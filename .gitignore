@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+*.tgz
+.nyc_output/
+coverage/
+.vscode/
+.idea/
+
+# Test temporary directories
+test-temp/
+test-integration/
+test-cli-*/ 

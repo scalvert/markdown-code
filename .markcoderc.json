@@ -1,0 +1,5 @@
+{
+  "snippetRoot": "./examples",
+  "markdownGlob": "**/*.md",
+  "includeExtensions": [".ts", ".js", ".py", ".java", ".cpp", ".c", ".go", ".rs", ".php", ".rb", ".swift", ".kt", ".json"]
+} 

@@ -1,0 +1,11 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "myapp"
+  },
+  "api": {
+    "version": "v1",
+    "timeout": 5000
+  }
+} 

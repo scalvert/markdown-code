@@ -1,0 +1,232 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import { visit } from 'unist-util-visit';
+import type { Root, Code } from 'mdast';
+import type { MarkdownFile, CodeBlock, SnippetDirective } from './types.js';
+
+export function parseSnippetDirective(
+  info: string
+): SnippetDirective | undefined {
+  const snippetMatch = info.match(/snippet=([^\s]+)/);
+
+  if (!snippetMatch || !snippetMatch[1]) {
+    return undefined;
+  }
+
+  const snippetPath = snippetMatch[1];
+
+  // Handle file paths with multiple hash symbols
+  const lastHashIndex = snippetPath.lastIndexOf('#');
+
+  if (lastHashIndex === -1) {
+    return { filePath: snippetPath };
+  }
+
+  const filePath = snippetPath.substring(0, lastHashIndex);
+  const lineSpec = snippetPath.substring(lastHashIndex + 1);
+
+  // Handle line specifications
+  if (lineSpec.startsWith('L')) {
+    const lineRange = lineSpec.substring(1); // Remove 'L' prefix
+    const rangeParts = lineRange.split('-');
+
+    if (rangeParts.length === 1) {
+      const line = parseInt(rangeParts[0], 10);
+      if (isNaN(line) || line < 0 || rangeParts[0] === '') {
+        return { filePath: snippetPath }; // Treat as file path if invalid number
+      }
+      return {
+        filePath,
+        startLine: line,
+        endLine: line,
+      };
+    }
+
+    if (rangeParts.length === 2) {
+      // Handle malformed cases like L-5-L10 which becomes ['', '5'] after removing 'L'
+      if (rangeParts[0] === '') {
+        return { filePath: snippetPath }; // Treat as file path if malformed
+      }
+
+      const startLine = parseInt(rangeParts[0], 10);
+
+      if (isNaN(startLine) || startLine < 0) {
+        return { filePath: snippetPath }; // Treat as file path if invalid start line
+      }
+
+      // Handle case where there's a dash but no end line (e.g., "L20-")
+      if (rangeParts[1] === '') {
+        return {
+          filePath,
+          startLine,
+        };
+      }
+
+      let endLine = parseInt(rangeParts[1].replace(/^L/, ''), 10); // Remove optional 'L' prefix
+
+      if (isNaN(endLine) || endLine < 0) {
+        // For mixed valid/invalid numbers, return just the valid start line
+        return {
+          filePath,
+          startLine,
+        };
+      }
+
+      return {
+        filePath,
+        startLine,
+        endLine,
+      };
+    }
+
+    // Handle cases with more than 2 parts (malformed like L-5-L10)
+    if (rangeParts.length > 2) {
+      return { filePath: snippetPath }; // Treat as file path if malformed
+    }
+  } else {
+    // Handle single line number without L prefix (e.g., test.ts#5)
+    const lineNumber = parseInt(lineSpec, 10);
+    if (!isNaN(lineNumber)) {
+      return {
+        filePath,
+        startLine: lineNumber,
+        endLine: lineNumber,
+      };
+    }
+  }
+
+  // If we can't parse the line specification, treat entire thing as file path
+  return { filePath: snippetPath };
+}
+
+export function parseMarkdownFile(filePath: string): MarkdownFile {
+  const content = readFileSync(filePath, 'utf-8');
+  const tree = unified().use(remarkParse).parse(content);
+  const codeBlocks: Array<CodeBlock> = [];
+
+  visit(tree, 'code', (node: Code, index, parent) => {
+    if (!node.lang || !node.meta) {
+      return;
+    }
+
+    const snippet = parseSnippetDirective(node.meta);
+
+    if (!snippet) {
+      return;
+    }
+
+    codeBlocks.push({
+      language: node.lang,
+      content: node.value,
+      snippet,
+      position: {
+        start: node.position?.start.offset ?? 0,
+        end: node.position?.end.offset ?? 0,
+      },
+    });
+  });
+
+  return {
+    filePath,
+    content,
+    codeBlocks,
+  };
+}
+
+export function loadSnippetContent(
+  snippetPath: string,
+  snippetRoot: string
+): string {
+  const fullPath = resolve(snippetRoot, snippetPath);
+  const resolvedRoot = resolve(snippetRoot);
+
+  // Security check: ensure the resolved path is within the snippet root
+  if (!fullPath.startsWith(resolvedRoot)) {
+    throw new Error(`Path traversal attempt detected: ${snippetPath}`);
+  }
+
+  return readFileSync(fullPath, 'utf-8');
+}
+
+export function extractLines(
+  content: string,
+  startLine?: number,
+  endLine?: number
+): string {
+  if (!startLine && !endLine) {
+    return content;
+  }
+
+  const lines = content.split('\n');
+
+  if (startLine && endLine) {
+    return lines.slice(startLine - 1, endLine).join('\n');
+  }
+
+  if (startLine) {
+    return lines.slice(startLine - 1).join('\n');
+  }
+
+  return content;
+}
+
+export function replaceCodeBlock(
+  markdownContent: string,
+  codeBlock: CodeBlock,
+  newContent: string
+): string {
+  const lines = markdownContent.split('\n');
+  const codeBlockLines: Array<string> = [];
+  let inCodeBlock = false;
+  let codeBlockStart = -1;
+  let codeBlockEnd = -1;
+  let currentLine = 0;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+
+    if (
+      line.startsWith('```') &&
+      codeBlock.snippet &&
+      line.includes('snippet=')
+    ) {
+      // Extract the snippet directive from the line
+      const snippetMatch = line.match(/snippet=([^\s]+)/);
+      if (snippetMatch && snippetMatch[0]) {
+        const lineSnippet = parseSnippetDirective(snippetMatch[0]);
+        // Match if the parsed snippet directives are equivalent
+        if (
+          lineSnippet &&
+          lineSnippet.filePath === codeBlock.snippet.filePath &&
+          lineSnippet.startLine === codeBlock.snippet.startLine &&
+          lineSnippet.endLine === codeBlock.snippet.endLine
+        ) {
+          inCodeBlock = true;
+          codeBlockStart = i;
+          continue;
+        }
+      }
+    }
+
+    if (inCodeBlock && line.trim() === '```') {
+      codeBlockEnd = i;
+      break;
+    }
+
+    if (inCodeBlock) {
+      currentLine += 1;
+    }
+  }
+
+  if (codeBlockStart === -1 || codeBlockEnd === -1) {
+    return markdownContent;
+  }
+
+  const beforeBlock = lines.slice(0, codeBlockStart + 1);
+  const afterBlock = lines.slice(codeBlockEnd);
+  const newContentLines = newContent.split('\n');
+
+  return [...beforeBlock, ...newContentLines, ...afterBlock].join('\n');
+}
