@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { extractLines, parseMarkdownFile, loadSnippetContent, replaceCodeBlock } from '../src/parser.js';
+import { extractLines, parseMarkdownFile, loadSnippetContent, replaceCodeBlock, trimBlankLines } from '../src/parser.js';
 
 describe('parser', () => {
   const testDir = './test-temp';
@@ -319,6 +319,89 @@ Some text after.
       expect(result).toContain('## After');
       expect(result).toContain('new');
       expect(result).not.toContain('old');
+    });
+  });
+
+  describe('trimBlankLines', () => {
+    it('removes leading blank lines', () => {
+      const content = '\n\n\nconsole.log("hello");';
+      const result = trimBlankLines(content);
+      expect(result).toBe('console.log("hello");');
+    });
+
+    it('removes trailing blank lines', () => {
+      const content = 'console.log("hello");\n\n\n';
+      const result = trimBlankLines(content);
+      expect(result).toBe('console.log("hello");');
+    });
+
+    it('removes both leading and trailing blank lines', () => {
+      const content = '\n\n\nconsole.log("hello");\nconsole.log("world");\n\n\n';
+      const result = trimBlankLines(content);
+      expect(result).toBe('console.log("hello");\nconsole.log("world");');
+    });
+
+    it('preserves blank lines in the middle', () => {
+      const content = 'function test() {\n\n  return true;\n}';
+      const result = trimBlankLines(content);
+      expect(result).toBe('function test() {\n\n  return true;\n}');
+    });
+
+    it('handles content with only blank lines', () => {
+      const content = '\n\n\n';
+      const result = trimBlankLines(content);
+      expect(result).toBe('');
+    });
+
+    it('handles content with only whitespace lines', () => {
+      const content = '   \n\t\n  \n';
+      const result = trimBlankLines(content);
+      expect(result).toBe('');
+    });
+
+    it('handles empty string', () => {
+      const content = '';
+      const result = trimBlankLines(content);
+      expect(result).toBe('');
+    });
+
+    it('handles single line with no blank lines', () => {
+      const content = 'const x = 1;';
+      const result = trimBlankLines(content);
+      expect(result).toBe('const x = 1;');
+    });
+
+    it('handles content with mixed whitespace', () => {
+      const content = '\n  \n\nconst x = 1;\nconst y = 2;\n\t\n  \n';
+      const result = trimBlankLines(content);
+      expect(result).toBe('const x = 1;\nconst y = 2;');
+    });
+  });
+
+  describe('extractLines with trimming', () => {
+    const testContent = '\n\nfunction test() {\n  return "hello";\n}\n\n';
+
+    it('trims blank lines when extracting whole file', () => {
+      const result = extractLines(testContent);
+      expect(result).toBe('function test() {\n  return "hello";\n}');
+    });
+
+    it('trims blank lines when extracting line ranges', () => {
+      const contentWithBlanks = '\n\nline 1\nline 2\nline 3\n\n';
+      const result = extractLines(contentWithBlanks, 2, 4);
+      expect(result).toBe('line 1\nline 2');
+    });
+
+    it('trims blank lines when extracting from start line', () => {
+      const contentWithBlanks = 'line 1\nline 2\n\n\nline 5\n\n';
+      const result = extractLines(contentWithBlanks, 3);
+      expect(result).toBe('line 5');
+    });
+
+    it('handles extracted content that is all blank lines', () => {
+      const contentWithBlanks = 'line 1\n\n\n\nline 5';
+      const result = extractLines(contentWithBlanks, 2, 4);
+      expect(result).toBe('');
     });
   });
 }); 

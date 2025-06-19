@@ -241,12 +241,11 @@ const value = "same";
     });
 
     it('should handle whitespace differences', async () => {
-      const sourceContent = 'const value = "test";';
-      
+      const sourceContent = 'const test = "value";';
       const markdownContent = `# Test
 
 \`\`\`js snippet=test.js
-  const value = "test";  
+const test = "different";
 \`\`\``;
 
       writeFileSync(join(testDir, 'test.js'), sourceContent);
@@ -256,6 +255,7 @@ const value = "same";
 
       expect(result.inSync).toBe(false);
       expect(result.outOfSync).toHaveLength(1);
+      expect(result.outOfSync[0]).toContain('README.md');
     });
 
     it('should handle line range check', async () => {
@@ -277,6 +277,29 @@ line 3
 
       expect(result.inSync).toBe(true);
       expect(result.outOfSync).toHaveLength(0);
+    });
+
+    it('should trim leading and trailing blank lines', async () => {
+      const sourceContent = '\n\n\nconst clean = "code";\nconsole.log("test");\n\n\n';
+      const markdownContent = `# Test
+
+\`\`\`js snippet=test.js
+old content
+\`\`\``;
+
+      writeFileSync(join(testDir, 'test.js'), sourceContent);
+      writeFileSync(join(testDir, 'README.md'), markdownContent);
+
+      const result = await syncMarkdownFiles(config);
+
+      expect(result.updated).toHaveLength(1);
+      expect(result.updated[0]).toContain('README.md');
+      expect(result.errors).toHaveLength(0);
+
+      const updatedContent = readFileSync(join(testDir, 'README.md'), 'utf-8');
+      expect(updatedContent).toContain('const clean = "code";\nconsole.log("test");');
+      expect(updatedContent).not.toMatch(/```js snippet=test\.js\n\n/);
+      expect(updatedContent).not.toMatch(/\n\n```$/);
     });
   });
 

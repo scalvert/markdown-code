@@ -747,7 +747,6 @@ old content
           }
           return a / b;
         }
-
         \`\`\`
 
         But sometimes you only need specific functions. Here's just the add function:
@@ -780,7 +779,6 @@ old content
             "timeout": 5000
           }
         } 
-
         \`\`\`
 
         But you might only need the database config:

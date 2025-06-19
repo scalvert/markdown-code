@@ -150,26 +150,50 @@ export function loadSnippetContent(
   return readFileSync(fullPath, 'utf-8');
 }
 
+export function trimBlankLines(content: string): string {
+  const lines = content.split('\n');
+  
+  // Find first non-blank line
+  let start = 0;
+  while (start < lines.length && lines[start].trim() === '') {
+    start++;
+  }
+  
+  // Find last non-blank line
+  let end = lines.length - 1;
+  while (end >= 0 && lines[end].trim() === '') {
+    end--;
+  }
+  
+  // If all lines are blank, return empty string
+  if (start > end) {
+    return '';
+  }
+  
+  return lines.slice(start, end + 1).join('\n');
+}
+
 export function extractLines(
   content: string,
   startLine?: number,
   endLine?: number
 ): string {
   if (!startLine && !endLine) {
-    return content;
+    return trimBlankLines(content);
   }
 
   const lines = content.split('\n');
+  let extractedLines: Array<string>;
 
   if (startLine && endLine) {
-    return lines.slice(startLine - 1, endLine).join('\n');
+    extractedLines = lines.slice(startLine - 1, endLine);
+  } else if (startLine) {
+    extractedLines = lines.slice(startLine - 1);
+  } else {
+    extractedLines = lines;
   }
 
-  if (startLine) {
-    return lines.slice(startLine - 1).join('\n');
-  }
-
-  return content;
+  return trimBlankLines(extractedLines.join('\n'));
 }
 
 export function replaceCodeBlock(
