@@ -34,16 +34,21 @@ describe('CLI', () => {
             $ markdown-code [options]
 
           Options
-            --check, -c       Check if markdown files are in sync (exit non-zero on mismatch)
-            --write, -w       Update markdown files with snippet content (default)
-            --init, -i        Create a default configuration file
-            --config          Path to configuration file
+            --check, -c              Check if markdown files are in sync (exit non-zero on mismatch)
+            --write, -w              Update markdown files with snippet content (default)
+            --init, -i               Create a default configuration file
+            --config                 Path to configuration file
+            --snippet-root           Directory containing source files (default: ".")
+            --markdown-glob          Glob pattern for markdown files (default: "**/*.md")
+            --include-extensions     Comma-separated list of file extensions to include
 
           Examples
             $ markdown-code                 # updates all snippet blocks (default is --write)
             $ markdown-code --check         # verifies sync, fails if out of sync
             $ markdown-code --init          # creates .markdown-coderc.json with default settings
             $ markdown-code --config path/to/.markdown-coderc.json
+            $ markdown-code --snippet-root ./src --markdown-glob "docs/**/*.md"
+            $ markdown-code --include-extensions .ts,.js,.py
         "
       `);
     });
@@ -477,6 +482,115 @@ old content
 
       const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
       expect(updatedMarkdown).toContain('const fromConfig = true;');
+    });
+
+    it('CLI flags override config file settings', async () => {
+      const configContent = {
+        snippetRoot: './wrong-dir',
+        markdownGlob: '*.wrong',
+        includeExtensions: ['.wrong'],
+      };
+
+      const sourceContent = 'const override = "test";';
+      
+      const markdownContent = `# Test
+
+\`\`\`js snippet=example.js
+old content
+\`\`\``;
+
+      await project.write({
+        '.markdown-coderc.json': JSON.stringify(configContent),
+        'custom-source': {
+          'example.js': sourceContent,
+        },
+        'test.md': markdownContent,
+      });
+
+      const result = await runBin(
+        '--snippet-root', 'custom-source',
+        '--markdown-glob', 'test.md',
+        '--include-extensions', '.js'
+      );
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "Syncing markdown files...
+        Updated files:
+          test.md"
+      `);
+
+      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'test.md'), 'utf-8');
+      expect(updatedMarkdown).toContain('const override = "test";');
+    });
+
+    it('supports comma-separated include-extensions', async () => {
+      const jsContent = 'const js = "file";';
+      const tsContent = 'const ts: string = "file";';
+      
+      const markdownContent = `# Test
+
+\`\`\`js snippet=example.js
+old js content
+\`\`\`
+
+\`\`\`ts snippet=example.ts
+old ts content
+\`\`\``;
+
+      await project.write({
+        'source': {
+          'example.js': jsContent,
+          'example.ts': tsContent,
+        },
+        'README.md': markdownContent,
+      });
+
+      const result = await runBin(
+        '--snippet-root', 'source',
+        '--include-extensions', '.js,.ts'
+      );
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "Syncing markdown files...
+        Updated files:
+          README.md"
+      `);
+
+      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      expect(updatedMarkdown).toContain('const js = "file";');
+      expect(updatedMarkdown).toContain('const ts: string = "file";');
+    });
+
+    it('uses default values when no config or flags provided', async () => {
+      const sourceContent = 'const defaultTest = true;';
+      
+      const markdownContent = `# Test
+
+\`\`\`js snippet=example.js
+old content
+\`\`\``;
+
+      await project.write({
+        'example.js': sourceContent,
+        'README.md': markdownContent,
+      });
+
+      const result = await runBin();
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "Syncing markdown files...
+        Updated files:
+          README.md"
+      `);
+
+      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      expect(updatedMarkdown).toContain('const defaultTest = true;');
     });
   });
 

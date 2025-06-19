@@ -21,30 +21,60 @@ const DEFAULT_CONFIG: Config = {
   ],
 };
 
-export function loadConfig(configPath?: string): Config {
+export interface ConfigOverrides {
+  snippetRoot?: string;
+  markdownGlob?: string;
+  includeExtensions?: string;
+}
+
+export function loadConfig(
+  configPath?: string,
+  overrides: ConfigOverrides = {}
+): Config {
+  let config = { ...DEFAULT_CONFIG };
+
   if (!configPath) {
     const defaultPath = resolve('.markdown-coderc.json');
 
     try {
       const content = readFileSync(defaultPath, 'utf-8');
-      return { ...DEFAULT_CONFIG, ...JSON.parse(content) };
+      config = { ...config, ...JSON.parse(content) };
     } catch {
-      return DEFAULT_CONFIG;
+      // Use defaults if no config file found
+    }
+  } else {
+    try {
+      const content = readFileSync(resolve(configPath), 'utf-8');
+      config = { ...config, ...JSON.parse(content) };
+    } catch (error) {
+      let errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes('ENOENT')) {
+        throw new Error(`Config file not found: ${configPath}`);
+      }
+
+      throw new Error(
+        `Failed to load config from ${configPath}: ${errorMessage}`
+      );
     }
   }
 
-  try {
-    const content = readFileSync(resolve(configPath), 'utf-8');
-    return { ...DEFAULT_CONFIG, ...JSON.parse(content) };
-  } catch (error) {
-    let errorMessage = error instanceof Error ? error.message : String(error);
-    
-    if (errorMessage.includes('ENOENT')) {
-      throw new Error(`Config file not found: ${configPath}`);
-    }
-    
-    throw new Error(`Failed to load config from ${configPath}: ${errorMessage}`);
+  if (overrides.snippetRoot) {
+    config.snippetRoot = overrides.snippetRoot;
   }
+
+  if (overrides.markdownGlob) {
+    config.markdownGlob = overrides.markdownGlob;
+  }
+
+  if (overrides.includeExtensions) {
+    config.includeExtensions = overrides.includeExtensions
+      .split(',')
+      .map((ext) => ext.trim())
+      .filter((ext) => ext.length > 0);
+  }
+
+  return config;
 }
 
 export function validateConfig(config: Config): void {

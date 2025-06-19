@@ -1,7 +1,7 @@
 import meow from 'meow';
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { loadConfig, validateConfig } from './config.js';
+import { loadConfig, validateConfig, type ConfigOverrides } from './config.js';
 import { syncMarkdownFiles, checkMarkdownFiles } from './sync.js';
 
 const cli = meow(
@@ -10,16 +10,21 @@ const cli = meow(
     $ markdown-code [options]
 
   Options
-    --check, -c       Check if markdown files are in sync (exit non-zero on mismatch)
-    --write, -w       Update markdown files with snippet content (default)
-    --init, -i        Create a default configuration file
-    --config          Path to configuration file
+    --check, -c              Check if markdown files are in sync (exit non-zero on mismatch)
+    --write, -w              Update markdown files with snippet content (default)
+    --init, -i               Create a default configuration file
+    --config                 Path to configuration file
+    --snippet-root           Directory containing source files (default: ".")
+    --markdown-glob          Glob pattern for markdown files (default: "**/*.md")
+    --include-extensions     Comma-separated list of file extensions to include
 
   Examples
     $ markdown-code                 # updates all snippet blocks (default is --write)
     $ markdown-code --check         # verifies sync, fails if out of sync
     $ markdown-code --init          # creates .markdown-coderc.json with default settings
     $ markdown-code --config path/to/.markdown-coderc.json
+    $ markdown-code --snippet-root ./src --markdown-glob "docs/**/*.md"
+    $ markdown-code --include-extensions .ts,.js,.py
 `,
   {
     importMeta: import.meta,
@@ -40,6 +45,15 @@ const cli = meow(
         default: false,
       },
       config: {
+        type: 'string',
+      },
+      snippetRoot: {
+        type: 'string',
+      },
+      markdownGlob: {
+        type: 'string',
+      },
+      includeExtensions: {
         type: 'string',
       },
     },
@@ -102,10 +116,15 @@ async function main(): Promise<void> {
       return;
     }
 
-    const config = loadConfig(cli.flags.config);
+    const overrides: ConfigOverrides = {};
+    if (cli.flags.snippetRoot) overrides.snippetRoot = cli.flags.snippetRoot;
+    if (cli.flags.markdownGlob) overrides.markdownGlob = cli.flags.markdownGlob;
+    if (cli.flags.includeExtensions)
+      overrides.includeExtensions = cli.flags.includeExtensions;
+
+    const config = loadConfig(cli.flags.config, overrides);
     validateConfig(config);
 
-    const isCheckMode = cli.flags.check;
     const shouldWrite =
       cli.flags.write || (!cli.flags.check && !cli.flags.write);
 
