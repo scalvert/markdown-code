@@ -8,6 +8,10 @@
     "code-sync",
     "cli"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scalvert/markdown-code.git"
+  },
   "license": "MIT",
   "author": "",
   "type": "module",
@@ -24,7 +28,6 @@
     "format": "prettier --write \"src/**/*.ts\" \"**/*.md\"",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "release": "release-it",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -39,6 +42,7 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
+    "@release-it-plugins/lerna-changelog": "^5.0.0",
     "@scalvert/bin-tester": "^2.0.0",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
@@ -48,12 +52,30 @@
     "eslint-config-airbnb-typescript": "^17.1.0",
     "eslint-plugin-import": "^2.29.0",
     "prettier": "^3.1.0",
-    "release-it": "^17.0.0",
+    "release-it": "^15.5.0",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
     "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "release-it": {
+    "plugins": {
+      "@release-it-plugins/lerna-changelog": {
+        "infile": "CHANGELOG.md",
+        "launchEditor": true
+      }
+    },
+    "git": {
+      "tagName": "v${version}"
+    },
+    "github": {
+      "release": true,
+      "tokenRef": "GITHUB_AUTH"
+    }
   }
 }
