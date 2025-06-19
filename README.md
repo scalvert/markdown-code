@@ -4,11 +4,11 @@ Keep code examples in Markdown synchronized with actual source files, preventing
 
 ## Features
 
-- 🔄 **Automatic Sync**: Replace fenced code blocks with contents from real files
-- 📝 **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
-- 🔍 **Check Mode**: Verify documentation is in sync without making changes
-- 🎯 **Multi-language**: Support for any programming language
-- ⚙️ **Configurable**: Flexible configuration via `.markdown-coderc.json`
+- **Automatic Sync**: Replace fenced code blocks with contents from real files
+- **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
+- **Check Mode**: Verify documentation is in sync without making changes
+- **Multi-language**: Support for any programming language
+- **Configurable**: Flexible configuration via `.markdown-coderc.json`
 
 ## Installation
 

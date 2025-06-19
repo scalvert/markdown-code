@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
 import type { Config } from './types.js';
 
 const DEFAULT_CONFIG: Config = {
@@ -37,7 +37,13 @@ export function loadConfig(configPath?: string): Config {
     const content = readFileSync(resolve(configPath), 'utf-8');
     return { ...DEFAULT_CONFIG, ...JSON.parse(content) };
   } catch (error) {
-    throw new Error(`Failed to load config from ${configPath}: ${error}`);
+    let errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('ENOENT')) {
+      throw new Error(`Config file not found: ${configPath}`);
+    }
+    
+    throw new Error(`Failed to load config from ${configPath}: ${errorMessage}`);
   }
 }
 

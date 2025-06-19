@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createBinTester, BinTesterProject } from '@scalvert/bin-tester';
@@ -36,11 +36,13 @@ describe('CLI', () => {
           Options
             --check, -c       Check if markdown files are in sync (exit non-zero on mismatch)
             --write, -w       Update markdown files with snippet content (default)
+            --init, -i        Create a default configuration file
             --config          Path to configuration file
 
           Examples
             $ markdown-code                 # updates all snippet blocks (default is --write)
             $ markdown-code --check         # verifies sync, fails if out of sync
+            $ markdown-code --init          # creates .markdown-coderc.json with default settings
             $ markdown-code --config path/to/.markdown-coderc.json
         "
       `);
@@ -52,6 +54,93 @@ describe('CLI', () => {
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('0.1.0');
+    });
+  });
+
+  describe('init mode', () => {
+    it('creates default configuration and snippets directory', async () => {
+      const result = await runBin('--init');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "Created .markdown-coderc.json with default configuration
+        Created snippets/ directory for your source files
+
+        Next steps:
+        1. Place your source files in the snippets/ directory
+        2. Add snippet directives to your markdown files: \`\`\`js snippet=example.js
+        3. Run \`markdown-code\` to sync your code examples"
+      `);
+
+      const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');
+      const config = JSON.parse(configContent);
+      
+      expect(config).toMatchInlineSnapshot(`
+        {
+          "includeExtensions": [
+            ".ts",
+            ".js",
+            ".py",
+            ".java",
+            ".cpp",
+            ".c",
+            ".go",
+            ".rs",
+            ".php",
+            ".rb",
+            ".swift",
+            ".kt",
+          ],
+          "markdownGlob": "**/*.md",
+          "snippetRoot": "./snippets",
+        }
+      `);
+
+      expect(existsSync(path.join(project.baseDir, 'snippets'))).toBe(true);
+    });
+
+    it('does not overwrite existing configuration', async () => {
+      const existingConfig = {
+        snippetRoot: './custom',
+        markdownGlob: '*.md',
+        includeExtensions: ['.js'],
+      };
+
+      await project.write({
+        '.markdown-coderc.json': JSON.stringify(existingConfig),
+      });
+
+      const result = await runBin('--init');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "Configuration file already exists at .markdown-coderc.json"
+      `);
+
+      const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');
+      const config = JSON.parse(configContent);
+      
+      expect(config).toEqual(existingConfig);
+    });
+
+    it('does not create snippets directory if it already exists', async () => {
+      await project.write({
+        'snippets': {
+          'example.js': 'console.log("existing");',
+        },
+      });
+
+      const result = await runBin('--init');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain('Created .markdown-coderc.json with default configuration');
+      expect(result.stdout).not.toContain('Created snippets/ directory');
+
+      const existingFile = readFileSync(path.join(project.baseDir, 'snippets', 'example.js'), 'utf-8');
+      expect(existingFile).toMatchInlineSnapshot(`"console.log("existing");"`);
     });
   });
 
@@ -107,7 +196,14 @@ describe('CLI', () => {
     `);
 
     const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-    expect(updatedMarkdown).toContain('const test = "sync with write flag";');
+    expect(updatedMarkdown).toMatchInlineSnapshot(`
+      "# Test
+
+      \`\`\`js snippet=test.js
+      const test = "sync with write flag"; 
+      \`\`\`
+      "
+    `);
   });
 
     it('reports when files are already in sync', async () => {
@@ -347,7 +443,7 @@ old content
       const result = await runBin('--config', 'nonexistent.json');
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toMatchInlineSnapshot(`"Error: Error: Failed to load config from nonexistent.json: Error: ENOENT: no such file or directory, open '/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-50722OlYUFHj76l4B/nonexistent.json'"`);
+      expect(result.stderr).toMatchInlineSnapshot(`"Config file not found: nonexistent.json"`);
     });
 
     it('uses .markdown-coderc.json when present', async () => {
@@ -410,7 +506,7 @@ malicious content
       const result = await runBin('--config', 'bad.json');
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toContain('Error:');
+      expect(result.stderr).toContain('Failed to load config from bad.json');
     });
 
     it('handles no markdown files gracefully', async () => {

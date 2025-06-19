@@ -1,4 +1,6 @@
 import meow from 'meow';
+import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { loadConfig, validateConfig } from './config.js';
 import { syncMarkdownFiles, checkMarkdownFiles } from './sync.js';
 
@@ -10,11 +12,13 @@ const cli = meow(
   Options
     --check, -c       Check if markdown files are in sync (exit non-zero on mismatch)
     --write, -w       Update markdown files with snippet content (default)
+    --init, -i        Create a default configuration file
     --config          Path to configuration file
 
   Examples
     $ markdown-code                 # updates all snippet blocks (default is --write)
     $ markdown-code --check         # verifies sync, fails if out of sync
+    $ markdown-code --init          # creates .markdown-coderc.json with default settings
     $ markdown-code --config path/to/.markdown-coderc.json
 `,
   {
@@ -30,6 +34,11 @@ const cli = meow(
         shortFlag: 'w',
         default: false,
       },
+      init: {
+        type: 'boolean',
+        shortFlag: 'i',
+        default: false,
+      },
       config: {
         type: 'string',
       },
@@ -37,8 +46,62 @@ const cli = meow(
   }
 );
 
+function createDefaultConfig(): void {
+  const configPath = resolve('.markdown-coderc.json');
+  const snippetsDir = resolve('snippets');
+
+  if (existsSync(configPath)) {
+    console.log('Configuration file already exists at .markdown-coderc.json');
+    return;
+  }
+
+  const defaultConfig = {
+    snippetRoot: './snippets',
+    markdownGlob: '**/*.md',
+    includeExtensions: [
+      '.ts',
+      '.js',
+      '.py',
+      '.java',
+      '.cpp',
+      '.c',
+      '.go',
+      '.rs',
+      '.php',
+      '.rb',
+      '.swift',
+      '.kt',
+    ],
+  };
+
+  try {
+    writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+    console.log('Created .markdown-coderc.json with default configuration');
+
+    if (!existsSync(snippetsDir)) {
+      mkdirSync(snippetsDir, { recursive: true });
+      console.log('Created snippets/ directory for your source files');
+    }
+
+    console.log('\nNext steps:');
+    console.log('1. Place your source files in the snippets/ directory');
+    console.log(
+      '2. Add snippet directives to your markdown files: ```js snippet=example.js'
+    );
+    console.log('3. Run `markdown-code` to sync your code examples');
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create configuration: ${errorMessage}`);
+  }
+}
+
 async function main(): Promise<void> {
   try {
+    if (cli.flags.init) {
+      createDefaultConfig();
+      return;
+    }
+
     const config = loadConfig(cli.flags.config);
     validateConfig(config);
 
@@ -103,7 +166,8 @@ async function main(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error(`Error: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(errorMessage);
     process.exit(1);
   }
 }
