@@ -1,6 +1,6 @@
 {
   "name": "markdown-code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keep code examples in Markdown synchronized with actual source files",
   "keywords": [
     "markdown",
