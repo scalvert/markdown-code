@@ -83,6 +83,19 @@ That's it! `md-code` will:
 - ✅ Extract code blocks from your markdown to snippet files
 - ✅ Update markdown to reference the new snippet files
 
+#### Extract Workflow Details
+
+When you run `md-code extract`, here's what happens:
+
+**For each markdown file** (e.g., `user-guide.md`):
+
+- ✅ Creates directory using lowercase filename (`user-guide/`)
+- ✅ Generates numbered snippet files (`snippet1.js`, `snippet2.ts`, etc.)
+- ✅ Handles naming collisions by incrementing numbers
+- ✅ Updates markdown to reference new snippet files
+- ❌ Ignores blocks without language tags
+- ❌ Ignores existing snippet references
+
 ### Start from Scratch
 
 If you're starting fresh:
@@ -133,14 +146,17 @@ md-code sync
 
 Here's a TypeScript function that greets users:
 
+````markdown
 ```ts snippet=examples/hello.ts#L1-L3
 export function greetUser(name: string): string {
   return `Hello, ${name}! Welcome to md-code.`;
 }
 ```
+````
 
 And here's an async function for fetching user data:
 
+````markdown
 ```ts snippet=examples/fetch_users.ts#L7-L14
 export async function fetchUsers(): Promise<Array<User>> {
   const response = await fetch('/api/users');
@@ -151,9 +167,11 @@ export async function fetchUsers(): Promise<Array<User>> {
 
   return response.json() as Promise<Array<User>>;
 ```
+````
 
 You can also include entire files:
 
+````markdown
 ```json snippet=examples/config.json
 {
   "name": "md-code-demo",
@@ -170,6 +188,7 @@ You can also include entire files:
   ]
 } 
 ```
+````
 
 ### Snippet Syntax
 
@@ -179,7 +198,6 @@ Use the `snippet=` directive in your fenced code blocks:
 ```ts snippet=path/to/file.ts
 // This content will be replaced
 ```
-````
 
 ```ts snippet=path/to/file.ts#L10-L20
 // This will include lines 10-20 only
@@ -221,35 +239,6 @@ Create a `.markdown-coderc.json` file in your project root:
 - **snippetRoot**: Base directory for resolving snippet paths (default: `"."`)
 - **markdownGlob**: Glob pattern to find Markdown files (default: `"**/*.md"`)
 - **includeExtensions**: File extensions to consider for snippets and extraction
-
-## Extract Workflow Details
-
-When you run `md-code extract`, here's what happens:
-
-**For each markdown file** (e.g., `user-guide.md`):
-- ✅ Creates directory using lowercase filename (`user-guide/`)
-- ✅ Generates numbered snippet files (`snippet1.js`, `snippet2.ts`, etc.)
-- ✅ Handles naming collisions by incrementing numbers
-- ✅ Updates markdown to reference new snippet files
-- ❌ Ignores blocks without language tags
-- ❌ Ignores existing snippet references
-
-**Example transformation**:
-```markdown
-<!-- Before extract -->
-```js
-function hello() {
-  console.log("Hello world");
-}
-```
-
-<!-- After extract -->
-```js snippet=user-guide/snippet1.js
-function hello() {
-  console.log("Hello world");
-}
-```
-```
 
 ## Contributing
 
