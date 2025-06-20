@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve, basename } from 'node:path';
+import { resolve } from 'node:path';
 import type { Config } from './types.js';
 
 const DEFAULT_CONFIG: Config = {

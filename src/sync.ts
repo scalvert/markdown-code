@@ -1,5 +1,5 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { join, resolve, basename, dirname } from 'node:path';
+import { join, resolve, basename } from 'node:path';
 import fg from 'fast-glob';
 import type { Config, SyncResult, CheckResult, ExtractResult } from './types.js';
 import {
@@ -31,7 +31,6 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             continue;
           }
 
-          // Security check for path traversal
           try {
             const fullPath = resolve(
               config.snippetRoot,
@@ -132,7 +131,6 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             continue;
           }
 
-          // Security check for path traversal
           try {
             const fullPath = resolve(
               config.snippetRoot,

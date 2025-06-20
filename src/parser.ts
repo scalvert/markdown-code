@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import { visit } from 'unist-util-visit';
-import type { Root, Code } from 'mdast';
+import type { Code } from 'mdast';
 import type { MarkdownFile, CodeBlock, SnippetDirective } from './types.js';
 
 export function parseSnippetDirective(
@@ -33,7 +33,7 @@ export function parseSnippetDirective(
     const rangeParts = lineRange.split('-');
 
     if (rangeParts.length === 1) {
-      const line = parseInt(rangeParts[0], 10);
+      const line = parseInt(rangeParts[0]!, 10);
       if (isNaN(line) || line < 0 || rangeParts[0] === '') {
         return { filePath: snippetPath }; // Treat as file path if invalid number
       }
@@ -50,7 +50,7 @@ export function parseSnippetDirective(
         return { filePath: snippetPath }; // Treat as file path if malformed
       }
 
-      const startLine = parseInt(rangeParts[0], 10);
+      const startLine = parseInt(rangeParts[0]!, 10);
 
       if (isNaN(startLine) || startLine < 0) {
         return { filePath: snippetPath }; // Treat as file path if invalid start line
@@ -64,7 +64,7 @@ export function parseSnippetDirective(
         };
       }
 
-      let endLine = parseInt(rangeParts[1].replace(/^L/, ''), 10); // Remove optional 'L' prefix
+      let endLine = parseInt(rangeParts[1]!.replace(/^L/, ''), 10); // Remove optional 'L' prefix
 
       if (isNaN(endLine) || endLine < 0) {
         // For mixed valid/invalid numbers, return just the valid start line
@@ -106,7 +106,7 @@ export function parseMarkdownFile(filePath: string): MarkdownFile {
   const tree = unified().use(remarkParse).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
 
-  visit(tree, 'code', (node: Code, index, parent) => {
+  visit(tree, 'code', (node: Code) => {
     if (!node.lang || !node.meta) {
       return;
     }
@@ -140,7 +140,7 @@ export function parseMarkdownForExtraction(filePath: string): MarkdownFile {
   const tree = unified().use(remarkParse).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
 
-  visit(tree, 'code', (node: Code, index, parent) => {
+  visit(tree, 'code', (node: Code) => {
     if (!node.lang) {
       return;
     }
@@ -188,13 +188,13 @@ export function trimBlankLines(content: string): string {
   
   // Find first non-blank line
   let start = 0;
-  while (start < lines.length && lines[start].trim() === '') {
+  while (start < lines.length && lines[start]!.trim() === '') {
     start++;
   }
   
   // Find last non-blank line
   let end = lines.length - 1;
-  while (end >= 0 && lines[end].trim() === '') {
+  while (end >= 0 && lines[end]!.trim() === '') {
     end--;
   }
   
@@ -235,7 +235,6 @@ export function replaceCodeBlock(
   newContent: string
 ): string {
   const lines = markdownContent.split('\n');
-  const codeBlockLines: Array<string> = [];
   let inCodeBlock = false;
   let codeBlockStart = -1;
   let codeBlockEnd = -1;
@@ -243,6 +242,10 @@ export function replaceCodeBlock(
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
+
+    if (!line) {
+      continue;
+    }
 
     if (
       line.startsWith('```') &&
