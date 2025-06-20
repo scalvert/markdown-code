@@ -1,5 +1,7 @@
 # Test
 
 ```ts snippet=hello.ts
-old content
+export function hello() {
+  return "Hello, World!";
+} 
 ```

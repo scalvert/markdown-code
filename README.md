@@ -46,7 +46,7 @@ And here's an async function for fetching user data:
 ```ts snippet=examples/fetch_users.ts#L7-L14
 export async function fetchUsers(): Promise<Array<User>> {
   const response = await fetch('/api/users');
-
+  
   if (!response.ok) {
     throw new Error(`Failed to fetch users: ${response.statusText}`);
   }
@@ -65,8 +65,12 @@ You can also include entire files:
     "maxRetries": 3,
     "timeout": 5000
   },
-  "features": ["syntax-highlighting", "line-numbers", "auto-sync"]
-}
+  "features": [
+    "syntax-highlighting",
+    "line-numbers",
+    "auto-sync"
+  ]
+} 
 ```
 
 ## Configuration

@@ -35,16 +35,17 @@
     "@types/mdast": "^4.0.3",
     "fast-glob": "^3.3.2",
     "mdast": "^3.0.0",
-    "meow": "^13.0.0",
     "remark": "^15.0.1",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.4",
-    "unist-util-visit": "^5.0.0"
+    "unist-util-visit": "^5.0.0",
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
     "@release-it-plugins/lerna-changelog": "^5.0.0",
     "@scalvert/bin-tester": "^2.0.0",
     "@types/node": "^20.10.0",
+    "@types/yargs": "^17.0.33",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",

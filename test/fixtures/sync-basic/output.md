@@ -2,6 +2,6 @@
 
 ```ts snippet=hello.ts
 export function hello() {
-  return 'Hello, World!';
-}
+  return "Hello, World!";
+} 
 ```

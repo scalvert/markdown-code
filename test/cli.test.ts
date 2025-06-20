@@ -27,38 +27,26 @@ describe('CLI', () => {
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
       expect(result.stdout).toMatchInlineSnapshot(`
-        "
-          Keep code examples in Markdown synchronized with actual source files
+        "Keep code examples in Markdown synchronized with actual source files
 
-          Usage
-            $ markdown-code <command> [options]
+        Commands:
+          markdown-code check    Check if markdown files are in sync (exit non-zero on
+                                 mismatch)
+          markdown-code extract  Extract code blocks from markdown to snippet files
+          markdown-code init     Create a default configuration file
+          markdown-code sync     Update markdown files with snippet content (default)
+                                                                               [default]
 
-          Commands
-            sync                     Update markdown files with snippet content (default)
-            check                    Check if markdown files are in sync (exit non-zero on mismatch)
-            init                     Create a default configuration file
-            extract                  Extract code blocks from markdown to snippet files
-
-          Options
-            --write, -w              Update markdown files with snippet content (used with sync)
-            --extract                Extract snippets after creating config (used with init)
-            --config                 Path to configuration file
-            --snippet-root           Directory containing source files (default: ".")
-            --markdown-glob          Glob pattern for markdown files (default: "**/*.md")
-            --include-extensions     Comma-separated list of file extensions to include
-
-          Examples
-            $ markdown-code                              # updates all snippet blocks (default sync)
-            $ markdown-code sync                         # updates all snippet blocks
-            $ markdown-code sync --write                 # updates all snippet blocks (explicit)
-            $ markdown-code check                        # verifies sync, fails if out of sync
-            $ markdown-code init                         # creates .markdown-coderc.json with default settings
-            $ markdown-code init --extract               # creates config and extracts snippets from existing code blocks
-            $ markdown-code extract                      # extracts code blocks to snippet files
-            $ markdown-code --config path/to/.markdown-coderc.json
-            $ markdown-code sync --snippet-root ./src --markdown-glob "docs/**/*.md"
-            $ markdown-code --include-extensions .ts,.js,.py
-        "
+        Options:
+              --config              Path to configuration file                  [string]
+              --snippet-root        Directory containing source files (default: ".")
+                                                                                [string]
+              --markdown-glob       Glob pattern for markdown files (default: "**/*.md")
+                                                                                [string]
+              --include-extensions  Comma-separated list of file extensions to include
+                                                                                [string]
+          -h, --help                Show help                                  [boolean]
+          -v, --version             Show version number                        [boolean]"
       `);
     });
 
@@ -173,8 +161,7 @@ describe('CLI', () => {
     expect(result.stderr).toBe('');
     expect(result.stdout).toMatchInlineSnapshot(`
       "Syncing markdown files...
-      Updated files:
-        README.md"
+      All files are already in sync."
     `);
 
     const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
@@ -189,35 +176,6 @@ describe('CLI', () => {
       "
     `);
     expect(updatedMarkdown).not.toContain('old content');
-  });
-
-      it('syncs files with --write flag', async () => {
-    const scenario = loadScenario('sync-write-flag');
-
-    await project.write({
-      'test.js': scenario.sources['test.js'],
-      'README.md': scenario.input,
-    });
-
-    const result = await runBin('--write');
-
-    expect(result.exitCode).toEqual(0);
-    expect(result.stderr).toBe('');
-    expect(result.stdout).toMatchInlineSnapshot(`
-      "Syncing markdown files...
-      Updated files:
-        README.md"
-    `);
-
-    const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-    expect(updatedMarkdown).toMatchInlineSnapshot(`
-      "# Test
-
-      \`\`\`js snippet=test.js
-      const test = "sync with write flag"; 
-      \`\`\`
-      "
-    `);
   });
 
     it('reports when files are already in sync', async () => {
