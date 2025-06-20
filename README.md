@@ -65,16 +65,23 @@ npm install -g md-code
 
 If you already have markdown files with code blocks:
 
-```bash
-# 1. Install globally
-npm install -g md-code
+1. Install globally
 
-# 2. Navigate to your project
-cd your-project
+  ```bash
+  npm install -g md-code
+  ```
 
-# 3. One-command setup: create config + extract all code blocks
-md-code init --extract
-```
+2. Navigate to your project
+
+  ```bash
+  cd your-project
+  ```
+
+3. One-command setup: create config + extract all code blocks
+
+  ```bash
+  md-code init --extract
+  ```
 
 That's it! `md-code` will:
 
@@ -100,14 +107,15 @@ When you run `md-code extract`, here's what happens:
 
 If you're starting fresh:
 
-```bash
-# 1. Install and setup
-npm install -g md-code
-md-code init
+1. Install and setup
 
-# 2. Add source files to snippets/ directory
-# 3. Reference them in markdown:
-```
+  ```bash
+  npm install -g md-code
+  md-code init
+  ```
+
+2. Add source files to snippets/ directory
+3. Reference them in markdown:
 
 ````markdown
 ```js snippet=hello.js
