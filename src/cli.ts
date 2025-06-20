@@ -2,7 +2,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 yargs(hideBin(process.argv))
-  .scriptName('markdown-code')
+  .scriptName('md-code')
   .usage('Keep code examples in Markdown synchronized with actual source files')
   .commandDir('./commands')
   .option('config', {

@@ -1,6 +1,48 @@
-# markdown-code
+# md-code
 
-Keep code examples in Markdown synchronized with actual source files, preventing documentation drift.
+**Stop copy-pasting code into documentation.** Keep your markdown examples automatically synchronized with real source files.
+
+## The Problem
+
+Your documentation has code examples, but they get outdated:
+
+- ❌ You update your source code but forget to update the docs
+- ❌ Code examples in README/docs become stale and misleading  
+- ❌ Copy-paste errors introduce bugs in documentation
+- ❌ Maintaining multiple copies of the same code is painful
+
+## The Solution
+
+`md-code` keeps your documentation in sync automatically:
+
+- ✅ **Single source of truth**: Code examples come from real files
+- ✅ **Always accurate**: Documentation updates when code changes
+- ✅ **Zero maintenance**: Sync happens automatically in CI/CD
+- ✅ **Extract existing**: Migrate current docs with one command
+
+## Example
+
+❌ Before: Manual copy-paste (gets outdated)
+
+````markdown
+```js
+function greet(name) {
+  return "Hello " + name;  // Oops, code changed but docs didn't!
+}
+```
+````
+
+✅ After: Automatic sync from real files
+
+````markdown
+```js snippet=src/utils/greet.js
+function greet(name) {
+  return `Hello, ${name}! Welcome to our app.`;  // Always current!
+}
+```
+````
+
+**Result**: Your documentation stays accurate as your code evolves.
 
 ## Features
 
@@ -14,71 +56,86 @@ Keep code examples in Markdown synchronized with actual source files, preventing
 ## Installation
 
 ```bash
-npm install -g markdown-code
+npm install -g md-code
 ```
 
-## Usage
+## Quick Start
 
-### Commands
+### Extract from Existing Documentation (Most Common)
+
+If you already have markdown files with code blocks:
 
 ```bash
-# Update markdown files with snippet content (default)
-markdown-code
-markdown-code sync
+# 1. Install globally
+npm install -g md-code
 
-# Check if files are in sync (exit non-zero on mismatch)
-markdown-code check
+# 2. Navigate to your project
+cd your-project
 
-# Create default configuration file
-markdown-code init
-
-# Extract code blocks from markdown to snippet files
-markdown-code extract
-
-# Create config and extract snippets in one step
-markdown-code init --extract
+# 3. One-command setup: create config + extract all code blocks
+md-code init --extract
 ```
+
+That's it! `md-code` will:
+
+- ✅ Create `.markdown-coderc.json` configuration
+- ✅ Create `snippets/` directory  
+- ✅ Extract code blocks from your markdown to snippet files
+- ✅ Update markdown to reference the new snippet files
+
+### Start from Scratch
+
+If you're starting fresh:
+
+```bash
+# 1. Install and setup
+npm install -g md-code
+md-code init
+
+# 2. Add source files to snippets/ directory
+# 3. Reference them in markdown:
+```
+
+````markdown
+```js snippet=hello.js
+// This will be replaced with hello.js content
+```
+````
+
+```bash
+# 4. Sync content
+md-code sync
+```
+
+## Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `md-code` | Update markdown with snippet content (default) | `md-code` |
+| `md-code sync` | Same as above, explicit | `md-code sync` |
+| `md-code check` | Verify files are in sync (CI-friendly) | `md-code check` |
+| `md-code init` | Create config and snippets directory | `md-code init` |
+| `md-code extract` | Extract code blocks to snippet files | `md-code extract` |
+| `md-code init --extract` | Setup + extract in one step | `md-code init --extract` |
 
 ### Global Options
 
-```bash
-# Use custom configuration
-markdown-code --config path/to/.markdown-coderc.json
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--config` | Custom configuration file | `md-code --config custom.json` |
+| `--snippet-root` | Override snippet directory | `md-code --snippet-root ./src` |
+| `--markdown-glob` | Override markdown file pattern | `md-code --markdown-glob "docs/**/*.md"` |
+| `--include-extensions` | Override file extensions | `md-code --include-extensions .ts,.js,.py` |
 
-# Override settings
-markdown-code --snippet-root ./src --markdown-glob "docs/**/*.md"
-markdown-code --include-extensions .ts,.js,.py
-```
+## How It Works
 
-### Extract Workflow
-
-The `extract` command helps you migrate existing documentation to use snippet files:
-
-```bash
-# 1. Create configuration
-markdown-code init
-
-# 2. Extract code blocks to files (creates directories based on markdown names)
-markdown-code extract
-
-# 3. Modify extracted files as needed
-# 4. Keep in sync
-markdown-code sync
-```
-
-**Extract Example**: If you have `user-guide.md` with code blocks, `extract` will:
-- Create `user-guide/` directory
-- Generate `snippet1.js`, `snippet2.ts`, etc.
-- Update markdown to reference these files
-- Only process languages in `includeExtensions`
-
-### Example Usage
+### Example: Code Snippets in Action
 
 Here's a TypeScript function that greets users:
 
 ```ts snippet=examples/hello.ts#L1-L3
 export function greetUser(name: string): string {
-  return `Hello, ${name}! Welcome to markdown-code.`;
+  return `Hello, ${name}! Welcome to md-code.`;
 }
 ```
 
@@ -99,7 +156,7 @@ You can also include entire files:
 
 ```json snippet=examples/config.json
 {
-  "name": "markdown-code-demo",
+  "name": "md-code-demo",
   "version": "1.0.0",
   "settings": {
     "debug": false,
@@ -113,6 +170,26 @@ You can also include entire files:
   ]
 } 
 ```
+
+### Snippet Syntax
+
+Use the `snippet=` directive in your fenced code blocks:
+
+````markdown
+```ts snippet=path/to/file.ts
+// This content will be replaced
+```
+````
+
+```ts snippet=path/to/file.ts#L10-L20
+// This will include lines 10-20 only
+```
+
+```ts snippet=path/to/file.ts#L5
+// This will include from line 5 to end of file
+```
+
+````
 
 ## Configuration
 
@@ -145,94 +222,38 @@ Create a `.markdown-coderc.json` file in your project root:
 - **markdownGlob**: Glob pattern to find Markdown files (default: `"**/*.md"`)
 - **includeExtensions**: File extensions to consider for snippets and extraction
 
-## Snippet Syntax
+## Extract Workflow Details
 
-Use the `snippet=` directive in your fenced code blocks:
+When you run `md-code extract`, here's what happens:
 
-````markdown
-```ts snippet=path/to/file.ts
-// This content will be replaced
-```
-````
+**For each markdown file** (e.g., `user-guide.md`):
+- ✅ Creates directory using lowercase filename (`user-guide/`)
+- ✅ Generates numbered snippet files (`snippet1.js`, `snippet2.ts`, etc.)
+- ✅ Handles naming collisions by incrementing numbers
+- ✅ Updates markdown to reference new snippet files
+- ❌ Ignores blocks without language tags
+- ❌ Ignores existing snippet references
 
-```ts snippet=path/to/file.ts#L10-L20
-// This will include lines 10-20 only
-```
-
-```ts snippet=path/to/file.ts#L5
-// This will include from line 5 to end of file
-```
-
-````
-
-## Command Reference
-
-### `sync` (default)
-Updates markdown files with content from snippet files.
-
-```bash
-markdown-code sync
-# or just
-markdown-code
+**Example transformation**:
+```markdown
+<!-- Before extract -->
+```js
+function hello() {
+  console.log("Hello world");
+}
 ```
 
-### `check`
-Validates that markdown files are in sync with snippet files. Exits with non-zero code if differences are found.
-
-```bash
-markdown-code check
+<!-- After extract -->
+```js snippet=user-guide/snippet1.js
+function hello() {
+  console.log("Hello world");
+}
 ```
-
-### `init`
-Creates a default `.markdown-coderc.json` configuration file and `snippets/` directory.
-
-```bash
-markdown-code init
-
-# Also extract snippets from existing code blocks
-markdown-code init --extract
-```
-
-### `extract`
-Extracts code blocks from markdown files to create snippet files. Only processes languages listed in `includeExtensions`.
-
-```bash
-markdown-code extract
-```
-
-**Extract Behavior**:
-- Creates directories using lowercase markdown filename (e.g., `user-guide.md` → `user-guide/`)
-- Generates numbered snippet files (`snippet1.js`, `snippet2.ts`, etc.)
-- Handles naming collisions by incrementing numbers
-- Updates markdown to reference new snippet files
-- Ignores blocks without language tags or existing snippet references
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Run tests
-npm test
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
 ```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
 
 ## License
 

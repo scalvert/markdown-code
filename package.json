@@ -1,5 +1,5 @@
 {
-  "name": "markdown-code",
+  "name": "md-code",
   "version": "0.2.0",
   "description": "Keep code examples in Markdown synchronized with actual source files",
   "keywords": [
@@ -10,14 +10,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/scalvert/markdown-code.git"
+    "url": "https://github.com/scalvert/md-code.git"
   },
   "license": "MIT",
   "author": "",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "markdown-code": "dist/cli.js"
+    "md-code": "dist/cli.js"
   },
   "files": [
     "dist"

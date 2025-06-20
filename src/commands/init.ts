@@ -65,7 +65,7 @@ function createDefaultConfig(): void {
     console.log(
       '2. Add snippet directives to your markdown files: ```js snippet=example.js'
     );
-    console.log('3. Run `markdown-code` to sync your code examples');
+    console.log('3. Run `md-code` to sync your code examples');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to create configuration: ${errorMessage}`);

@@ -30,12 +30,11 @@ describe('CLI', () => {
         "Keep code examples in Markdown synchronized with actual source files
 
         Commands:
-          markdown-code check    Check if markdown files are in sync (exit non-zero on
-                                 mismatch)
-          markdown-code extract  Extract code blocks from markdown to snippet files
-          markdown-code init     Create a default configuration file
-          markdown-code sync     Update markdown files with snippet content (default)
-                                                                               [default]
+          md-code check    Check if markdown files are in sync (exit non-zero on
+                           mismatch)
+          md-code extract  Extract code blocks from markdown to snippet files
+          md-code init     Create a default configuration file
+          md-code sync     Update markdown files with snippet content (default)[default]
 
         Options:
               --config              Path to configuration file                  [string]
@@ -72,7 +71,7 @@ describe('CLI', () => {
         Next steps:
         1. Place your source files in the snippets/ directory
         2. Add snippet directives to your markdown files: \`\`\`js snippet=example.js
-        3. Run \`markdown-code\` to sync your code examples"
+        3. Run \`md-code\` to sync your code examples"
       `);
 
       const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');

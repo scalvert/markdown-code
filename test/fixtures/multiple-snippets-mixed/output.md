@@ -47,7 +47,7 @@ throw new Error('Division by zero');
 Our app uses this configuration:
 
 ```json snippet=config.json
-  "name": "markdown-code-demo",
+  "name": "md-code-demo",
   "version": "1.0.0",
   "settings": {
     "debug": false,
