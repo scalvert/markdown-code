@@ -38,3 +38,10 @@ export interface CheckResult {
   warnings: Array<string>;
   errors: Array<string>;
 }
+
+export interface ExtractResult {
+  extracted: Array<string>;
+  snippetsCreated: number;
+  warnings: Array<string>;
+  errors: Array<string>;
+}

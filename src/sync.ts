@@ -1,9 +1,10 @@
-import { writeFileSync, existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { join, resolve, basename, dirname } from 'node:path';
 import fg from 'fast-glob';
-import type { Config, SyncResult, CheckResult } from './types.js';
+import type { Config, SyncResult, CheckResult, ExtractResult } from './types.js';
 import {
   parseMarkdownFile,
+  parseMarkdownForExtraction,
   loadSnippetContent,
   extractLines,
   replaceCodeBlock,
@@ -187,6 +188,91 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
         if (!isFileInSync) {
           result.outOfSync.push(filePath);
           result.inSync = false;
+        }
+      } catch (error) {
+        result.errors.push(`Error processing ${filePath}: ${error}`);
+      }
+    }
+  } catch (error) {
+    result.errors.push(`Error finding markdown files: ${error}`);
+  }
+
+  return result;
+}
+
+export async function extractSnippets(config: Config): Promise<ExtractResult> {
+  const result: ExtractResult = {
+    extracted: [],
+    snippetsCreated: 0,
+    warnings: [],
+    errors: [],
+  };
+
+  try {
+    const markdownFiles = await fg(config.markdownGlob);
+
+    for (const filePath of markdownFiles) {
+      try {
+        const markdownFile = parseMarkdownForExtraction(filePath);
+        
+        if (markdownFile.codeBlocks.length === 0) {
+          continue;
+        }
+
+        const baseFileName = basename(filePath, '.md');
+        const dirName = baseFileName.toLowerCase();
+        const outputDir = join(config.snippetRoot, dirName);
+
+        if (!existsSync(outputDir)) {
+          mkdirSync(outputDir, { recursive: true });
+        }
+
+        let hasChanges = false;
+        let updatedContent = markdownFile.content;
+        let snippetIndex = 1;
+
+        const supportedExtensions = config.includeExtensions.map(ext => ext.replace('.', '')); 
+
+        for (const codeBlock of markdownFile.codeBlocks) {
+          const lang = codeBlock.language;
+          
+          if (!supportedExtensions.includes(lang)) {
+            continue;
+          }
+
+          const extension = config.includeExtensions.find(ext => ext.replace('.', '') === lang);
+          if (!extension) {
+            continue;
+          }
+
+          let snippetFileName = `snippet${snippetIndex}${extension}`;
+          let snippetFilePath = join(outputDir, snippetFileName);
+
+          while (existsSync(snippetFilePath)) {
+            snippetIndex++;
+            snippetFileName = `snippet${snippetIndex}${extension}`;
+            snippetFilePath = join(outputDir, snippetFileName);
+          }
+
+          writeFileSync(snippetFilePath, codeBlock.content, 'utf-8');
+          result.snippetsCreated++;
+
+          const snippetReference = `${dirName}/${snippetFileName}`;
+          
+          const newCodeBlockStart = '```' + lang + ' snippet=' + snippetReference;
+          
+          updatedContent = updatedContent.replace(
+            new RegExp('^```' + lang + '$', 'm'),
+            newCodeBlockStart
+          );
+          
+          hasChanges = true;
+          snippetIndex++;
+        }
+
+        if (hasChanges) {
+          writeFileSync(filePath, updatedContent, 'utf-8');
+          result.extracted.push(filePath);
         }
       } catch (error) {
         result.errors.push(`Error processing ${filePath}: ${error}`);

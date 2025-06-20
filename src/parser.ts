@@ -135,6 +135,39 @@ export function parseMarkdownFile(filePath: string): MarkdownFile {
   };
 }
 
+export function parseMarkdownForExtraction(filePath: string): MarkdownFile {
+  const content = readFileSync(filePath, 'utf-8');
+  const tree = unified().use(remarkParse).parse(content);
+  const codeBlocks: Array<CodeBlock> = [];
+
+  visit(tree, 'code', (node: Code, index, parent) => {
+    if (!node.lang) {
+      return;
+    }
+
+    const hasSnippetDirective = node.meta && parseSnippetDirective(node.meta);
+
+    if (hasSnippetDirective) {
+      return;
+    }
+
+    codeBlocks.push({
+      language: node.lang,
+      content: node.value,
+      position: {
+        start: node.position?.start.offset ?? 0,
+        end: node.position?.end.offset ?? 0,
+      },
+    });
+  });
+
+  return {
+    filePath,
+    content,
+    codeBlocks,
+  };
+}
+
 export function loadSnippetContent(
   snippetPath: string,
   snippetRoot: string

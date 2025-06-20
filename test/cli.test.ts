@@ -37,9 +37,11 @@ describe('CLI', () => {
             sync                     Update markdown files with snippet content (default)
             check                    Check if markdown files are in sync (exit non-zero on mismatch)
             init                     Create a default configuration file
+            extract                  Extract code blocks from markdown to snippet files
 
           Options
             --write, -w              Update markdown files with snippet content (used with sync)
+            --extract                Extract snippets after creating config (used with init)
             --config                 Path to configuration file
             --snippet-root           Directory containing source files (default: ".")
             --markdown-glob          Glob pattern for markdown files (default: "**/*.md")
@@ -51,6 +53,8 @@ describe('CLI', () => {
             $ markdown-code sync --write                 # updates all snippet blocks (explicit)
             $ markdown-code check                        # verifies sync, fails if out of sync
             $ markdown-code init                         # creates .markdown-coderc.json with default settings
+            $ markdown-code init --extract               # creates config and extracts snippets from existing code blocks
+            $ markdown-code extract                      # extracts code blocks to snippet files
             $ markdown-code --config path/to/.markdown-coderc.json
             $ markdown-code sync --snippet-root ./src --markdown-glob "docs/**/*.md"
             $ markdown-code --include-extensions .ts,.js,.py
