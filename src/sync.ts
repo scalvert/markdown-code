@@ -34,26 +34,26 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
           try {
             const fullPath = resolve(
               config.snippetRoot,
-              codeBlock.snippet.filePath
+              codeBlock.snippet.filePath,
             );
             const resolvedRoot = resolve(config.snippetRoot);
 
             if (!fullPath.startsWith(resolvedRoot)) {
               result.errors.push(
-                `Path traversal attempt detected: ${codeBlock.snippet.filePath}`
+                `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
               );
               continue;
             }
           } catch (error) {
             result.errors.push(
-              `Error validating path ${codeBlock.snippet.filePath}: ${error}`
+              `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
             );
             continue;
           }
 
           const snippetPath = join(
             config.snippetRoot,
-            codeBlock.snippet.filePath
+            codeBlock.snippet.filePath,
           );
 
           if (!existsSync(snippetPath)) {
@@ -64,15 +64,16 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
           try {
             const snippetContent = loadSnippetContent(
               codeBlock.snippet.filePath,
-              config.snippetRoot
+              config.snippetRoot,
             );
             const extractedContent = extractLines(
               snippetContent,
               codeBlock.snippet.startLine,
-              codeBlock.snippet.endLine
+              codeBlock.snippet.endLine,
             );
 
-            // Skip update if extracted content is empty and we have line ranges (likely invalid range)
+            // Skip update if extracted content is empty and we have line ranges
+            // (likely invalid range)
             if (
               extractedContent === '' &&
               (codeBlock.snippet.startLine || codeBlock.snippet.endLine)
@@ -84,13 +85,13 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
               updatedContent = replaceCodeBlock(
                 updatedContent,
                 codeBlock,
-                extractedContent
+                extractedContent,
               );
               hasChanges = true;
             }
           } catch (error) {
             result.errors.push(
-              `Error loading snippet ${snippetPath}: ${error}`
+              `Error loading snippet ${snippetPath}: ${error}`,
             );
           }
         }
@@ -134,26 +135,26 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
           try {
             const fullPath = resolve(
               config.snippetRoot,
-              codeBlock.snippet.filePath
+              codeBlock.snippet.filePath,
             );
             const resolvedRoot = resolve(config.snippetRoot);
 
             if (!fullPath.startsWith(resolvedRoot)) {
               result.errors.push(
-                `Path traversal attempt detected: ${codeBlock.snippet.filePath}`
+                `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
               );
               continue;
             }
           } catch (error) {
             result.errors.push(
-              `Error validating path ${codeBlock.snippet.filePath}: ${error}`
+              `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
             );
             continue;
           }
 
           const snippetPath = join(
             config.snippetRoot,
-            codeBlock.snippet.filePath
+            codeBlock.snippet.filePath,
           );
 
           if (!existsSync(snippetPath)) {
@@ -164,12 +165,12 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
           try {
             const snippetContent = loadSnippetContent(
               codeBlock.snippet.filePath,
-              config.snippetRoot
+              config.snippetRoot,
             );
             const extractedContent = extractLines(
               snippetContent,
               codeBlock.snippet.startLine,
-              codeBlock.snippet.endLine
+              codeBlock.snippet.endLine,
             );
 
             if (extractedContent !== codeBlock.content) {
@@ -178,7 +179,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             }
           } catch (error) {
             result.errors.push(
-              `Error loading snippet ${snippetPath}: ${error}`
+              `Error loading snippet ${snippetPath}: ${error}`,
             );
           }
         }
@@ -212,7 +213,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
     for (const filePath of markdownFiles) {
       try {
         const markdownFile = parseMarkdownForExtraction(filePath);
-        
+
         if (markdownFile.codeBlocks.length === 0) {
           continue;
         }
@@ -229,11 +230,11 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
         let updatedContent = markdownFile.content;
         let snippetIndex = 1;
 
-        const supportedExtensions = config.includeExtensions.map(ext => ext.replace('.', '')); 
+        const supportedExtensions = config.includeExtensions.map(ext => ext.replace('.', ''));
 
         for (const codeBlock of markdownFile.codeBlocks) {
           const lang = codeBlock.language;
-          
+
           if (!supportedExtensions.includes(lang)) {
             continue;
           }
@@ -256,14 +257,14 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
           result.snippetsCreated++;
 
           const snippetReference = `${dirName}/${snippetFileName}`;
-          
+
           const newCodeBlockStart = '```' + lang + ' snippet=' + snippetReference;
-          
+
           updatedContent = updatedContent.replace(
             new RegExp('^```' + lang + '$', 'm'),
-            newCodeBlockStart
+            newCodeBlockStart,
           );
-          
+
           hasChanges = true;
           snippetIndex++;
         }

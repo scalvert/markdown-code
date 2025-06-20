@@ -63,7 +63,7 @@ function createDefaultConfig(): void {
     console.log('\nNext steps:');
     console.log('1. Place your source files in the snippets/ directory');
     console.log(
-      '2. Add snippet directives to your markdown files: ```js snippet=example.js'
+      '2. Add snippet directives to your markdown files: ```js snippet=example.js',
     );
     console.log('3. Run `md-code` to sync your code examples');
   } catch (error) {
@@ -75,10 +75,10 @@ function createDefaultConfig(): void {
 export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
   try {
     createDefaultConfig();
-    
+
     if (argv.extract) {
       console.log('Extracting snippets from existing code blocks...');
-      
+
       const overrides: ConfigOverrides = {};
       if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
       if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
@@ -86,9 +86,9 @@ export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
 
       const config = loadConfig(argv.config, overrides);
       validateConfig(config);
-      
+
       const result = await extractSnippets(config);
-      
+
       if (result.warnings.length > 0) {
         console.log('Warnings:');
         for (const warning of result.warnings) {
@@ -118,4 +118,4 @@ export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
     console.error(errorMessage);
     process.exit(1);
   }
-}; 
+};

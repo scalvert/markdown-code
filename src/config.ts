@@ -29,7 +29,7 @@ export interface ConfigOverrides {
 
 export function loadConfig(
   configPath?: string,
-  overrides: ConfigOverrides = {}
+  overrides: ConfigOverrides = {},
 ): Config {
   let config = { ...DEFAULT_CONFIG };
 
@@ -47,14 +47,14 @@ export function loadConfig(
       const content = readFileSync(resolve(configPath), 'utf-8');
       config = { ...config, ...JSON.parse(content) };
     } catch (error) {
-      let errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       if (errorMessage.includes('ENOENT')) {
         throw new Error(`Config file not found: ${configPath}`);
       }
 
       throw new Error(
-        `Failed to load config from ${configPath}: ${errorMessage}`
+        `Failed to load config from ${configPath}: ${errorMessage}`,
       );
     }
   }

@@ -54,4 +54,4 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     console.error(errorMessage);
     process.exit(1);
   }
-}; 
+};

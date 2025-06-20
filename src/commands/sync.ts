@@ -53,4 +53,4 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
     console.error(errorMessage);
     process.exit(1);
   }
-}; 
+};

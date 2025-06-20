@@ -7,11 +7,11 @@ import type { Code } from 'mdast';
 import type { MarkdownFile, CodeBlock, SnippetDirective } from './types.js';
 
 export function parseSnippetDirective(
-  info: string
+  info: string,
 ): SnippetDirective | undefined {
   const snippetMatch = info.match(/snippet=([^\s]+)/);
 
-  if (!snippetMatch || !snippetMatch[1]) {
+  if (!snippetMatch?.[1]) {
     return undefined;
   }
 
@@ -64,7 +64,7 @@ export function parseSnippetDirective(
         };
       }
 
-      let endLine = parseInt(rangeParts[1]!.replace(/^L/, ''), 10); // Remove optional 'L' prefix
+      const endLine = parseInt(rangeParts[1]!.replace(/^L/, ''), 10); // Remove optional 'L' prefix
 
       if (isNaN(endLine) || endLine < 0) {
         // For mixed valid/invalid numbers, return just the valid start line
@@ -170,7 +170,7 @@ export function parseMarkdownForExtraction(filePath: string): MarkdownFile {
 
 export function loadSnippetContent(
   snippetPath: string,
-  snippetRoot: string
+  snippetRoot: string,
 ): string {
   const fullPath = resolve(snippetRoot, snippetPath);
   const resolvedRoot = resolve(snippetRoot);
@@ -185,31 +185,31 @@ export function loadSnippetContent(
 
 export function trimBlankLines(content: string): string {
   const lines = content.split('\n');
-  
+
   // Find first non-blank line
   let start = 0;
   while (start < lines.length && lines[start]!.trim() === '') {
     start++;
   }
-  
+
   // Find last non-blank line
   let end = lines.length - 1;
   while (end >= 0 && lines[end]!.trim() === '') {
     end--;
   }
-  
+
   // If all lines are blank, return empty string
   if (start > end) {
     return '';
   }
-  
+
   return lines.slice(start, end + 1).join('\n');
 }
 
 export function extractLines(
   content: string,
   startLine?: number,
-  endLine?: number
+  endLine?: number,
 ): string {
   if (!startLine && !endLine) {
     return trimBlankLines(content);
@@ -232,14 +232,12 @@ export function extractLines(
 export function replaceCodeBlock(
   markdownContent: string,
   codeBlock: CodeBlock,
-  newContent: string
+  newContent: string,
 ): string {
   const lines = markdownContent.split('\n');
   let inCodeBlock = false;
   let codeBlockStart = -1;
   let codeBlockEnd = -1;
-  let currentLine = 0;
-
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
 
@@ -254,7 +252,7 @@ export function replaceCodeBlock(
     ) {
       // Extract the snippet directive from the line
       const snippetMatch = line.match(/snippet=([^\s]+)/);
-      if (snippetMatch && snippetMatch[0]) {
+      if (snippetMatch?.[0]) {
         const lineSnippet = parseSnippetDirective(snippetMatch[0]);
         // Match if the parsed snippet directives are equivalent
         if (
@@ -273,10 +271,6 @@ export function replaceCodeBlock(
     if (inCodeBlock && line.trim() === '```') {
       codeBlockEnd = i;
       break;
-    }
-
-    if (inCodeBlock) {
-      currentLine += 1;
     }
   }
 
