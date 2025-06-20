@@ -1,5 +1,6 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
+import { createRequire } from 'node:module';
 import fg from 'fast-glob';
 import type { Config, SyncResult, CheckResult, ExtractResult } from './types.js';
 import {
@@ -9,7 +10,9 @@ import {
   extractLines,
   replaceCodeBlock,
 } from './parser.js';
-import languageMap from 'language-map';
+
+const require = createRequire(import.meta.url);
+const languageMap = require('language-map');
 
 export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
   const result: SyncResult = {
