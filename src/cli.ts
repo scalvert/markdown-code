@@ -7,41 +7,36 @@ import { syncMarkdownFiles, checkMarkdownFiles } from './sync.js';
 const cli = meow(
   `
   Usage
-    $ markdown-code [options]
+    $ markdown-code <command> [options]
+
+  Commands
+    sync                     Update markdown files with snippet content (default)
+    check                    Check if markdown files are in sync (exit non-zero on mismatch)
+    init                     Create a default configuration file
 
   Options
-    --check, -c              Check if markdown files are in sync (exit non-zero on mismatch)
-    --write, -w              Update markdown files with snippet content (default)
-    --init, -i               Create a default configuration file
+    --write, -w              Update markdown files with snippet content (used with sync)
     --config                 Path to configuration file
     --snippet-root           Directory containing source files (default: ".")
     --markdown-glob          Glob pattern for markdown files (default: "**/*.md")
     --include-extensions     Comma-separated list of file extensions to include
 
   Examples
-    $ markdown-code                 # updates all snippet blocks (default is --write)
-    $ markdown-code --check         # verifies sync, fails if out of sync
-    $ markdown-code --init          # creates .markdown-coderc.json with default settings
+    $ markdown-code                              # updates all snippet blocks (default sync)
+    $ markdown-code sync                         # updates all snippet blocks
+    $ markdown-code sync --write                 # updates all snippet blocks (explicit)
+    $ markdown-code check                        # verifies sync, fails if out of sync
+    $ markdown-code init                         # creates .markdown-coderc.json with default settings
     $ markdown-code --config path/to/.markdown-coderc.json
-    $ markdown-code --snippet-root ./src --markdown-glob "docs/**/*.md"
+    $ markdown-code sync --snippet-root ./src --markdown-glob "docs/**/*.md"
     $ markdown-code --include-extensions .ts,.js,.py
 `,
   {
     importMeta: import.meta,
     flags: {
-      check: {
-        type: 'boolean',
-        shortFlag: 'c',
-        default: false,
-      },
       write: {
         type: 'boolean',
         shortFlag: 'w',
-        default: false,
-      },
-      init: {
-        type: 'boolean',
-        shortFlag: 'i',
         default: false,
       },
       config: {
@@ -111,9 +106,17 @@ function createDefaultConfig(): void {
 
 async function main(): Promise<void> {
   try {
-    if (cli.flags.init) {
+    const command = cli.input[0] || 'sync';
+
+    if (command === 'init') {
       createDefaultConfig();
       return;
+    }
+
+    if (!['sync', 'check'].includes(command)) {
+      console.error(`Unknown command: ${command}`);
+      console.error('Available commands: sync, check, init');
+      process.exit(1);
     }
 
     const overrides: ConfigOverrides = {};
@@ -125,10 +128,7 @@ async function main(): Promise<void> {
     const config = loadConfig(cli.flags.config, overrides);
     validateConfig(config);
 
-    const shouldWrite =
-      cli.flags.write || (!cli.flags.check && !cli.flags.write);
-
-    if (shouldWrite) {
+    if (command === 'sync') {
       console.log('Syncing markdown files...');
       const result = await syncMarkdownFiles(config);
 
@@ -155,7 +155,7 @@ async function main(): Promise<void> {
       } else {
         console.log('All files are already in sync.');
       }
-    } else {
+    } else if (command === 'check') {
       console.log('Checking markdown files...');
       const result = await checkMarkdownFiles(config);
 

@@ -31,23 +31,28 @@ describe('CLI', () => {
           Keep code examples in Markdown synchronized with actual source files
 
           Usage
-            $ markdown-code [options]
+            $ markdown-code <command> [options]
+
+          Commands
+            sync                     Update markdown files with snippet content (default)
+            check                    Check if markdown files are in sync (exit non-zero on mismatch)
+            init                     Create a default configuration file
 
           Options
-            --check, -c              Check if markdown files are in sync (exit non-zero on mismatch)
-            --write, -w              Update markdown files with snippet content (default)
-            --init, -i               Create a default configuration file
+            --write, -w              Update markdown files with snippet content (used with sync)
             --config                 Path to configuration file
             --snippet-root           Directory containing source files (default: ".")
             --markdown-glob          Glob pattern for markdown files (default: "**/*.md")
             --include-extensions     Comma-separated list of file extensions to include
 
           Examples
-            $ markdown-code                 # updates all snippet blocks (default is --write)
-            $ markdown-code --check         # verifies sync, fails if out of sync
-            $ markdown-code --init          # creates .markdown-coderc.json with default settings
+            $ markdown-code                              # updates all snippet blocks (default sync)
+            $ markdown-code sync                         # updates all snippet blocks
+            $ markdown-code sync --write                 # updates all snippet blocks (explicit)
+            $ markdown-code check                        # verifies sync, fails if out of sync
+            $ markdown-code init                         # creates .markdown-coderc.json with default settings
             $ markdown-code --config path/to/.markdown-coderc.json
-            $ markdown-code --snippet-root ./src --markdown-glob "docs/**/*.md"
+            $ markdown-code sync --snippet-root ./src --markdown-glob "docs/**/*.md"
             $ markdown-code --include-extensions .ts,.js,.py
         "
       `);
@@ -58,13 +63,13 @@ describe('CLI', () => {
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
-      expect(result.stdout).toContain('0.1.0');
+      expect(result.stdout).toContain('0.2.0');
     });
   });
 
   describe('init mode', () => {
     it('creates default configuration and snippets directory', async () => {
-      const result = await runBin('--init');
+      const result = await runBin('init');
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
@@ -116,7 +121,7 @@ describe('CLI', () => {
         '.markdown-coderc.json': JSON.stringify(existingConfig),
       });
 
-      const result = await runBin('--init');
+      const result = await runBin('init');
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
@@ -137,7 +142,7 @@ describe('CLI', () => {
         },
       });
 
-      const result = await runBin('--init');
+      const result = await runBin('init');
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
@@ -302,7 +307,7 @@ const value = "same";
         'README.md': markdownContent,
       });
 
-      const result = await runBin('--check');
+      const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
@@ -326,7 +331,7 @@ const updated = "old";
         'README.md': markdownContent,
       });
 
-      const result = await runBin('--check');
+      const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
@@ -335,7 +340,7 @@ const updated = "old";
       `);
     });
 
-    it('uses short flag -c', async () => {
+    it('uses check command', async () => {
       const sourceContent = 'const test = true;';
       
       const markdownContent = `# Test
@@ -349,7 +354,7 @@ const test = true;
         'README.md': markdownContent,
       });
 
-      const result = await runBin('-c');
+      const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
@@ -373,7 +378,7 @@ const test = true;
         'README.md': markdownContent,
       });
 
-      const result = await runBin('--check');
+      const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
@@ -393,7 +398,7 @@ old content
         'README.md': markdownContent,
       });
 
-      const result = await runBin('--check');
+      const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
