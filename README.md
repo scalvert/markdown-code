@@ -51,7 +51,7 @@ function greet(name) {
 - **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
 - **Check Mode**: Verify documentation is in sync without making changes
 - **Multi-language**: Support for any programming language
-- **Configurable**: Flexible configuration via `.markdown-coderc.json`
+- **Configurable**: Flexible configuration via `.md-coderc.json`
 
 ## Installation
 
@@ -85,7 +85,7 @@ If you already have markdown files with code blocks:
 
 That's it! `md-code` will:
 
-- ✅ Create `.markdown-coderc.json` configuration
+- ✅ Create `.md-coderc.json` configuration
 - ✅ Create `snippets/` directory  
 - ✅ Extract code blocks from your markdown to snippet files
 - ✅ Update markdown to reference the new snippet files
@@ -219,7 +219,7 @@ Use the `snippet=` directive in your fenced code blocks:
 
 ## Configuration
 
-Create a `.markdown-coderc.json` file in your project root:
+Create a `.md-coderc.json` file in your project root:
 
 ```json
 {

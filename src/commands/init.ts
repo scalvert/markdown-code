@@ -24,11 +24,11 @@ export const builder = (yargs: Argv) => {
 };
 
 function createDefaultConfig(): void {
-  const configPath = resolve('.markdown-coderc.json');
+  const configPath = resolve('.md-coderc.json');
   const snippetsDir = resolve('snippets');
 
   if (existsSync(configPath)) {
-    console.log('Configuration file already exists at .markdown-coderc.json');
+    console.log('Configuration file already exists at .md-coderc.json');
     return;
   }
 
@@ -53,7 +53,7 @@ function createDefaultConfig(): void {
 
   try {
     writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
-    console.log('Created .markdown-coderc.json with default configuration');
+    console.log('Created .md-coderc.json with default configuration');
 
     if (!existsSync(snippetsDir)) {
       mkdirSync(snippetsDir, { recursive: true });

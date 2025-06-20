@@ -65,7 +65,7 @@ describe('CLI', () => {
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Created .markdown-coderc.json with default configuration
+        "Created .md-coderc.json with default configuration
         Created snippets/ directory for your source files
 
         Next steps:
@@ -74,7 +74,7 @@ describe('CLI', () => {
         3. Run \`md-code\` to sync your code examples"
       `);
 
-      const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');
+      const configContent = readFileSync(path.join(project.baseDir, '.md-coderc.json'), 'utf-8');
       const config = JSON.parse(configContent);
       
       expect(config).toMatchInlineSnapshot(`
@@ -109,7 +109,7 @@ describe('CLI', () => {
       };
 
       await project.write({
-        '.markdown-coderc.json': JSON.stringify(existingConfig),
+        '.md-coderc.json': JSON.stringify(existingConfig),
       });
 
       const result = await runBin('init');
@@ -117,10 +117,10 @@ describe('CLI', () => {
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Configuration file already exists at .markdown-coderc.json"
+        "Configuration file already exists at .md-coderc.json"
       `);
 
-      const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');
+      const configContent = readFileSync(path.join(project.baseDir, '.md-coderc.json'), 'utf-8');
       const config = JSON.parse(configContent);
       
       expect(config).toEqual(existingConfig);
@@ -137,7 +137,7 @@ describe('CLI', () => {
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
-      expect(result.stdout).toContain('Created .markdown-coderc.json with default configuration');
+      expect(result.stdout).toContain('Created .md-coderc.json with default configuration');
       expect(result.stdout).not.toContain('Created snippets/ directory');
 
       const existingFile = readFileSync(path.join(project.baseDir, 'snippets', 'example.js'), 'utf-8');
@@ -417,7 +417,7 @@ old content
       expect(result.stderr).toMatchInlineSnapshot(`"Config file not found: nonexistent.json"`);
     });
 
-    it('uses .markdown-coderc.json when present', async () => {
+    it('uses .md-coderc.json when present', async () => {
       const configContent = {
         snippetRoot: './examples',
         markdownGlob: '**/*.md',
@@ -433,7 +433,7 @@ old content
 \`\`\``;
 
       await project.write({
-        '.markdown-coderc.json': JSON.stringify(configContent),
+        '.md-coderc.json': JSON.stringify(configContent),
         'examples': {
           'config.js': sourceContent,
         },
@@ -466,7 +466,7 @@ old content
 \`\`\``;
 
       await project.write({
-        '.markdown-coderc.json': JSON.stringify(configContent),
+        '.md-coderc.json': JSON.stringify(configContent),
         'custom-source': {
           'example.js': sourceContent,
         },
