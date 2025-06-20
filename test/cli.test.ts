@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createBinTester, BinTesterProject } from '@scalvert/bin-tester';
 import { loadScenario } from './fixtures/index.js';
+import { VERSION } from '../src/version.js';
 
 describe('CLI', () => {
   let project: BinTesterProject;
@@ -54,7 +55,7 @@ describe('CLI', () => {
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
-      expect(result.stdout).toContain('0.2.0');
+      expect(result.stdout).toContain(VERSION);
     });
   });
 

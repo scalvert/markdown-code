@@ -9,6 +9,7 @@ import {
   extractLines,
   replaceCodeBlock,
 } from './parser.js';
+import languageMap from 'language-map';
 
 export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
   const result: SyncResult = {
@@ -199,6 +200,25 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
   return result;
 }
 
+function getExtensionForLanguage(language: string): string | null {
+  const normalizedLang = language.toLowerCase();
+
+  for (const [langName, langData] of Object.entries(languageMap)) {
+    if (langName.toLowerCase() === normalizedLang) {
+      return (langData as any).extensions?.[0] ?? null;
+    }
+
+    const hasMatchingAlias = (langData as any).aliases?.some(
+      (alias: string) => alias.toLowerCase() === normalizedLang,
+    );
+    if (hasMatchingAlias) {
+      return (langData as any).extensions?.[0] ?? null;
+    }
+  }
+
+  return null;
+}
+
 export async function extractSnippets(config: Config): Promise<ExtractResult> {
   const result: ExtractResult = {
     extracted: [],
@@ -230,26 +250,20 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
         let updatedContent = markdownFile.content;
         let snippetIndex = 1;
 
-        const supportedExtensions = config.includeExtensions.map(ext => ext.replace('.', ''));
-
         for (const codeBlock of markdownFile.codeBlocks) {
           const lang = codeBlock.language;
+          const mappedExtension = getExtensionForLanguage(lang);
 
-          if (!supportedExtensions.includes(lang)) {
+          if (!mappedExtension || !config.includeExtensions.includes(mappedExtension)) {
             continue;
           }
 
-          const extension = config.includeExtensions.find(ext => ext.replace('.', '') === lang);
-          if (!extension) {
-            continue;
-          }
-
-          let snippetFileName = `snippet${snippetIndex}${extension}`;
+          let snippetFileName = `snippet${snippetIndex}${mappedExtension}`;
           let snippetFilePath = join(outputDir, snippetFileName);
 
           while (existsSync(snippetFilePath)) {
             snippetIndex++;
-            snippetFileName = `snippet${snippetIndex}${extension}`;
+            snippetFileName = `snippet${snippetIndex}${mappedExtension}`;
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
