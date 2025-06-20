@@ -1,5 +1,5 @@
 {
-  "name": "md-code",
+  "name": "markdown-code",
   "version": "0.2.0",
   "description": "Keep code examples in Markdown synchronized with actual source files",
   "keywords": [
@@ -10,7 +10,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/scalvert/md-code.git"
+    "url": "https://github.com/scalvert/markdown-code.git"
   },
   "license": "MIT",
   "author": "",

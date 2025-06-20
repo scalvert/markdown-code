@@ -1,5 +1,5 @@
 export function greetUser(name: string): string {
-  return `Hello, ${name}! Welcome to md-code.`;
+  return `Hello, ${name}! Welcome to markdown-code.`;
 }
 
 export function calculateSum(a: number, b: number): number {

@@ -34,7 +34,7 @@ export function loadConfig(
   let config = { ...DEFAULT_CONFIG };
 
   if (!configPath) {
-    const defaultPath = resolve('.md-coderc.json');
+    const defaultPath = resolve('.markdown-coderc.json');
 
     try {
       const content = readFileSync(defaultPath, 'utf-8');

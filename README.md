@@ -51,12 +51,12 @@ function greet(name) {
 - **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
 - **Check Mode**: Verify documentation is in sync without making changes
 - **Multi-language**: Support for any programming language
-- **Configurable**: Flexible configuration via `.md-coderc.json`
+- **Configurable**: Flexible configuration via `.markdown-coderc.json`
 
 ## Installation
 
 ```bash
-npm install -g md-code
+npm install -g markdown-code
 ```
 
 ## Quick Start
@@ -68,7 +68,7 @@ If you already have markdown files with code blocks:
 1. Install globally
 
   ```bash
-  npm install -g md-code
+  npm install -g markdown-code
   ```
 
 2. Navigate to your project
@@ -85,7 +85,7 @@ If you already have markdown files with code blocks:
 
 That's it! `md-code` will:
 
-- ✅ Create `.md-coderc.json` configuration
+- ✅ Create `.markdown-coderc.json` configuration
 - ✅ Create `snippets/` directory  
 - ✅ Extract code blocks from your markdown to snippet files
 - ✅ Update markdown to reference the new snippet files
@@ -110,7 +110,7 @@ If you're starting fresh:
 1. Install and setup
 
   ```bash
-  npm install -g md-code
+  npm install -g markdown-code
   md-code init
   ```
 
@@ -219,7 +219,7 @@ Use the `snippet=` directive in your fenced code blocks:
 
 ## Configuration
 
-Create a `.md-coderc.json` file in your project root:
+Create a `.markdown-coderc.json` file in your project root:
 
 ```json
 {
