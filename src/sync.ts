@@ -2,7 +2,13 @@ import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
-import type { Config, SyncResult, CheckResult, ExtractResult, Issue } from './types.js';
+import type {
+  Config,
+  SyncResult,
+  CheckResult,
+  ExtractResult,
+  Issue,
+} from './types.js';
 import {
   parseMarkdownFile,
   parseMarkdownForExtraction,
@@ -221,7 +227,9 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             );
 
             if (extractedContent !== codeBlock.content) {
-              const endLineText = codeBlock.snippet.endLine ? `-L${codeBlock.snippet.endLine}` : '';
+              const endLineText = codeBlock.snippet.endLine
+                ? `-L${codeBlock.snippet.endLine}`
+                : '';
               const rangeText = codeBlock.snippet.startLine
                 ? `#L${codeBlock.snippet.startLine}${endLineText}`
                 : '';
@@ -333,9 +341,15 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 
         for (const codeBlock of markdownFile.codeBlocks) {
           const lang = codeBlock.language;
-          const mappedExtension = getExtensionForLanguage(lang, config.includeExtensions);
+          const mappedExtension = getExtensionForLanguage(
+            lang,
+            config.includeExtensions,
+          );
 
-          if (!mappedExtension || !config.includeExtensions.includes(mappedExtension)) {
+          if (
+            !mappedExtension ||
+            !config.includeExtensions.includes(mappedExtension)
+          ) {
             continue;
           }
 
@@ -353,7 +367,8 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 
           const snippetReference = `${dirName}/${snippetFileName}`;
 
-          const newCodeBlockStart = '```' + lang + ' snippet=' + snippetReference;
+          const newCodeBlockStart =
+            '```' + lang + ' snippet=' + snippetReference;
 
           updatedContent = updatedContent.replace(
             new RegExp('^```' + lang + '$', 'm'),

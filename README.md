@@ -7,7 +7,7 @@
 Your documentation has code examples, but they get outdated:
 
 - ❌ You update your source code but forget to update the docs
-- ❌ Code examples in README/docs become stale and misleading  
+- ❌ Code examples in README/docs become stale and misleading
 - ❌ Copy-paste errors introduce bugs in documentation
 - ❌ Maintaining multiple copies of the same code is painful
 
@@ -27,7 +27,7 @@ Your documentation has code examples, but they get outdated:
 ````markdown
 ```js
 function greet(name) {
-  return "Hello " + name;  // Oops, code changed but docs didn't!
+  return 'Hello ' + name; // Oops, code changed but docs didn't!
 }
 ```
 ````
@@ -37,7 +37,7 @@ function greet(name) {
 ````markdown
 ```js snippet=src/utils/greet.js
 function greet(name) {
-  return `Hello, ${name}! Welcome to our app.`;  // Always current!
+  return `Hello, ${name}! Welcome to our app.`; // Always current!
 }
 ```
 ````
@@ -67,26 +67,26 @@ If you already have markdown files with code blocks:
 
 1. Install globally
 
-  ```bash
-  npm install -g markdown-code
-  ```
+```bash
+npm install -g markdown-code
+```
 
 2. Navigate to your project
 
-  ```bash
-  cd your-project
-  ```
+```bash
+cd your-project
+```
 
 3. One-command setup: create config + extract all code blocks
 
-  ```bash
-  md-code init --extract
-  ```
+```bash
+md-code init --extract
+```
 
 That's it! `md-code` will:
 
 - ✅ Create `.markdown-coderc.json` configuration
-- ✅ Create `snippets/` directory  
+- ✅ Create `snippets/` directory
 - ✅ Extract code blocks from your markdown to snippet files
 - ✅ Update markdown to reference the new snippet files
 
@@ -109,10 +109,10 @@ If you're starting fresh:
 
 1. Install and setup
 
-  ```bash
-  npm install -g markdown-code
-  md-code init
-  ```
+```bash
+npm install -g markdown-code
+md-code init
+```
 
 2. Add source files to snippets/ directory
 3. Reference them in markdown:
@@ -130,23 +130,23 @@ md-code sync
 
 ## Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `md-code` | Update markdown with snippet content (default) | `md-code` |
-| `md-code sync` | Same as above, explicit | `md-code sync` |
-| `md-code check` | Verify files are in sync (CI-friendly) | `md-code check` |
-| `md-code init` | Create config and snippets directory | `md-code init` |
-| `md-code extract` | Extract code blocks to snippet files | `md-code extract` |
-| `md-code init --extract` | Setup + extract in one step | `md-code init --extract` |
+| Command                  | Description                                    | Example                  |
+| ------------------------ | ---------------------------------------------- | ------------------------ |
+| `md-code`                | Update markdown with snippet content (default) | `md-code`                |
+| `md-code sync`           | Same as above, explicit                        | `md-code sync`           |
+| `md-code check`          | Verify files are in sync (CI-friendly)         | `md-code check`          |
+| `md-code init`           | Create config and snippets directory           | `md-code init`           |
+| `md-code extract`        | Extract code blocks to snippet files           | `md-code extract`        |
+| `md-code init --extract` | Setup + extract in one step                    | `md-code init --extract` |
 
 ### Global Options
 
-| Option | Description | Example |
-|--------|-------------|---------|
-| `--config` | Custom configuration file | `md-code --config custom.json` |
-| `--snippet-root` | Override snippet directory | `md-code --snippet-root ./src` |
-| `--markdown-glob` | Override markdown file pattern | `md-code --markdown-glob "docs/**/*.md"` |
-| `--include-extensions` | Override file extensions | `md-code --include-extensions .ts,.js,.py` |
+| Option                 | Description                    | Example                                    |
+| ---------------------- | ------------------------------ | ------------------------------------------ |
+| `--config`             | Custom configuration file      | `md-code --config custom.json`             |
+| `--snippet-root`       | Override snippet directory     | `md-code --snippet-root ./src`             |
+| `--markdown-glob`      | Override markdown file pattern | `md-code --markdown-glob "docs/**/*.md"`   |
+| `--include-extensions` | Override file extensions       | `md-code --include-extensions .ts,.js,.py` |
 
 ## How It Works
 
@@ -168,7 +168,7 @@ And here's an async function for fetching user data:
 ```ts snippet=examples/fetch_users.ts#L7-L14
 export async function fetchUsers(): Promise<Array<User>> {
   const response = await fetch('/api/users');
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch users: ${response.statusText}`);
   }
@@ -189,12 +189,8 @@ You can also include entire files:
     "maxRetries": 3,
     "timeout": 5000
   },
-  "features": [
-    "syntax-highlighting",
-    "line-numbers",
-    "auto-sync"
-  ]
-} 
+  "features": ["syntax-highlighting", "line-numbers", "auto-sync"]
+}
 ```
 ````
 
@@ -214,7 +210,6 @@ Use the `snippet=` directive in your fenced code blocks:
 ```ts snippet=path/to/file.ts#L5
 // This will include from line 5 to end of file
 ```
-
 ````
 
 ## Configuration

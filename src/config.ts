@@ -47,7 +47,8 @@ export function loadConfig(
       const content = readFileSync(resolve(configPath), 'utf-8');
       config = { ...config, ...JSON.parse(content) };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
       if (errorMessage.includes('ENOENT')) {
         throw new Error(`Config file not found: ${configPath}`);

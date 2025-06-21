@@ -1,7 +1,7 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
 import { syncMarkdownFiles } from '../sync.js';
-import { formatEslintStyle, hasErrors, hasIssues } from '../formatter.js';
+import { format, hasErrors, hasIssues } from '../formatter.js';
 
 interface SyncArgs {
   config?: string;
@@ -18,7 +18,8 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
     const overrides: ConfigOverrides = {};
     if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
     if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
-    if (argv.includeExtensions) overrides.includeExtensions = argv.includeExtensions;
+    if (argv.includeExtensions)
+      overrides.includeExtensions = argv.includeExtensions;
 
     const config = loadConfig(argv.config, overrides);
     validateConfig(config);
@@ -42,9 +43,9 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
     }
 
     if (hasIssues(result.fileIssues)) {
-      const formattedOutput = formatEslintStyle(result.fileIssues);
+      const formattedOutput = format(result.fileIssues);
       console.error(formattedOutput);
-      
+
       if (hasErrors(result.fileIssues)) {
         process.exit(1);
       }

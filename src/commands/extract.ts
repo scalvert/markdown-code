@@ -17,7 +17,8 @@ export const handler = async (argv: ArgumentsCamelCase<ExtractArgs>) => {
     const overrides: ConfigOverrides = {};
     if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
     if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
-    if (argv.includeExtensions) overrides.includeExtensions = argv.includeExtensions;
+    if (argv.includeExtensions)
+      overrides.includeExtensions = argv.includeExtensions;
 
     const config = loadConfig(argv.config, overrides);
     validateConfig(config);

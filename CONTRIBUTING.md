@@ -111,4 +111,4 @@ Releases are handled by maintainers:
 
 ## Questions?
 
-Feel free to open an issue for questions about contributing or development! 
+Feel free to open an issue for questions about contributing or development!

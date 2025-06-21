@@ -1,7 +1,7 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
 import { checkMarkdownFiles } from '../sync.js';
-import { formatEslintStyle, hasErrors, hasIssues } from '../formatter.js';
+import { format, hasErrors, hasIssues } from '../formatter.js';
 
 interface CheckArgs {
   config?: string;
@@ -11,14 +11,16 @@ interface CheckArgs {
 }
 
 export const command = 'check';
-export const describe = 'Check if markdown files are in sync (exit non-zero on mismatch)';
+export const describe =
+  'Check if markdown files are in sync (exit non-zero on mismatch)';
 
 export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
   try {
     const overrides: ConfigOverrides = {};
     if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
     if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
-    if (argv.includeExtensions) overrides.includeExtensions = argv.includeExtensions;
+    if (argv.includeExtensions)
+      overrides.includeExtensions = argv.includeExtensions;
 
     const config = loadConfig(argv.config, overrides);
     validateConfig(config);
@@ -42,7 +44,7 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     }
 
     if (hasIssues(result.fileIssues)) {
-      const formattedOutput = formatEslintStyle(result.fileIssues);
+      const formattedOutput = format(result.fileIssues);
       console.error(formattedOutput);
 
       if (hasErrors(result.fileIssues)) {

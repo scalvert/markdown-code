@@ -18,7 +18,8 @@ export const describe = 'Create a default configuration file';
 export const builder = (yargs: Argv) => {
   return yargs.option('extract', {
     type: 'boolean',
-    describe: 'Extract snippets from existing code blocks after creating config',
+    describe:
+      'Extract snippets from existing code blocks after creating config',
     default: false,
   });
 };
@@ -82,7 +83,8 @@ export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
       const overrides: ConfigOverrides = {};
       if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
       if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
-      if (argv.includeExtensions) overrides.includeExtensions = argv.includeExtensions;
+      if (argv.includeExtensions)
+        overrides.includeExtensions = argv.includeExtensions;
 
       const config = loadConfig(argv.config, overrides);
       validateConfig(config);
