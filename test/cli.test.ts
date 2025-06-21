@@ -244,11 +244,14 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toBe('');
+      expect(result.stderr).toMatchInlineSnapshot(`
+        "README.md
+          3:1    warning Snippet file not found: missing.js  snippet-not-found
+
+        ✖ 1 problem (1 warning)"
+      `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
-        Warnings:
-          Snippet file not found: missing.js
         All files are already in sync."
       `);
     });
@@ -297,8 +300,10 @@ const updated = "old";
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "The following files are out of sync:
-          README.md"
+        "README.md
+          3:1    error   Code block out of sync with snippet://test.js  out-of-sync
+
+        ✖ 1 problem (1 error)"
       `);
     });
 
@@ -344,8 +349,10 @@ const test = true;
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "The following files are out of sync:
-          README.md"
+        "README.md
+          3:1    error   Code block out of sync with snippet://test.js  out-of-sync
+
+        ✖ 1 problem (1 error)"
       `);
     });
 
@@ -363,12 +370,14 @@ old content
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toBe('');
+      expect(result.stderr).toMatchInlineSnapshot(`
+        "README.md
+          3:1    warning Snippet file not found: missing.js  snippet-not-found
+
+        ✖ 1 problem (1 warning)"
+      `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Checking markdown files...
-        Warnings:
-          Snippet file not found: missing.js
-        All markdown files are in sync."
+        "Checking markdown files..."
       `);
     });
   });
@@ -576,7 +585,12 @@ malicious content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toContain('Errors:');
+      expect(result.stderr).toMatchInlineSnapshot(`
+        "README.md
+          3:1    error   Path traversal attempt detected: ../../../etc/passwd  path-traversal
+
+        ✖ 1 problem (1 error)"
+      `);
     });
 
     it('handles malformed config gracefully', async () => {
@@ -620,12 +634,17 @@ ${scenario.sources['file2.js']}
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toBe('');
+      expect(result.stderr).toMatchInlineSnapshot(`
+        "doc1.md
+          15:1   warning Snippet file not found: missing.js  snippet-not-found
+
+        doc3.md
+          15:1   warning Snippet file not found: missing.js  snippet-not-found
+
+        ✖ 2 problems (2 warnings)"
+      `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
-        Warnings:
-          Snippet file not found: missing.js
-          Snippet file not found: missing.js
         Updated files:
           doc1.md
           doc3.md"
@@ -674,11 +693,14 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toBe('');
+      expect(result.stderr).toMatchInlineSnapshot(`
+        "README.md
+          61:1   warning Snippet file not found: nonexistent.js  snippet-not-found
+
+        ✖ 1 problem (1 warning)"
+      `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
-        Warnings:
-          Snippet file not found: nonexistent.js
         Updated files:
           README.md"
       `);
@@ -972,11 +994,14 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toBe('');
+      expect(result.stderr).toMatchInlineSnapshot(`
+        "README.md
+          19:1   warning Snippet file not found: missing.js  snippet-not-found
+
+        ✖ 1 problem (1 warning)"
+      `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
-        Warnings:
-          Snippet file not found: missing.js
         Updated files:
           README.md"
       `);

@@ -2,7 +2,7 @@ import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
-import type { Config, SyncResult, CheckResult, ExtractResult } from './types.js';
+import type { Config, SyncResult, CheckResult, ExtractResult, Issue } from './types.js';
 import {
   parseMarkdownFile,
   parseMarkdownForExtraction,
@@ -17,6 +17,7 @@ const languageMap = require('language-map');
 export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
   const result: SyncResult = {
     updated: [],
+    fileIssues: [],
     warnings: [],
     errors: [],
   };
@@ -25,6 +26,8 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
     const markdownFiles = await fg(config.markdownGlob);
 
     for (const filePath of markdownFiles) {
+      const fileIssues: Array<Issue> = [];
+      
       try {
         const markdownFile = parseMarkdownFile(filePath);
         let hasChanges = false;
@@ -43,15 +46,23 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             const resolvedRoot = resolve(config.snippetRoot);
 
             if (!fullPath.startsWith(resolvedRoot)) {
-              result.errors.push(
-                `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
-              );
+              fileIssues.push({
+                type: 'error',
+                message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
+                line: codeBlock.lineNumber ?? 1,
+                column: codeBlock.columnNumber ?? 1,
+                ruleId: 'path-traversal',
+              });
               continue;
             }
           } catch (error) {
-            result.errors.push(
-              `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
-            );
+            fileIssues.push({
+              type: 'error',
+              message: `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
+              line: codeBlock.lineNumber ?? 1,
+              column: codeBlock.columnNumber ?? 1,
+              ruleId: 'path-validation',
+            });
             continue;
           }
 
@@ -61,7 +72,13 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
           );
 
           if (!existsSync(snippetPath)) {
-            result.warnings.push(`Snippet file not found: ${snippetPath}`);
+            fileIssues.push({
+              type: 'warning',
+              message: `Snippet file not found: ${snippetPath}`,
+              line: codeBlock.lineNumber ?? 1,
+              column: codeBlock.columnNumber ?? 1,
+              ruleId: 'snippet-not-found',
+            });
             continue;
           }
 
@@ -76,11 +93,9 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
               codeBlock.snippet.endLine,
             );
 
-            // Skip update if extracted content is empty and we have line ranges
-            // (likely invalid range)
             if (
               extractedContent === '' &&
-              (codeBlock.snippet.startLine || codeBlock.snippet.endLine)
+              (codeBlock.snippet.startLine ?? codeBlock.snippet.endLine)
             ) {
               continue;
             }
@@ -94,10 +109,21 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
               hasChanges = true;
             }
           } catch (error) {
-            result.errors.push(
-              `Error loading snippet ${snippetPath}: ${error}`,
-            );
+            fileIssues.push({
+              type: 'error',
+              message: `Error loading snippet ${snippetPath}: ${error}`,
+              line: codeBlock.lineNumber ?? 1,
+              column: codeBlock.columnNumber ?? 1,
+              ruleId: 'snippet-load-error',
+            });
           }
+        }
+
+        if (fileIssues.length > 0) {
+          result.fileIssues.push({
+            filePath,
+            issues: fileIssues,
+          });
         }
 
         if (hasChanges) {
@@ -119,6 +145,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
   const result: CheckResult = {
     inSync: true,
     outOfSync: [],
+    fileIssues: [],
     warnings: [],
     errors: [],
   };
@@ -127,6 +154,8 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
     const markdownFiles = await fg(config.markdownGlob);
 
     for (const filePath of markdownFiles) {
+      const fileIssues: Array<Issue> = [];
+
       try {
         const markdownFile = parseMarkdownFile(filePath);
         let isFileInSync = true;
@@ -144,15 +173,23 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             const resolvedRoot = resolve(config.snippetRoot);
 
             if (!fullPath.startsWith(resolvedRoot)) {
-              result.errors.push(
-                `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
-              );
+              fileIssues.push({
+                type: 'error',
+                message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
+                line: codeBlock.lineNumber ?? 1,
+                column: codeBlock.columnNumber ?? 1,
+                ruleId: 'path-traversal',
+              });
               continue;
             }
           } catch (error) {
-            result.errors.push(
-              `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
-            );
+            fileIssues.push({
+              type: 'error',
+              message: `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
+              line: codeBlock.lineNumber ?? 1,
+              column: codeBlock.columnNumber ?? 1,
+              ruleId: 'path-validation',
+            });
             continue;
           }
 
@@ -162,7 +199,13 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
           );
 
           if (!existsSync(snippetPath)) {
-            result.warnings.push(`Snippet file not found: ${snippetPath}`);
+            fileIssues.push({
+              type: 'warning',
+              message: `Snippet file not found: ${snippetPath}`,
+              line: codeBlock.lineNumber ?? 1,
+              column: codeBlock.columnNumber ?? 1,
+              ruleId: 'snippet-not-found',
+            });
             continue;
           }
 
@@ -178,14 +221,39 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             );
 
             if (extractedContent !== codeBlock.content) {
+              const endLineText = codeBlock.snippet.endLine ? `-L${codeBlock.snippet.endLine}` : '';
+              const rangeText = codeBlock.snippet.startLine
+                ? `#L${codeBlock.snippet.startLine}${endLineText}`
+                : '';
+
+              const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
+
+              fileIssues.push({
+                type: 'error',
+                message: `Code block out of sync with ${snippetRef}`,
+                line: codeBlock.lineNumber ?? 1,
+                column: codeBlock.columnNumber ?? 1,
+                ruleId: 'out-of-sync',
+              });
+
               isFileInSync = false;
-              break;
             }
           } catch (error) {
-            result.errors.push(
-              `Error loading snippet ${snippetPath}: ${error}`,
-            );
+            fileIssues.push({
+              type: 'error',
+              message: `Error loading snippet ${snippetPath}: ${error}`,
+              line: codeBlock.lineNumber ?? 1,
+              column: codeBlock.columnNumber ?? 1,
+              ruleId: 'snippet-load-error',
+            });
           }
+        }
+
+        if (fileIssues.length > 0) {
+          result.fileIssues.push({
+            filePath,
+            issues: fileIssues,
+          });
         }
 
         if (!isFileInSync) {

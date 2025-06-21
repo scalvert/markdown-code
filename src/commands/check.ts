@@ -1,6 +1,7 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
 import { checkMarkdownFiles } from '../sync.js';
+import { formatEslintStyle, hasErrors, hasIssues } from '../formatter.js';
 
 interface CheckArgs {
   config?: string;
@@ -40,14 +41,15 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
       process.exit(1);
     }
 
-    if (result.inSync) {
-      console.log('All markdown files are in sync.');
-    } else {
-      console.error('The following files are out of sync:');
-      for (const file of result.outOfSync) {
-        console.error(`  ${file}`);
+    if (hasIssues(result.fileIssues)) {
+      const formattedOutput = formatEslintStyle(result.fileIssues);
+      console.error(formattedOutput);
+
+      if (hasErrors(result.fileIssues)) {
+        process.exit(1);
       }
-      process.exit(1);
+    } else {
+      console.log('All markdown files are in sync.');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

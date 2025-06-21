@@ -1,5 +1,5 @@
 # Test
 
 ```js snippet=test.js
-const updated = 'old';
+const updated = "new"; 
 ```

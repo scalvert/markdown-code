@@ -12,6 +12,8 @@ export interface CodeBlock {
     start: number;
     end: number;
   };
+  lineNumber?: number;
+  columnNumber?: number;
 }
 
 export interface MarkdownFile {
@@ -26,8 +28,22 @@ export interface Config {
   includeExtensions: Array<string>;
 }
 
+export interface Issue {
+  type: 'error' | 'warning';
+  message: string;
+  line: number;
+  column: number;
+  ruleId?: string;
+}
+
+export interface FileIssues {
+  filePath: string;
+  issues: Array<Issue>;
+}
+
 export interface SyncResult {
   updated: Array<string>;
+  fileIssues: Array<FileIssues>;
   warnings: Array<string>;
   errors: Array<string>;
 }
@@ -35,6 +51,7 @@ export interface SyncResult {
 export interface CheckResult {
   inSync: boolean;
   outOfSync: Array<string>;
+  fileIssues: Array<FileIssues>;
   warnings: Array<string>;
   errors: Array<string>;
 }

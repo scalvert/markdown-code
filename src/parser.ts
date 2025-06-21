@@ -125,6 +125,8 @@ export function parseMarkdownFile(filePath: string): MarkdownFile {
         start: node.position?.start.offset ?? 0,
         end: node.position?.end.offset ?? 0,
       },
+      lineNumber: node.position?.start.line ?? 1,
+      columnNumber: node.position?.start.column ?? 1,
     });
   });
 

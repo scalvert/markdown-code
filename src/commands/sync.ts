@@ -1,6 +1,7 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
 import { syncMarkdownFiles } from '../sync.js';
+import { formatEslintStyle, hasErrors, hasIssues } from '../formatter.js';
 
 interface SyncArgs {
   config?: string;
@@ -38,6 +39,15 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
         console.error(`  ${error}`);
       }
       process.exit(1);
+    }
+
+    if (hasIssues(result.fileIssues)) {
+      const formattedOutput = formatEslintStyle(result.fileIssues);
+      console.error(formattedOutput);
+      
+      if (hasErrors(result.fileIssues)) {
+        process.exit(1);
+      }
     }
 
     if (result.updated.length > 0) {

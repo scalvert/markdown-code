@@ -172,8 +172,10 @@ old content
       const result = await syncMarkdownFiles(config);
 
       expect(result.updated).toHaveLength(0);
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toContain('missing.js');
+      expect(result.fileIssues).toHaveLength(1);
+      expect(result.fileIssues[0].issues).toHaveLength(1);
+      expect(result.fileIssues[0].issues[0].type).toBe('warning');
+      expect(result.fileIssues[0].issues[0].message).toContain('missing.js');
       expect(result.errors).toHaveLength(0);
 
       const markdownAfter = readFileSync(join(testDir, 'README.md'), 'utf-8');
@@ -316,7 +318,10 @@ malicious content
       const result = await syncMarkdownFiles(config);
 
       expect(result.updated).toHaveLength(0);
-      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.fileIssues).toHaveLength(1);
+      expect(result.fileIssues[0].issues).toHaveLength(1);
+      expect(result.fileIssues[0].issues[0].type).toBe('error');
+      expect(result.fileIssues[0].issues[0].ruleId).toBe('path-traversal');
     });
 
     it('should handle malformed markdown gracefully', async () => {

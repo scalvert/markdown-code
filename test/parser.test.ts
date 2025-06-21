@@ -88,6 +88,8 @@ More text here.`;
           filePath: 'test.ts',
         },
         position: expect.any(Object),
+        lineNumber: expect.any(Number),
+        columnNumber: expect.any(Number),
       });
     });
 
