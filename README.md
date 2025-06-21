@@ -1,4 +1,8 @@
-# md-code
+# markdown-code
+
+![CI Build](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml/badge.svg)
+[![npm version](https://badge.fury.io/js/markdown-code.svg)](https://badge.fury.io/js/markdown-code)
+[![License](https://img.shields.io/npm/l/markdown-code.svg)](https://github.com/scalvert/markdown-code/blob/main/LICENSE)
 
 **Stop copy-pasting code into documentation.** Keep your markdown examples automatically synchronized with real source files.
 
@@ -6,23 +10,25 @@
 
 Your documentation has code examples, but they get outdated:
 
-- ❌ You update your source code but forget to update the docs
-- ❌ Code examples in README/docs become stale and misleading
-- ❌ Copy-paste errors introduce bugs in documentation
-- ❌ Maintaining multiple copies of the same code is painful
+- You update your source code but forget to update the docs
+- Code examples in README/docs become stale and misleading
+- Copy-paste errors introduce bugs in documentation
+- Code examples can't be validated, linted, or tested like real source code
+- Maintaining multiple copies of the same code is painful
 
 ## The Solution
 
-`md-code` keeps your documentation in sync automatically:
+markdown-code keeps your documentation in sync automatically:
 
-- ✅ **Single source of truth**: Code examples come from real files
-- ✅ **Always accurate**: Documentation updates when code changes
-- ✅ **Zero maintenance**: Sync happens automatically in CI/CD
-- ✅ **Extract existing**: Migrate current docs with one command
+- **Single source of truth**: Code examples come from real files
+- **Always accurate**: Documentation updates when code changes
+- **Validated code**: Snippets can be linted, type-checked, and tested like any source file
+- **Zero maintenance**: Sync happens automatically in CI/CD
+- **Extract existing**: Migrate current docs with one command
 
 ## Example
 
-❌ Before: Manual copy-paste (gets outdated)
+### Before: Manual copy-paste (gets outdated)
 
 ````markdown
 ```js
@@ -32,7 +38,7 @@ function greet(name) {
 ```
 ````
 
-✅ After: Automatic sync from real files
+### After: Automatic sync from real files
 
 ````markdown
 ```js snippet=src/utils/greet.js
@@ -44,155 +50,31 @@ function greet(name) {
 
 **Result**: Your documentation stays accurate as your code evolves.
 
-## Features
-
-- **Automatic Sync**: Replace fenced code blocks with contents from real files
-- **Extract Mode**: Create snippet files from existing code blocks in markdown
-- **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
-- **Check Mode**: Verify documentation is in sync without making changes
-- **Multi-language**: Support for any programming language
-- **Configurable**: Flexible configuration via `.markdown-coderc.json`
-
 ## Installation
 
+No installation required - use it directly:
+
+```bash
+npx markdown-code --help
+npx markdown-code init --extract
+```
+
+Or install once, then use the shorter `md-code` command:
+
 ```bash
 npm install -g markdown-code
 ```
 
-## Quick Start
-
-### Extract from Existing Documentation (Most Common)
-
-If you already have markdown files with code blocks:
-
-1. Install globally
+Now you can use the convenient `md-code` binary:
 
 ```bash
-npm install -g markdown-code
-```
-
-2. Navigate to your project
-
-```bash
-cd your-project
-```
-
-3. One-command setup: create config + extract all code blocks
-
-```bash
+md-code --help
 md-code init --extract
 ```
 
-That's it! `md-code` will:
-
-- ✅ Create `.markdown-coderc.json` configuration
-- ✅ Create `snippets/` directory
-- ✅ Extract code blocks from your markdown to snippet files
-- ✅ Update markdown to reference the new snippet files
-
-#### Extract Workflow Details
-
-When you run `md-code extract`, here's what happens:
-
-**For each markdown file** (e.g., `user-guide.md`):
-
-- ✅ Creates directory using lowercase filename (`user-guide/`)
-- ✅ Generates numbered snippet files (`snippet1.js`, `snippet2.ts`, etc.)
-- ✅ Handles naming collisions by incrementing numbers
-- ✅ Updates markdown to reference new snippet files
-- ❌ Ignores blocks without language tags
-- ❌ Ignores existing snippet references
-
-### Start from Scratch
-
-If you're starting fresh:
-
-1. Install and setup
-
-```bash
-npm install -g markdown-code
-md-code init
-```
-
-2. Add source files to snippets/ directory
-3. Reference them in markdown:
-
-````markdown
-```js snippet=hello.js
-// This will be replaced with hello.js content
-```
-````
-
-```bash
-# 4. Sync content
-md-code sync
-```
-
-## Commands
-
-| Command                  | Description                                    | Example                  |
-| ------------------------ | ---------------------------------------------- | ------------------------ |
-| `md-code`                | Update markdown with snippet content (default) | `md-code`                |
-| `md-code sync`           | Same as above, explicit                        | `md-code sync`           |
-| `md-code check`          | Verify files are in sync (CI-friendly)         | `md-code check`          |
-| `md-code init`           | Create config and snippets directory           | `md-code init`           |
-| `md-code extract`        | Extract code blocks to snippet files           | `md-code extract`        |
-| `md-code init --extract` | Setup + extract in one step                    | `md-code init --extract` |
-
-### Global Options
-
-| Option                 | Description                    | Example                                    |
-| ---------------------- | ------------------------------ | ------------------------------------------ |
-| `--config`             | Custom configuration file      | `md-code --config custom.json`             |
-| `--snippet-root`       | Override snippet directory     | `md-code --snippet-root ./src`             |
-| `--markdown-glob`      | Override markdown file pattern | `md-code --markdown-glob "docs/**/*.md"`   |
-| `--include-extensions` | Override file extensions       | `md-code --include-extensions .ts,.js,.py` |
+> **Note**: All examples in this README show both `npx markdown-code` and `md-code` variants.
 
 ## How It Works
-
-### Example: Code Snippets in Action
-
-Here's a TypeScript function that greets users:
-
-````markdown
-```ts snippet=examples/hello.ts#L1-L3
-export function greetUser(name: string): string {
-  return `Hello, ${name}! Welcome to md-code.`;
-}
-```
-````
-
-And here's an async function for fetching user data:
-
-````markdown
-```ts snippet=examples/fetch_users.ts#L7-L14
-export async function fetchUsers(): Promise<Array<User>> {
-  const response = await fetch('/api/users');
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch users: ${response.statusText}`);
-  }
-
-  return response.json() as Promise<Array<User>>;
-```
-````
-
-You can also include entire files:
-
-````markdown
-```json snippet=examples/config.json
-{
-  "name": "md-code-demo",
-  "version": "1.0.0",
-  "settings": {
-    "debug": false,
-    "maxRetries": 3,
-    "timeout": 5000
-  },
-  "features": ["syntax-highlighting", "line-numbers", "auto-sync"]
-}
-```
-````
 
 ### Snippet Syntax
 
@@ -211,6 +93,84 @@ Use the `snippet=` directive in your fenced code blocks:
 // This will include from line 5 to end of file
 ```
 ````
+
+## Usage
+
+markdown-code provides two powerful workflows for keeping your documentation in sync with your code:
+
+1. **Extract from existing docs** - Convert unmanaged code blocks into manageable snippets
+2. **Reference source files** - Keep documentation in sync with your actual codebase
+
+### Workflows
+
+#### Workflow 1: Extract from Existing Documentation
+
+Perfect for projects with existing markdown documentation that contains code blocks.
+
+![Extraction Demo](demo/extraction/extraction-demo.gif)
+
+**Use this when:**
+
+- You have markdown files with unmanaged code blocks
+- You want to extract code examples into separate files
+- You need to start managing existing documentation
+
+**How it works:**
+
+1. Run `npx markdown-code check` (or `md-code check`) to discover manageable code blocks
+2. Run `npx markdown-code init --extract` (or `md-code init --extract`) to extract them into snippet files
+3. Your markdown is updated to reference the new snippet files
+4. Future changes to snippets automatically sync to documentation
+
+#### Workflow 2: Reference Existing Source Files
+
+Perfect for keeping documentation in sync with your actual project source code.
+
+![Reference Demo](demo/reference/reference-demo.gif)
+
+**Use this when:**
+
+- You want documentation to reference your actual source files
+- You need line-range extraction from existing code
+- You want living documentation that stays current with code changes
+
+**How it works:**
+
+1. Add snippet directives to reference source files with line ranges
+2. Run `npx markdown-code sync` (or `md-code sync`) to populate markdown with current source content
+3. When source files change, `npx markdown-code check` (or `md-code check`) detects drift
+4. Run `npx markdown-code sync` (or `md-code sync`) to update documentation with latest changes
+
+## Features
+
+- **Automatic Sync**: Replace fenced code blocks with contents from real files
+- **Extract Mode**: Create snippet files from existing code blocks in markdown
+- **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
+- **Check Mode**: Verify documentation is in sync without making changes
+- **Multi-language**: Support for any programming language
+- **Configurable**: Flexible configuration via `.markdown-coderc.json`
+
+## Commands
+
+| Command                                                       | Description                                    | Example                                                        |
+| ------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| `npx markdown-code` / `md-code`                               | Update markdown with snippet content (default) | `npx markdown-code` or `md-code`                               |
+| `npx markdown-code sync` / `md-code sync`                     | Same as above, explicit                        | `npx markdown-code sync` or `md-code sync`                     |
+| `npx markdown-code check` / `md-code check`                   | Verify files are in sync (CI-friendly)         | `npx markdown-code check` or `md-code check`                   |
+| `npx markdown-code init` / `md-code init`                     | Create config and snippets directory           | `npx markdown-code init` or `md-code init`                     |
+| `npx markdown-code extract` / `md-code extract`               | Extract code blocks to snippet files           | `npx markdown-code extract` or `md-code extract`               |
+| `npx markdown-code init --extract` / `md-code init --extract` | Setup + extract in one step                    | `npx markdown-code init --extract` or `md-code init --extract` |
+
+### Global Options
+
+| Option                 | Description                    | Example                                                                                            |
+| ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `--config`             | Custom configuration file      | `npx markdown-code --config custom.json` or `md-code --config custom.json`                         |
+| `--snippet-root`       | Override snippet directory     | `npx markdown-code --snippet-root ./src` or `md-code --snippet-root ./src`                         |
+| `--markdown-glob`      | Override markdown file pattern | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`     |
+| `--include-extensions` | Override file extensions       | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py` |
+
+
 
 ## Configuration
 

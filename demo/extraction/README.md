@@ -1,25 +1,25 @@
 # Demo
 
-```typescript snippet=snippets/demo/greet.ts
+```typescript snippet=_demo/snippet1.ts
 export function greet(name: string): string {
   return `Hello, ${name}!`;
 }
 ```
 
-```json snippet=snippets/demo/config.json
+```json
 {
   "name": "my-project",
   "version": "1.0.0"
 }
 ```
 
-```javascript snippet=snippets/demo/utils.js
+```javascript snippet=_demo/snippet2.js
 function calculateSum(a, b) {
   return a + b;
 }
 ```
 
-```bash snippet=snippets/demo/install.sh
+```bash
 npm install
 npm start
-``` 
+```

@@ -1,6 +1,6 @@
 # Demo
 
-```typescript
+```typescript snippet=_demo/snippet1.ts
 export function greet(name: string): string {
   return `Hello, ${name}!`;
 }
@@ -13,7 +13,7 @@ export function greet(name: string): string {
 }
 ```
 
-```javascript
+```javascript snippet=_demo/snippet2.js
 function calculateSum(a, b) {
   return a + b;
 }
@@ -22,4 +22,4 @@ function calculateSum(a, b) {
 ```bash
 npm install
 npm start
-``` 
+```
