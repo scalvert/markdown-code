@@ -203,19 +203,29 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
   return result;
 }
 
-function getExtensionForLanguage(language: string): string | null {
+function getExtensionForLanguage(
+  language: string,
+  configuredExtensions: Array<string>,
+): string | null {
   const normalizedLang = language.toLowerCase();
 
   for (const [langName, langData] of Object.entries(languageMap)) {
-    if (langName.toLowerCase() === normalizedLang) {
-      return (langData as any).extensions?.[0] ?? null;
-    }
+    const isMatchingLanguage =
+      langName.toLowerCase() === normalizedLang ||
+      (langData as any).aliases?.some(
+        (alias: string) => alias.toLowerCase() === normalizedLang,
+      );
 
-    const hasMatchingAlias = (langData as any).aliases?.some(
-      (alias: string) => alias.toLowerCase() === normalizedLang,
-    );
-    if (hasMatchingAlias) {
-      return (langData as any).extensions?.[0] ?? null;
+    if (isMatchingLanguage) {
+      const availableExtensions = (langData as any).extensions ?? [];
+
+      for (const configExt of configuredExtensions) {
+        if (availableExtensions.includes(configExt)) {
+          return configExt;
+        }
+      }
+
+      return availableExtensions[0] ?? null;
     }
   }
 
@@ -255,7 +265,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 
         for (const codeBlock of markdownFile.codeBlocks) {
           const lang = codeBlock.language;
-          const mappedExtension = getExtensionForLanguage(lang);
+          const mappedExtension = getExtensionForLanguage(lang, config.includeExtensions);
 
           if (!mappedExtension || !config.includeExtensions.includes(mappedExtension)) {
             continue;
