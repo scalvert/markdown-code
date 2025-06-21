@@ -245,10 +245,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          3:1    warning Snippet file not found: missing.js  snippet-not-found
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-787025vCmCnkSoG2D/README.md
+          3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
-        ✖ 1 problem (1 warning)"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -300,10 +300,10 @@ const updated = "old";
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          3:1    error   Code block out of sync with snippet://test.js  out-of-sync
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702X1zjEAJb8YvZ/README.md
+          3:1    sync-needed  Code block out of sync with snippet://test.js  content-mismatch
 
-        ✖ 1 problem (1 error)"
+        ✖ 1 problem (1 sync-needed)"
       `);
     });
 
@@ -349,10 +349,10 @@ const test = true;
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          3:1    error   Code block out of sync with snippet://test.js  out-of-sync
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702yoLLgBIMmdZm/README.md
+          3:1    sync-needed  Code block out of sync with snippet://test.js  content-mismatch
 
-        ✖ 1 problem (1 error)"
+        ✖ 1 problem (1 sync-needed)"
       `);
     });
 
@@ -371,10 +371,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          3:1    warning Snippet file not found: missing.js  snippet-not-found
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-787027XNcteDnHc75/README.md
+          3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
-        ✖ 1 problem (1 warning)"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Checking markdown files..."
@@ -586,10 +586,10 @@ malicious content
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          3:1    error   Path traversal attempt detected: ../../../etc/passwd  path-traversal
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702dJhsBcnm4Oer/README.md
+          3:1    invalid-path Path traversal attempt detected: ../../../etc/passwd  path-traversal
 
-        ✖ 1 problem (1 error)"
+        ✖ 1 problem (1 invalid-path)"
       `);
     });
 
@@ -635,13 +635,13 @@ ${scenario.sources['file2.js']}
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "doc1.md
-          15:1   warning Snippet file not found: missing.js  snippet-not-found
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702HSbr6ymBv5tg/doc1.md
+          15:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        doc3.md
-          15:1   warning Snippet file not found: missing.js  snippet-not-found
+        /private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702HSbr6ymBv5tg/doc3.md
+          15:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        ✖ 2 problems (2 warnings)"
+        ✖ 2 problems (2 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -694,10 +694,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          61:1   warning Snippet file not found: nonexistent.js  snippet-not-found
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702pGvI7W9QNf7A/README.md
+          61:1   file-missing Snippet file not found: nonexistent.js  snippet-not-found
 
-        ✖ 1 problem (1 warning)"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -995,10 +995,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toMatchInlineSnapshot(`
-        "README.md
-          19:1   warning Snippet file not found: missing.js  snippet-not-found
+        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702svJ9H9kMFhMI/README.md
+          19:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        ✖ 1 problem (1 warning)"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...

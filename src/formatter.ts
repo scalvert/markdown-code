@@ -1,5 +1,20 @@
 import { resolve } from 'node:path';
+import pc from 'picocolors';
 import type { FileIssues, Issue } from './types.js';
+
+function getIssueColor(type: string): (text: string) => string {
+  switch (type) {
+    case 'sync-needed':
+      return pc.yellow;
+    case 'file-missing':
+      return pc.cyan;
+    case 'invalid-path':
+    case 'load-failed':
+      return pc.red;
+    default:
+      return pc.white;
+  }
+}
 
 function getPluralForm(type: string): string {
   const pluralMap: Record<string, string> = {
@@ -14,9 +29,10 @@ function getPluralForm(type: string): string {
 
 function formatIssue(issue: Issue): string {
   const { line, column, type, message, ruleId } = issue;
-  const position = `${line}:${column}`.padEnd(6);
-  const severity = type.padEnd(12);
-  const rule = ruleId ? `  ${ruleId}` : '';
+  const position = pc.dim(`${line}:${column}`.padEnd(6));
+  const colorFn = getIssueColor(type);
+  const severity = colorFn(type.padEnd(12));
+  const rule = ruleId ? pc.dim(`  ${ruleId}`) : '';
   
   return `  ${position} ${severity} ${message}${rule}`;
 }
@@ -28,7 +44,7 @@ function formatFileIssues(fileIssues: FileIssues): string {
     return '';
   }
   
-  const absolutePath = resolve(filePath);
+  const absolutePath = pc.dim(resolve(filePath));
   const formattedIssues = issues.map(formatIssue).join('\n');
   
   return `${absolutePath}\n${formattedIssues}`;
@@ -49,16 +65,17 @@ function formatSummary(allFileIssues: Array<FileIssues>): string {
   }, {} as Record<string, number>);
   
   const problemsText = totalIssues === 1 ? 'problem' : 'problems';
-  let summary = `✖ ${totalIssues} ${problemsText}`;
+  let summary = pc.bold(pc.red(`✖ ${totalIssues} ${problemsText}`));
   
   const parts: Array<string> = [];
   Object.entries(issueCountsByType).forEach(([type, count]) => {
     const label = count === 1 ? type : getPluralForm(type);
-    parts.push(`${count} ${label}`);
+    const colorFn = getIssueColor(type);
+    parts.push(colorFn(`${count} ${label}`));
   });
   
   if (parts.length > 0) {
-    summary += ` (${parts.join(', ')})`;
+    summary += pc.dim(` (${parts.join(', ')})`);
   }
   
   return summary;
