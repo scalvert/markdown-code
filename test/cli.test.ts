@@ -6,6 +6,10 @@ import { createBinTester, BinTesterProject } from '@scalvert/bin-tester';
 import { loadScenario } from './fixtures/index.js';
 import { VERSION } from '../src/version.js';
 
+function normalizePath(path: string, baseDir: string): string {
+  return path.replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
+}
+
 describe('CLI', () => {
   let project: BinTesterProject;
 
@@ -244,8 +248,8 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-787025vCmCnkSoG2D/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
         ✖ 1 problem (1 file-missing)"
@@ -299,8 +303,8 @@ const updated = "old";
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702X1zjEAJb8YvZ/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           3:1    sync-needed  Code block out of sync with snippet://test.js  content-mismatch
 
         ✖ 1 problem (1 sync-needed)"
@@ -348,8 +352,8 @@ const test = true;
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702yoLLgBIMmdZm/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           3:1    sync-needed  Code block out of sync with snippet://test.js  content-mismatch
 
         ✖ 1 problem (1 sync-needed)"
@@ -370,8 +374,8 @@ old content
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-787027XNcteDnHc75/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
         ✖ 1 problem (1 file-missing)"
@@ -585,8 +589,8 @@ malicious content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702dJhsBcnm4Oer/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           3:1    invalid-path Path traversal attempt detected: ../../../etc/passwd  path-traversal
 
         ✖ 1 problem (1 invalid-path)"
@@ -634,11 +638,11 @@ ${scenario.sources['file2.js']}
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702HSbr6ymBv5tg/doc1.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/doc1.md
           15:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        /private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702HSbr6ymBv5tg/doc3.md
+        <TMP_DIR>/doc3.md
           15:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
         ✖ 2 problems (2 file-missing)"
@@ -693,8 +697,8 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702pGvI7W9QNf7A/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           61:1   file-missing Snippet file not found: nonexistent.js  snippet-not-found
 
         ✖ 1 problem (1 file-missing)"
@@ -994,8 +998,8 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(result.stderr).toMatchInlineSnapshot(`
-        "/private/var/folders/bf/gf7n41qd65s3p9rxmv6d33d00000gn/T/tmp-78702svJ9H9kMFhMI/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+        "<TMP_DIR>/README.md
           19:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
         ✖ 1 problem (1 file-missing)"
