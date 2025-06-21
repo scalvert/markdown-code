@@ -1,0 +1,11 @@
+# Generated demo files
+demo.gif
+demo.mp4
+
+# markdown-code generated files
+.markdown-coderc.json
+snippets/
+
+# Temporary files
+*.tmp
+*.log 

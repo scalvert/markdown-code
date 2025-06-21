@@ -24,6 +24,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "demo": "demo/run-demo.sh",
     "dev": "tsup --watch",
     "format": "prettier --write \"src/**/*.ts\" \"**/*.md\"",
     "lint": "eslint src",
