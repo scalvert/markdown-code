@@ -47,9 +47,15 @@ old content
       expect(result.errors).toHaveLength(0);
 
       const updatedMarkdown = readFileSync(join(testDir, 'README.md'), 'utf-8');
-      expect(updatedMarkdown).toContain('export function hello()');
-      expect(updatedMarkdown).toContain('return "Hello, World!"');
-      expect(updatedMarkdown).not.toContain('old content');
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`ts snippet=hello.ts
+        export function hello() {
+          return "Hello, World!";
+        }
+        \`\`\`"
+      `);
     });
 
     it('should sync with line ranges', async () => {
@@ -74,11 +80,15 @@ old content
       expect(result.errors).toHaveLength(0);
 
       const updatedMarkdown = readFileSync(join(testDir, 'README.md'), 'utf-8');
-      expect(updatedMarkdown).toContain('line 2');
-      expect(updatedMarkdown).toContain('line 3');
-      expect(updatedMarkdown).toContain('line 4');
-      expect(updatedMarkdown).not.toContain('line 1');
-      expect(updatedMarkdown).not.toContain('line 5');
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`text snippet=lines.txt#L2-L4
+        line 2
+        line 3
+        line 4
+        \`\`\`"
+      `);
     });
 
     it('should sync single line', async () => {
@@ -101,9 +111,13 @@ old content
       expect(result.errors).toHaveLength(0);
 
       const updatedMarkdown = readFileSync(join(testDir, 'README.md'), 'utf-8');
-      expect(updatedMarkdown).toContain('const value2 = 2;');
-      expect(updatedMarkdown).not.toContain('const value1 = 1;');
-      expect(updatedMarkdown).not.toContain('const value3 = 3;');
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`js snippet=values.js#L2
+        const value2 = 2;
+        \`\`\`"
+      `);
     });
 
     it('should handle multiple snippets in one file', async () => {
@@ -130,10 +144,17 @@ old two
       expect(result.errors).toHaveLength(0);
 
       const updatedMarkdown = readFileSync(join(testDir, 'README.md'), 'utf-8');
-      expect(updatedMarkdown).toContain('function one() {}');
-      expect(updatedMarkdown).toContain('function two() {}');
-      expect(updatedMarkdown).not.toContain('old one');
-      expect(updatedMarkdown).not.toContain('old two');
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`js snippet=one.js
+        function one() {}
+        \`\`\`
+
+        \`\`\`js snippet=two.js
+        function two() {}
+        \`\`\`"
+      `);
     });
 
     it('should handle nested directories', async () => {
@@ -157,7 +178,13 @@ old content
       expect(result.errors).toHaveLength(0);
 
       const updatedMarkdown = readFileSync(join(testDir, 'README.md'), 'utf-8');
-      expect(updatedMarkdown).toContain('export const helper = () => {};');
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`ts snippet=src/utils/helper.ts
+        export const helper = () => {};
+        \`\`\`"
+      `);
     });
 
     it('should warn about missing files', async () => {
@@ -172,11 +199,23 @@ old content
       const result = await syncMarkdownFiles(config);
 
       expect(result.updated).toHaveLength(0);
-      expect(result.fileIssues).toHaveLength(1);
-      expect(result.fileIssues[0].issues).toHaveLength(1);
-      expect(result.fileIssues[0].issues[0].type).toBe('file-missing');
-      expect(result.fileIssues[0].issues[0].message).toContain('missing.js');
       expect(result.errors).toHaveLength(0);
+      expect(result.fileIssues).toMatchInlineSnapshot(`
+        [
+          {
+            "filePath": "./test-integration/README.md",
+            "issues": [
+              {
+                "column": 1,
+                "line": 3,
+                "message": "Snippet file not found: test-integration/missing.js",
+                "ruleId": "snippet-not-found",
+                "type": "file-missing",
+              },
+            ],
+          },
+        ]
+      `);
 
       const markdownAfter = readFileSync(join(testDir, 'README.md'), 'utf-8');
       expect(markdownAfter).toContain('old content');
@@ -196,9 +235,14 @@ const synced = true;
 
       const result = await syncMarkdownFiles(config);
 
-      expect(result.updated).toHaveLength(0);
-      expect(result.errors).toHaveLength(0);
-      expect(result.warnings).toHaveLength(0);
+      expect(result).toMatchInlineSnapshot(`
+        {
+          "errors": [],
+          "fileIssues": [],
+          "updated": [],
+          "warnings": [],
+        }
+      `);
     });
   });
 
@@ -299,9 +343,14 @@ old content
       expect(result.errors).toHaveLength(0);
 
       const updatedContent = readFileSync(join(testDir, 'README.md'), 'utf-8');
-      expect(updatedContent).toContain('const clean = "code";\nconsole.log("test");');
-      expect(updatedContent).not.toMatch(/```js snippet=test\.js\n\n/);
-      expect(updatedContent).not.toMatch(/\n\n```$/);
+      expect(updatedContent).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`js snippet=test.js
+        const clean = "code";
+        console.log("test");
+        \`\`\`"
+      `);
     });
   });
 
@@ -318,10 +367,23 @@ malicious content
       const result = await syncMarkdownFiles(config);
 
       expect(result.updated).toHaveLength(0);
-      expect(result.fileIssues).toHaveLength(1);
-      expect(result.fileIssues[0].issues).toHaveLength(1);
-      expect(result.fileIssues[0].issues[0].type).toBe('invalid-path');
-      expect(result.fileIssues[0].issues[0].ruleId).toBe('path-traversal');
+      expect(result.errors).toHaveLength(0);
+      expect(result.fileIssues).toMatchInlineSnapshot(`
+        [
+          {
+            "filePath": "./test-integration/README.md",
+            "issues": [
+              {
+                "column": 1,
+                "line": 3,
+                "message": "Path traversal attempt detected: ../../../etc/passwd",
+                "ruleId": "path-traversal",
+                "type": "invalid-path",
+              },
+            ],
+          },
+        ]
+      `);
     });
 
     it('should handle malformed markdown gracefully', async () => {

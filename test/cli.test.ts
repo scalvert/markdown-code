@@ -165,7 +165,8 @@ describe('CLI', () => {
     expect(result.stderr).toBe('');
     expect(result.stdout).toMatchInlineSnapshot(`
       "Syncing markdown files...
-      All files are already in sync."
+      Updated files:
+        README.md"
     `);
 
     const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');

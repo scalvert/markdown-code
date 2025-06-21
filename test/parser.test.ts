@@ -81,16 +81,21 @@ More text here.`;
       expect(result.filePath).toBe(filePath);
       expect(result.content).toBe(markdownContent);
       expect(result.codeBlocks).toHaveLength(1);
-      expect(result.codeBlocks[0]).toEqual({
-        language: 'ts',
-        content: 'old content',
-        snippet: {
-          filePath: 'test.ts',
-        },
-        position: expect.any(Object),
-        lineNumber: expect.any(Number),
-        columnNumber: expect.any(Number),
-      });
+      expect(result.codeBlocks[0]).toMatchInlineSnapshot(`
+        {
+          "columnNumber": 1,
+          "content": "old content",
+          "language": "ts",
+          "lineNumber": 5,
+          "position": {
+            "end": 64,
+            "start": 27,
+          },
+          "snippet": {
+            "filePath": "test.ts",
+          },
+        }
+      `);
     });
 
     it('should parse snippet directive with line range', () => {
@@ -103,11 +108,13 @@ old content
 
       const result = parseMarkdownFile(filePath);
 
-      expect(result.codeBlocks[0].snippet).toEqual({
-        filePath: 'utils.js',
-        startLine: 5,
-        endLine: 10,
-      });
+      expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
+        {
+          "endLine": 10,
+          "filePath": "utils.js",
+          "startLine": 5,
+        }
+      `);
     });
 
     it('should parse snippet directive with single line', () => {
@@ -120,11 +127,13 @@ old content
 
       const result = parseMarkdownFile(filePath);
 
-      expect(result.codeBlocks[0].snippet).toEqual({
-        filePath: 'main.py',
-        startLine: 15,
-        endLine: 15,
-      });
+      expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
+        {
+          "endLine": 15,
+          "filePath": "main.py",
+          "startLine": 15,
+        }
+      `);
     });
 
     it('should parse snippet directive with start line only', () => {
@@ -137,10 +146,12 @@ old content
 
       const result = parseMarkdownFile(filePath);
 
-      expect(result.codeBlocks[0].snippet).toEqual({
-        filePath: 'main.cpp',
-        startLine: 20,
-      });
+      expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
+        {
+          "filePath": "main.cpp",
+          "startLine": 20,
+        }
+      `);
     });
 
     it('should ignore code blocks without snippet directive', () => {
