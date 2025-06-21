@@ -52,6 +52,7 @@ npm run demo
 ```
 
 This will automatically:
+
 - Build the CLI if needed
 - Run the demo using VHS
 - Generate the GIF
@@ -70,6 +71,7 @@ vhs demo.tape
 ## 📤 Output
 
 The demo generates:
+
 - **`demo.gif`**: An animated GIF showing the complete workflow
 - **Temporary files**: `.markdown-coderc.json` and `snippets/` directory (cleaned up automatically)
 
@@ -78,12 +80,14 @@ The demo generates:
 ### Modify the Tape File
 
 Edit `demo.tape` to:
+
 - Change terminal theme: `Set Theme "Your Theme"`
 - Adjust timing: Modify `Sleep` values
 - Add/remove steps: Add more `Type` and `Enter` commands
 - Change dimensions: Modify `Set Width` and `Set Height`
 
 ### Available VHS Themes
+
 - `Catppuccin Mocha` (default)
 - `GitHub Dark`
 - `Dracula`
@@ -93,6 +97,7 @@ Edit `demo.tape` to:
 ### Custom Content
 
 Modify the source files in `src/` and `README.md` to demonstrate different scenarios:
+
 - Different programming languages
 - Complex line ranges
 - Multiple snippet files
@@ -101,6 +106,7 @@ Modify the source files in `src/` and `README.md` to demonstrate different scena
 ## 🚀 Using the Demo
 
 ### In Documentation
+
 Add the generated GIF to your README:
 
 ```markdown
@@ -108,14 +114,17 @@ Add the generated GIF to your README:
 ```
 
 ### In Presentations
+
 Use the GIF in slides, blog posts, or documentation to show the tool in action.
 
 ### For Testing
+
 Use the demo setup to test new features or reproduce issues.
 
 ## 🛠️ Troubleshooting
 
 ### VHS Not Found
+
 ```bash
 # Check if VHS is in PATH
 which vhs
@@ -125,11 +134,13 @@ brew install vhs
 ```
 
 ### Permission Denied
+
 ```bash
 chmod +x run-demo.sh
 ```
 
 ### CLI Not Found
+
 ```bash
 # Build the CLI first
 npm run build
@@ -140,4 +151,4 @@ npm run build
 - The demo runs in isolation and cleans up after itself
 - All file modifications are temporary and local to the demo directory
 - The recording captures real terminal interaction, showing actual CLI output
-- Colors and formatting in the GIF match the terminal theme 
+- Colors and formatting in the GIF match the terminal theme

@@ -393,3 +393,55 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 
   return result;
 }
+
+export async function discoverCodeBlocks(
+  markdownGlob: string = '**/*.md',
+): Promise<{
+  markdownFiles: Array<string>;
+  totalCodeBlocks: number;
+  fileDetails: Array<{
+    filePath: string;
+    codeBlocks: number;
+    languages: Array<string>;
+  }>;
+}> {
+  const result = {
+    markdownFiles: [] as Array<string>,
+    totalCodeBlocks: 0,
+    fileDetails: [] as Array<{
+      filePath: string;
+      codeBlocks: number;
+      languages: Array<string>;
+    }>,
+  };
+
+  try {
+    const markdownFiles = await fg(markdownGlob);
+
+    for (const filePath of markdownFiles) {
+      try {
+        const markdownFile = parseMarkdownForExtraction(filePath);
+
+        if (markdownFile.codeBlocks.length > 0) {
+          const languages = [
+            ...new Set(markdownFile.codeBlocks.map((cb) => cb.language)),
+          ];
+
+          result.markdownFiles.push(filePath);
+          result.totalCodeBlocks += markdownFile.codeBlocks.length;
+          result.fileDetails.push({
+            filePath,
+            codeBlocks: markdownFile.codeBlocks.length,
+            languages,
+          });
+        }
+      } catch (error) {
+        console.warn(`Warning: Could not process ${filePath}: ${error}`);
+      }
+    }
+  } catch (error) {
+    console.warn(`Warning: Error finding markdown files: ${error}`);
+  }
+
+  return result;
+}

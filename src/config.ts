@@ -27,6 +27,17 @@ export interface ConfigOverrides {
   includeExtensions?: string;
 }
 
+export function configExists(configPath?: string): boolean {
+  const defaultPath = resolve('.markdown-coderc.json');
+  const pathToCheck = configPath ? resolve(configPath) : defaultPath;
+
+  try {
+    return readFileSync(pathToCheck, 'utf-8').length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function loadConfig(
   configPath?: string,
   overrides: ConfigOverrides = {},

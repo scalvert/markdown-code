@@ -4,15 +4,15 @@ import type { FileIssues, Issue } from './types.js';
 
 function getIssueColor(type: string): (text: string) => string {
   switch (type) {
-  case 'sync-needed':
-    return pc.yellow;
-  case 'file-missing':
-    return pc.cyan;
-  case 'invalid-path':
-  case 'load-failed':
-    return pc.red;
-  default:
-    return pc.white;
+    case 'sync-needed':
+      return pc.yellow;
+    case 'file-missing':
+      return pc.cyan;
+    case 'invalid-path':
+    case 'load-failed':
+      return pc.red;
+    default:
+      return pc.white;
   }
 }
 

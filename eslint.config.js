@@ -39,7 +39,6 @@ export default [
       "quotes": ["error", "single", { avoidEscape: true }],
       "object-curly-spacing": ["error", "always"],
       "array-bracket-spacing": ["error", "never"],
-      "indent": ["error", 2],
       "max-len": ["error", { code: 100, ignoreUrls: true }],
 
       // TypeScript-specific rules (Airbnb-inspired)
