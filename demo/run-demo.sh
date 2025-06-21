@@ -21,6 +21,11 @@ echo "🧹 Cleaning up previous demo..."
 rm -f .markdown-coderc.json
 rm -rf snippets/
 rm -f demo.gif
+rm -f DEMO.md
+
+# Set up demo files
+echo "📝 Setting up demo files..."
+cp _DEMO.md DEMO.md
 
 echo "🎥 Recording demo with VHS..."
 vhs demo.tape
