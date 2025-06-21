@@ -1,9 +1,21 @@
+import { resolve } from 'node:path';
 import type { FileIssues, Issue } from './types.js';
+
+function getPluralForm(type: string): string {
+  const pluralMap: Record<string, string> = {
+    'sync-needed': 'sync-needed',
+    'file-missing': 'file-missing',
+    'invalid-path': 'invalid-paths',
+    'load-failed': 'load-failed',
+  };
+
+  return pluralMap[type] ?? `${type}s`;
+}
 
 function formatIssue(issue: Issue): string {
   const { line, column, type, message, ruleId } = issue;
   const position = `${line}:${column}`.padEnd(6);
-  const severity = type.padEnd(7);
+  const severity = type.padEnd(12);
   const rule = ruleId ? `  ${ruleId}` : '';
   
   return `  ${position} ${severity} ${message}${rule}`;
@@ -16,10 +28,10 @@ function formatFileIssues(fileIssues: FileIssues): string {
     return '';
   }
   
-  const header = filePath;
+  const absolutePath = resolve(filePath);
   const formattedIssues = issues.map(formatIssue).join('\n');
   
-  return `${header}\n${formattedIssues}`;
+  return `${absolutePath}\n${formattedIssues}`;
 }
 
 function formatSummary(allFileIssues: Array<FileIssues>): string {
@@ -29,26 +41,21 @@ function formatSummary(allFileIssues: Array<FileIssues>): string {
     return '';
   }
   
-  const errorCount = allFileIssues.reduce(
-    (sum, file) => sum + file.issues.filter(issue => issue.type === 'error').length,
-    0
-  );
-  
-  const warningCount = allFileIssues.reduce(
-    (sum, file) => sum + file.issues.filter(issue => issue.type === 'warning').length,
-    0
-  );
+  const issueCountsByType = allFileIssues.reduce((counts, file) => {
+    file.issues.forEach(issue => {
+      counts[issue.type] = (counts[issue.type] ?? 0) + 1;
+    });
+    return counts;
+  }, {} as Record<string, number>);
   
   const problemsText = totalIssues === 1 ? 'problem' : 'problems';
   let summary = `✖ ${totalIssues} ${problemsText}`;
   
   const parts: Array<string> = [];
-  if (errorCount > 0) {
-    parts.push(`${errorCount} ${errorCount === 1 ? 'error' : 'errors'}`);
-  }
-  if (warningCount > 0) {
-    parts.push(`${warningCount} ${warningCount === 1 ? 'warning' : 'warnings'}`);
-  }
+  Object.entries(issueCountsByType).forEach(([type, count]) => {
+    const label = count === 1 ? type : getPluralForm(type);
+    parts.push(`${count} ${label}`);
+  });
   
   if (parts.length > 0) {
     summary += ` (${parts.join(', ')})`;
@@ -74,7 +81,7 @@ export function formatEslintStyle(fileIssues: Array<FileIssues>): string {
 
 export function hasErrors(fileIssues: Array<FileIssues>): boolean {
   return fileIssues.some(file => 
-    file.issues.some(issue => issue.type === 'error')
+    file.issues.some(issue => issue.type === 'sync-needed' || issue.type === 'invalid-path' || issue.type === 'load-failed')
   );
 }
 

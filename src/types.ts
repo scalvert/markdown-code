@@ -29,7 +29,7 @@ export interface Config {
 }
 
 export interface Issue {
-  type: 'error' | 'warning';
+  type: 'sync-needed' | 'file-missing' | 'invalid-path' | 'load-failed' | 'out-of-sync';
   message: string;
   line: number;
   column: number;

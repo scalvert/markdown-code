@@ -27,7 +27,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
 
     for (const filePath of markdownFiles) {
       const fileIssues: Array<Issue> = [];
-      
+
       try {
         const markdownFile = parseMarkdownFile(filePath);
         let hasChanges = false;
@@ -47,7 +47,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
 
             if (!fullPath.startsWith(resolvedRoot)) {
               fileIssues.push({
-                type: 'error',
+                type: 'invalid-path',
                 message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
                 line: codeBlock.lineNumber ?? 1,
                 column: codeBlock.columnNumber ?? 1,
@@ -57,7 +57,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             }
           } catch (error) {
             fileIssues.push({
-              type: 'error',
+              type: 'load-failed',
               message: `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
@@ -73,7 +73,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
 
           if (!existsSync(snippetPath)) {
             fileIssues.push({
-              type: 'warning',
+              type: 'file-missing',
               message: `Snippet file not found: ${snippetPath}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
@@ -110,7 +110,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             }
           } catch (error) {
             fileIssues.push({
-              type: 'error',
+              type: 'load-failed',
               message: `Error loading snippet ${snippetPath}: ${error}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
@@ -174,7 +174,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
 
             if (!fullPath.startsWith(resolvedRoot)) {
               fileIssues.push({
-                type: 'error',
+                type: 'invalid-path',
                 message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
                 line: codeBlock.lineNumber ?? 1,
                 column: codeBlock.columnNumber ?? 1,
@@ -184,7 +184,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             }
           } catch (error) {
             fileIssues.push({
-              type: 'error',
+              type: 'load-failed',
               message: `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
@@ -200,7 +200,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
 
           if (!existsSync(snippetPath)) {
             fileIssues.push({
-              type: 'warning',
+              type: 'file-missing',
               message: `Snippet file not found: ${snippetPath}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
@@ -229,18 +229,18 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
               const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
 
               fileIssues.push({
-                type: 'error',
+                type: 'sync-needed',
                 message: `Code block out of sync with ${snippetRef}`,
                 line: codeBlock.lineNumber ?? 1,
                 column: codeBlock.columnNumber ?? 1,
-                ruleId: 'out-of-sync',
+                ruleId: 'content-mismatch',
               });
 
               isFileInSync = false;
             }
           } catch (error) {
             fileIssues.push({
-              type: 'error',
+              type: 'load-failed',
               message: `Error loading snippet ${snippetPath}: ${error}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,

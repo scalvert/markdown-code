@@ -174,7 +174,7 @@ old content
       expect(result.updated).toHaveLength(0);
       expect(result.fileIssues).toHaveLength(1);
       expect(result.fileIssues[0].issues).toHaveLength(1);
-      expect(result.fileIssues[0].issues[0].type).toBe('warning');
+      expect(result.fileIssues[0].issues[0].type).toBe('file-missing');
       expect(result.fileIssues[0].issues[0].message).toContain('missing.js');
       expect(result.errors).toHaveLength(0);
 
@@ -320,7 +320,7 @@ malicious content
       expect(result.updated).toHaveLength(0);
       expect(result.fileIssues).toHaveLength(1);
       expect(result.fileIssues[0].issues).toHaveLength(1);
-      expect(result.fileIssues[0].issues[0].type).toBe('error');
+      expect(result.fileIssues[0].issues[0].type).toBe('invalid-path');
       expect(result.fileIssues[0].issues[0].ruleId).toBe('path-traversal');
     });
 
