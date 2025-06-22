@@ -41,7 +41,10 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
       const hasConfig = configExists(argv.config);
 
       if (!hasConfig) {
-        const discovery = await discoverCodeBlocks(config.markdownGlob, config.excludeGlob);
+        const discovery = await discoverCodeBlocks(
+          config.markdownGlob,
+          config.excludeGlob,
+        );
 
         if (discovery.totalCodeBlocks > 0) {
           const discoveryIssues: Array<FileIssues> = discovery.fileDetails.map(
@@ -88,4 +91,3 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     process.exit(1);
   }
 };
-

@@ -107,8 +107,6 @@ markdown-code provides two powerful workflows for keeping your documentation in 
 
 Perfect for projects with existing markdown documentation that contains code blocks.
 
-![Extraction Demo](demo/extraction/extraction-demo.gif)
-
 **Use this when:**
 
 - You have markdown files with unmanaged code blocks
@@ -125,8 +123,6 @@ Perfect for projects with existing markdown documentation that contains code blo
 #### Workflow 2: Reference Existing Source Files
 
 Perfect for keeping documentation in sync with your actual project source code.
-
-![Reference Demo](demo/reference/reference-demo.gif)
 
 **Use this when:**
 
@@ -163,15 +159,13 @@ Perfect for keeping documentation in sync with your actual project source code.
 
 ### Global Options
 
-| Option                 | Description                    | Example                                                                                            |
-| ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `--config`             | Custom configuration file      | `npx markdown-code --config custom.json` or `md-code --config custom.json`                         |
-| `--snippet-root`       | Override snippet directory     | `npx markdown-code --snippet-root ./src` or `md-code --snippet-root ./src`                         |
-| `--markdown-glob`      | Override markdown file pattern | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`     |
+| Option                 | Description                    | Example                                                                                                            |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `--config`             | Custom configuration file      | `npx markdown-code --config custom.json` or `md-code --config custom.json`                                         |
+| `--snippet-root`       | Override snippet directory     | `npx markdown-code --snippet-root ./src` or `md-code --snippet-root ./src`                                         |
+| `--markdown-glob`      | Override markdown file pattern | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`                     |
 | `--exclude-glob`       | Override exclusion patterns    | `npx markdown-code --exclude-glob "node_modules/**,dist/**"` or `md-code --exclude-glob "node_modules/**,dist/**"` |
-| `--include-extensions` | Override file extensions       | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py` |
-
-
+| `--include-extensions` | Override file extensions       | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py`                 |
 
 ## Configuration
 
@@ -212,10 +206,12 @@ Create a `.markdown-coderc.json` file in your project root:
 
 ### Configuration Options
 
-- **snippetRoot**: Base directory for resolving snippet paths (default: `"."`)
-- **markdownGlob**: Glob pattern to find Markdown files (default: `"**/*.md"`)
-- **excludeGlob**: Array of glob patterns to exclude from processing (default: common build/dependency directories)
-- **includeExtensions**: File extensions to consider for snippets and extraction
+| Option                | Description                                             | Default                                                                                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **snippetRoot**       | Base directory for resolving snippet paths              | `"."`                                                                                                                                                                                                                                    |
+| **markdownGlob**      | Glob pattern to find Markdown files                     | `"**/*.md"`                                                                                                                                                                                                                              |
+| **excludeGlob**       | Array of glob patterns to exclude from processing       | Common build/dependency directories                                                                                                                                                                                                      |
+| **includeExtensions** | File extensions to consider for snippets and extraction | `[".ts", ".js", ".tsx", ".jsx", ".py", ".rb", ".go", ".rs", ".java", ".cpp", ".c", ".cs", ".php", ".sh", ".bash", ".zsh", ".fish", ".json", ".yaml", ".yml", ".toml", ".xml", ".html", ".css", ".scss", ".less", ".sql", ".md", ".txt"]` |
 
 ## Contributing
 

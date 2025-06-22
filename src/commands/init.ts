@@ -1,7 +1,12 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
-import { loadConfig, validateConfig, type ConfigOverrides, DEFAULT_CONFIG } from '../config.js';
+import {
+  loadConfig,
+  validateConfig,
+  type ConfigOverrides,
+  DEFAULT_CONFIG,
+} from '../config.js';
 import { extractSnippets } from '../sync.js';
 
 interface InitArgs {
