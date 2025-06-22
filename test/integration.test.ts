@@ -10,6 +10,7 @@ describe('integration tests', () => {
     snippetRoot: testDir,
     markdownGlob: `${testDir}/**/*.md`,
     includeExtensions: ['.ts', '.js', '.py', '.json'],
+    excludeGlob: ['node_modules/**'],
   };
 
   beforeEach(() => {

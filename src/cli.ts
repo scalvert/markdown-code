@@ -20,6 +20,11 @@ yargs(hideBin(process.argv))
     describe: 'Glob pattern for markdown files (default: "**/*.md")',
     global: true,
   })
+  .option('exclude-glob', {
+    type: 'string',
+    describe: 'Comma-separated list of glob patterns to exclude',
+    global: true,
+  })
   .option('include-extensions', {
     type: 'string',
     describe: 'Comma-separated list of file extensions to include',

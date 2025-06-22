@@ -2,9 +2,21 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Config } from './types.js';
 
-const DEFAULT_CONFIG: Config = {
+export const DEFAULT_CONFIG: Config = {
   snippetRoot: '.',
   markdownGlob: '**/*.md',
+  excludeGlob: [
+    'node_modules/**',
+    '.git/**',
+    'dist/**',
+    'build/**',
+    'coverage/**',
+    '.next/**',
+    '.nuxt/**',
+    'out/**',
+    'target/**',
+    'vendor/**',
+  ],
   includeExtensions: [
     '.ts',
     '.js',
@@ -24,6 +36,7 @@ const DEFAULT_CONFIG: Config = {
 export interface ConfigOverrides {
   snippetRoot?: string;
   markdownGlob?: string;
+  excludeGlob?: string;
   includeExtensions?: string;
 }
 
@@ -79,6 +92,13 @@ export function loadConfig(
     config.markdownGlob = overrides.markdownGlob;
   }
 
+  if (overrides.excludeGlob) {
+    config.excludeGlob = overrides.excludeGlob
+      .split(',')
+      .map((pattern) => pattern.trim())
+      .filter((pattern) => pattern.length > 0);
+  }
+
   if (overrides.includeExtensions) {
     config.includeExtensions = overrides.includeExtensions
       .split(',')
@@ -96,6 +116,10 @@ export function validateConfig(config: Config): void {
 
   if (!config.markdownGlob || typeof config.markdownGlob !== 'string') {
     throw new Error('Config: markdownGlob must be a non-empty string');
+  }
+
+  if (!Array.isArray(config.excludeGlob)) {
+    throw new Error('Config: excludeGlob must be an array');
   }
 
   if (!Array.isArray(config.includeExtensions)) {

@@ -29,7 +29,9 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
   };
 
   try {
-    const markdownFiles = await fg(config.markdownGlob);
+    const markdownFiles = await fg(config.markdownGlob, {
+      ignore: config.excludeGlob,
+    });
 
     for (const filePath of markdownFiles) {
       const fileIssues: Array<Issue> = [];
@@ -157,7 +159,9 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
   };
 
   try {
-    const markdownFiles = await fg(config.markdownGlob);
+    const markdownFiles = await fg(config.markdownGlob, {
+      ignore: config.excludeGlob,
+    });
 
     for (const filePath of markdownFiles) {
       const fileIssues: Array<Issue> = [];
@@ -317,7 +321,9 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
   };
 
   try {
-    const markdownFiles = await fg(config.markdownGlob);
+    const markdownFiles = await fg(config.markdownGlob, {
+      ignore: config.excludeGlob,
+    });
 
     for (const filePath of markdownFiles) {
       try {
@@ -396,6 +402,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 
 export async function discoverCodeBlocks(
   markdownGlob: string = '**/*.md',
+  excludeGlob: Array<string> = [],
 ): Promise<{
   markdownFiles: Array<string>;
   totalCodeBlocks: number;
@@ -416,7 +423,9 @@ export async function discoverCodeBlocks(
   };
 
   try {
-    const markdownFiles = await fg(markdownGlob);
+    const markdownFiles = await fg(markdownGlob, {
+      ignore: excludeGlob,
+    });
 
     for (const filePath of markdownFiles) {
       try {

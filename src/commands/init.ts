@@ -1,7 +1,7 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
-import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
+import { loadConfig, validateConfig, type ConfigOverrides, DEFAULT_CONFIG } from '../config.js';
 import { extractSnippets } from '../sync.js';
 
 interface InitArgs {
@@ -9,6 +9,7 @@ interface InitArgs {
   config?: string;
   snippetRoot?: string;
   markdownGlob?: string;
+  excludeGlob?: string;
   includeExtensions?: string;
 }
 
@@ -34,22 +35,8 @@ function createDefaultConfig(): void {
   }
 
   const defaultConfig = {
+    ...DEFAULT_CONFIG,
     snippetRoot: './snippets',
-    markdownGlob: '**/*.md',
-    includeExtensions: [
-      '.ts',
-      '.js',
-      '.py',
-      '.java',
-      '.cpp',
-      '.c',
-      '.go',
-      '.rs',
-      '.php',
-      '.rb',
-      '.swift',
-      '.kt',
-    ],
   };
 
   try {
@@ -83,6 +70,7 @@ export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
       const overrides: ConfigOverrides = {};
       if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
       if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
+      if (argv.excludeGlob) overrides.excludeGlob = argv.excludeGlob;
       if (argv.includeExtensions)
         overrides.includeExtensions = argv.includeExtensions;
 

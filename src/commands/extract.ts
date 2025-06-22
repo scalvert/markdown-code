@@ -6,6 +6,7 @@ interface ExtractArgs {
   config?: string;
   snippetRoot?: string;
   markdownGlob?: string;
+  excludeGlob?: string;
   includeExtensions?: string;
 }
 
@@ -17,6 +18,7 @@ export const handler = async (argv: ArgumentsCamelCase<ExtractArgs>) => {
     const overrides: ConfigOverrides = {};
     if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
     if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
+    if (argv.excludeGlob) overrides.excludeGlob = argv.excludeGlob;
     if (argv.includeExtensions)
       overrides.includeExtensions = argv.includeExtensions;
 

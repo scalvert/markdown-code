@@ -25,6 +25,7 @@ export interface MarkdownFile {
 export interface Config {
   snippetRoot: string;
   markdownGlob: string;
+  excludeGlob: Array<string>;
   includeExtensions: Array<string>;
 }
 

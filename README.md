@@ -168,6 +168,7 @@ Perfect for keeping documentation in sync with your actual project source code.
 | `--config`             | Custom configuration file      | `npx markdown-code --config custom.json` or `md-code --config custom.json`                         |
 | `--snippet-root`       | Override snippet directory     | `npx markdown-code --snippet-root ./src` or `md-code --snippet-root ./src`                         |
 | `--markdown-glob`      | Override markdown file pattern | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`     |
+| `--exclude-glob`       | Override exclusion patterns    | `npx markdown-code --exclude-glob "node_modules/**,dist/**"` or `md-code --exclude-glob "node_modules/**,dist/**"` |
 | `--include-extensions` | Override file extensions       | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py` |
 
 
@@ -180,6 +181,18 @@ Create a `.markdown-coderc.json` file in your project root:
 {
   "snippetRoot": "./snippets",
   "markdownGlob": "**/*.md",
+  "excludeGlob": [
+    "node_modules/**",
+    ".git/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    ".next/**",
+    ".nuxt/**",
+    "out/**",
+    "target/**",
+    "vendor/**"
+  ],
   "includeExtensions": [
     ".ts",
     ".js",
@@ -201,6 +214,7 @@ Create a `.markdown-coderc.json` file in your project root:
 
 - **snippetRoot**: Base directory for resolving snippet paths (default: `"."`)
 - **markdownGlob**: Glob pattern to find Markdown files (default: `"**/*.md"`)
+- **excludeGlob**: Array of glob patterns to exclude from processing (default: common build/dependency directories)
 - **includeExtensions**: File extensions to consider for snippets and extraction
 
 ## Contributing

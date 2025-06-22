@@ -13,6 +13,7 @@ interface CheckArgs {
   config?: string;
   snippetRoot?: string;
   markdownGlob?: string;
+  excludeGlob?: string;
   includeExtensions?: string;
 }
 
@@ -25,6 +26,7 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     const overrides: ConfigOverrides = {};
     if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
     if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
+    if (argv.excludeGlob) overrides.excludeGlob = argv.excludeGlob;
     if (argv.includeExtensions) {
       overrides.includeExtensions = argv.includeExtensions;
     }
@@ -32,13 +34,14 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     const config = loadConfig(argv.config, overrides);
     validateConfig(config);
 
+    console.log('Checking markdown files...');
     const result = await checkMarkdownFiles(config);
 
     if (!hasIssues(result.fileIssues)) {
       const hasConfig = configExists(argv.config);
 
       if (!hasConfig) {
-        const discovery = await discoverCodeBlocks(config.markdownGlob);
+        const discovery = await discoverCodeBlocks(config.markdownGlob, config.excludeGlob);
 
         if (discovery.totalCodeBlocks > 0) {
           const discoveryIssues: Array<FileIssues> = discovery.fileDetails.map(
@@ -73,6 +76,8 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     const output = format(result.fileIssues);
     if (output) {
       console.log(output);
+    } else {
+      console.log('All markdown files are in sync.');
     }
 
     if (hasErrors(result.fileIssues)) {
@@ -83,3 +88,4 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     process.exit(1);
   }
 };
+

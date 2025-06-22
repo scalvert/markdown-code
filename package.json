@@ -17,7 +17,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "md-code": "dist/cli.js"
+    "md-code": "dist/cli.js",
+    "markdown-code": "dist/cli.js"
   },
   "files": [
     "dist"

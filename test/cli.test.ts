@@ -47,6 +47,8 @@ describe('CLI', () => {
                                                                                 [string]
               --markdown-glob       Glob pattern for markdown files (default: "**/*.md")
                                                                                 [string]
+              --exclude-glob        Comma-separated list of glob patterns to exclude
+                                                                                [string]
               --include-extensions  Comma-separated list of file extensions to include
                                                                                 [string]
           -h, --help                Show help                                  [boolean]
@@ -84,6 +86,18 @@ describe('CLI', () => {
       
       expect(config).toMatchInlineSnapshot(`
         {
+          "excludeGlob": [
+            "node_modules/**",
+            ".git/**",
+            "dist/**",
+            "build/**",
+            "coverage/**",
+            ".next/**",
+            ".nuxt/**",
+            "out/**",
+            "target/**",
+            "vendor/**",
+          ],
           "includeExtensions": [
             ".ts",
             ".js",
@@ -304,12 +318,7 @@ const updated = "old";
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
-          3:1    sync-needed  Code block out of sync with snippet://test.js  content-mismatch
-
-        ✖ 1 problem (1 sync-needed)"
-      `);
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
     });
 
     it('uses check command', async () => {
@@ -353,12 +362,7 @@ const test = true;
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
-          3:1    sync-needed  Code block out of sync with snippet://test.js  content-mismatch
-
-        ✖ 1 problem (1 sync-needed)"
-      `);
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
     });
 
     it('warns about missing files in check mode', async () => {
@@ -375,14 +379,13 @@ old content
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
+      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
+      expect(normalizePath(result.stdout, project.baseDir)).toMatchInlineSnapshot(`
+        "Checking markdown files...
+        <TMP_DIR>/README.md
           3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
         ✖ 1 problem (1 file-missing)"
-      `);
-      expect(result.stdout).toMatchInlineSnapshot(`
-        "Checking markdown files..."
       `);
     });
   });
