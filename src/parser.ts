@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
@@ -101,8 +101,8 @@ export function parseSnippetDirective(
   return { filePath: snippetPath };
 }
 
-export function parseMarkdownFile(filePath: string): MarkdownFile {
-  const content = readFileSync(filePath, 'utf-8');
+export async function parseMarkdownFile(filePath: string): Promise<MarkdownFile> {
+  const content = await readFile(filePath, 'utf-8');
   const tree = unified().use(remarkParse).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
 
@@ -137,8 +137,8 @@ export function parseMarkdownFile(filePath: string): MarkdownFile {
   };
 }
 
-export function parseMarkdownForExtraction(filePath: string): MarkdownFile {
-  const content = readFileSync(filePath, 'utf-8');
+export async function parseMarkdownForExtraction(filePath: string): Promise<MarkdownFile> {
+  const content = await readFile(filePath, 'utf-8');
   const tree = unified().use(remarkParse).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
 
@@ -170,10 +170,10 @@ export function parseMarkdownForExtraction(filePath: string): MarkdownFile {
   };
 }
 
-export function loadSnippetContent(
+export async function loadSnippetContent(
   snippetPath: string,
   snippetRoot: string,
-): string {
+): Promise<string> {
   const fullPath = resolve(snippetRoot, snippetPath);
   const resolvedRoot = resolve(snippetRoot);
 
@@ -182,7 +182,7 @@ export function loadSnippetContent(
     throw new Error(`Path traversal attempt detected: ${snippetPath}`);
   }
 
-  return readFileSync(fullPath, 'utf-8');
+  return await readFile(fullPath, 'utf-8');
 }
 
 export function trimBlankLines(content: string): string {

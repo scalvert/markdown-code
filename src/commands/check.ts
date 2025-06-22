@@ -31,14 +31,14 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
       overrides.includeExtensions = argv.includeExtensions;
     }
 
-    const config = loadConfig(argv.config, overrides);
+    const config = await loadConfig(argv.config, overrides);
     validateConfig(config);
 
     console.log('Checking markdown files...');
     const result = await checkMarkdownFiles(config);
 
     if (!hasIssues(result.fileIssues)) {
-      const hasConfig = configExists(argv.config);
+      const hasConfig = await configExists(argv.config);
 
       if (!hasConfig) {
         const discovery = await discoverCodeBlocks(

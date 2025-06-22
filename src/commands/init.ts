@@ -1,4 +1,4 @@
-import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
 import {
@@ -8,6 +8,7 @@ import {
   DEFAULT_CONFIG,
 } from '../config.js';
 import { extractSnippets } from '../sync.js';
+import { fileExists } from '../utils.js';
 
 interface InitArgs {
   extract?: boolean;
@@ -30,11 +31,11 @@ export const builder = (yargs: Argv) => {
   });
 };
 
-function createDefaultConfig(): void {
+async function createDefaultConfig(): Promise<void> {
   const configPath = resolve('.markdown-coderc.json');
   const snippetsDir = resolve('snippets');
 
-  if (existsSync(configPath)) {
+  if (await fileExists(configPath)) {
     console.log('Configuration file already exists at .markdown-coderc.json');
     return;
   }
@@ -45,11 +46,11 @@ function createDefaultConfig(): void {
   };
 
   try {
-    writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+    await writeFile(configPath, JSON.stringify(defaultConfig, null, 2));
     console.log('Created .markdown-coderc.json with default configuration');
 
-    if (!existsSync(snippetsDir)) {
-      mkdirSync(snippetsDir, { recursive: true });
+    if (!(await fileExists(snippetsDir))) {
+      await mkdir(snippetsDir, { recursive: true });
       console.log('Created snippets/ directory for your source files');
     }
 
@@ -67,7 +68,7 @@ function createDefaultConfig(): void {
 
 export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
   try {
-    createDefaultConfig();
+    await createDefaultConfig();
 
     if (argv.extract) {
       console.log('Extracting snippets from existing code blocks...');
@@ -79,7 +80,7 @@ export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
       if (argv.includeExtensions)
         overrides.includeExtensions = argv.includeExtensions;
 
-      const config = loadConfig(argv.config, overrides);
+      const config = await loadConfig(argv.config, overrides);
       validateConfig(config);
 
       const result = await extractSnippets(config);

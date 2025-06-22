@@ -62,7 +62,7 @@ line 5`;
   });
 
   describe('parseMarkdownFile', () => {
-    it('should parse markdown file with snippet directive', () => {
+    it('should parse markdown file with snippet directive', async () => {
       const markdownContent = `# Test
 
 Here's some code:
@@ -76,7 +76,7 @@ More text here.`;
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.filePath).toBe(filePath);
       expect(result.content).toBe(markdownContent);
@@ -98,7 +98,7 @@ More text here.`;
       `);
     });
 
-    it('should parse snippet directive with line range', () => {
+    it('should parse snippet directive with line range', async () => {
       const markdownContent = `\`\`\`js snippet=utils.js#L5-L10
 old content
 \`\`\``;
@@ -106,7 +106,7 @@ old content
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
         {
@@ -117,7 +117,7 @@ old content
       `);
     });
 
-    it('should parse snippet directive with single line', () => {
+    it('should parse snippet directive with single line', async () => {
       const markdownContent = `\`\`\`py snippet=main.py#L15
 old content
 \`\`\``;
@@ -125,7 +125,7 @@ old content
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
         {
@@ -136,7 +136,7 @@ old content
       `);
     });
 
-    it('should parse snippet directive with start line only', () => {
+    it('should parse snippet directive with start line only', async () => {
       const markdownContent = `\`\`\`cpp snippet=main.cpp#L20-
 old content
 \`\`\``;
@@ -144,7 +144,7 @@ old content
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
         {
@@ -154,7 +154,7 @@ old content
       `);
     });
 
-    it('should ignore code blocks without snippet directive', () => {
+    it('should ignore code blocks without snippet directive', async () => {
       const markdownContent = `\`\`\`ts
 regular code block
 \`\`\`
@@ -166,13 +166,13 @@ snippet block
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks).toHaveLength(1);
       expect(result.codeBlocks[0].snippet?.filePath).toBe('test.js');
     });
 
-    it('should ignore code blocks without language', () => {
+    it('should ignore code blocks without language', async () => {
       const markdownContent = `\`\`\` snippet=test.js
 no language
 \`\`\``;
@@ -180,12 +180,12 @@ no language
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks).toHaveLength(0);
     });
 
-    it('should handle multiple snippet blocks', () => {
+    it('should handle multiple snippet blocks', async () => {
       const markdownContent = `\`\`\`ts snippet=file1.ts
 content 1
 \`\`\`
@@ -201,7 +201,7 @@ content 3
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks).toHaveLength(3);
       expect(result.codeBlocks[0].snippet?.filePath).toBe('file1.ts');
@@ -209,7 +209,7 @@ content 3
       expect(result.codeBlocks[2].snippet?.filePath).toBe('file3.py');
     });
 
-    it('should handle complex file paths', () => {
+    it('should handle complex file paths', async () => {
       const markdownContent = `\`\`\`ts snippet=src/components/Button.tsx#L15-L25
 button content
 \`\`\``;
@@ -217,7 +217,7 @@ button content
       const filePath = join(testDir, 'test.md');
       writeFileSync(filePath, markdownContent);
 
-      const result = parseMarkdownFile(filePath);
+      const result = await parseMarkdownFile(filePath);
 
       expect(result.codeBlocks[0].snippet).toEqual({
         filePath: 'src/components/Button.tsx',
@@ -228,24 +228,24 @@ button content
   });
 
   describe('loadSnippetContent', () => {
-    it('should load content from file', () => {
+    it('should load content from file', async () => {
       const content = 'export const test = "hello";';
       const filePath = join(testDir, 'test.ts');
       writeFileSync(filePath, content);
 
-      const result = loadSnippetContent('test.ts', testDir);
+      const result = await loadSnippetContent('test.ts', testDir);
 
       expect(result).toBe(content);
     });
 
-    it('should handle nested paths', () => {
+    it('should handle nested paths', async () => {
       const content = 'nested file content';
       const nestedDir = join(testDir, 'nested');
       mkdirSync(nestedDir);
       const filePath = join(nestedDir, 'file.js');
       writeFileSync(filePath, content);
 
-      const result = loadSnippetContent('nested/file.js', testDir);
+      const result = await loadSnippetContent('nested/file.js', testDir);
 
       expect(result).toBe(content);
     });

@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Config } from './types.js';
+import { fileExists } from './utils.js';
 
 export const DEFAULT_CONFIG: Config = {
   snippetRoot: '.',
@@ -40,35 +41,40 @@ export interface ConfigOverrides {
   includeExtensions?: string;
 }
 
-export function configExists(configPath?: string): boolean {
+export async function configExists(configPath?: string): Promise<boolean> {
   const defaultPath = resolve('.markdown-coderc.json');
   const pathToCheck = configPath ? resolve(configPath) : defaultPath;
 
+  if (!(await fileExists(pathToCheck))) {
+    return false;
+  }
+
   try {
-    return readFileSync(pathToCheck, 'utf-8').length > 0;
+    const content = await readFile(pathToCheck, 'utf-8');
+    return content.length > 0;
   } catch {
     return false;
   }
 }
 
-export function loadConfig(
+export async function loadConfig(
   configPath?: string,
   overrides: ConfigOverrides = {},
-): Config {
+): Promise<Config> {
   let config = { ...DEFAULT_CONFIG };
 
   if (!configPath) {
     const defaultPath = resolve('.markdown-coderc.json');
 
     try {
-      const content = readFileSync(defaultPath, 'utf-8');
+      const content = await readFile(defaultPath, 'utf-8');
       config = { ...config, ...JSON.parse(content) };
     } catch {
       // Use defaults if no config file found
     }
   } else {
     try {
-      const content = readFileSync(resolve(configPath), 'utf-8');
+      const content = await readFile(resolve(configPath), 'utf-8');
       config = { ...config, ...JSON.parse(content) };
     } catch (error) {
       const errorMessage =

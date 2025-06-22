@@ -1,7 +1,8 @@
-import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve, basename } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
+import { fileExists } from './utils.js';
 import type {
   Config,
   SyncResult,
@@ -37,7 +38,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
       const fileIssues: Array<Issue> = [];
 
       try {
-        const markdownFile = parseMarkdownFile(filePath);
+        const markdownFile = await parseMarkdownFile(filePath);
         let hasChanges = false;
         let updatedContent = markdownFile.content;
 
@@ -79,7 +80,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             codeBlock.snippet.filePath,
           );
 
-          if (!existsSync(snippetPath)) {
+          if (!(await fileExists(snippetPath))) {
             fileIssues.push({
               type: 'file-missing',
               message: `Snippet file not found: ${snippetPath}`,
@@ -91,7 +92,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
           }
 
           try {
-            const snippetContent = loadSnippetContent(
+            const snippetContent = await loadSnippetContent(
               codeBlock.snippet.filePath,
               config.snippetRoot,
             );
@@ -135,7 +136,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
         }
 
         if (hasChanges) {
-          writeFileSync(filePath, updatedContent, 'utf-8');
+          await writeFile(filePath, updatedContent, 'utf-8');
           result.updated.push(filePath);
         }
       } catch (error) {
@@ -167,7 +168,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
       const fileIssues: Array<Issue> = [];
 
       try {
-        const markdownFile = parseMarkdownFile(filePath);
+        const markdownFile = await parseMarkdownFile(filePath);
         let isFileInSync = true;
 
         for (const codeBlock of markdownFile.codeBlocks) {
@@ -208,7 +209,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             codeBlock.snippet.filePath,
           );
 
-          if (!existsSync(snippetPath)) {
+          if (!(await fileExists(snippetPath))) {
             fileIssues.push({
               type: 'file-missing',
               message: `Snippet file not found: ${snippetPath}`,
@@ -220,7 +221,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
           }
 
           try {
-            const snippetContent = loadSnippetContent(
+            const snippetContent = await loadSnippetContent(
               codeBlock.snippet.filePath,
               config.snippetRoot,
             );
@@ -327,7 +328,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 
     for (const filePath of markdownFiles) {
       try {
-        const markdownFile = parseMarkdownForExtraction(filePath);
+        const markdownFile = await parseMarkdownForExtraction(filePath);
 
         if (markdownFile.codeBlocks.length === 0) {
           continue;
@@ -337,9 +338,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
         const dirName = baseFileName.toLowerCase();
         const outputDir = join(config.snippetRoot, dirName);
 
-        if (!existsSync(outputDir)) {
-          mkdirSync(outputDir, { recursive: true });
-        }
+        await mkdir(outputDir, { recursive: true });
 
         let hasChanges = false;
         let updatedContent = markdownFile.content;
@@ -362,13 +361,13 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
           let snippetFileName = `snippet${snippetIndex}${mappedExtension}`;
           let snippetFilePath = join(outputDir, snippetFileName);
 
-          while (existsSync(snippetFilePath)) {
+          while (await fileExists(snippetFilePath)) {
             snippetIndex++;
             snippetFileName = `snippet${snippetIndex}${mappedExtension}`;
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
-          writeFileSync(snippetFilePath, codeBlock.content, 'utf-8');
+          await writeFile(snippetFilePath, codeBlock.content, 'utf-8');
           result.snippetsCreated++;
 
           const snippetReference = `${dirName}/${snippetFileName}`;
@@ -386,7 +385,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
         }
 
         if (hasChanges) {
-          writeFileSync(filePath, updatedContent, 'utf-8');
+          await writeFile(filePath, updatedContent, 'utf-8');
           result.extracted.push(filePath);
         }
       } catch (error) {
@@ -429,7 +428,7 @@ export async function discoverCodeBlocks(
 
     for (const filePath of markdownFiles) {
       try {
-        const markdownFile = parseMarkdownForExtraction(filePath);
+        const markdownFile = await parseMarkdownForExtraction(filePath);
 
         if (markdownFile.codeBlocks.length > 0) {
           const languages = [
