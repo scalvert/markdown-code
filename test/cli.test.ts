@@ -264,10 +264,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
-          3:1    file-missing Snippet file not found: missing.js  snippet-not-found
+        "[2m<TMP_DIR>/README.md[22m
+          [2m3:1   [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
-        ✖ 1 problem (1 file-missing)"
+        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -382,10 +382,10 @@ old content
       expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
       expect(normalizePath(result.stdout, project.baseDir)).toMatchInlineSnapshot(`
         "Checking markdown files...
-        <TMP_DIR>/README.md
-          3:1    file-missing Snippet file not found: missing.js  snippet-not-found
+        [2m<TMP_DIR>/README.md[22m
+          [2m3:1   [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
-        ✖ 1 problem (1 file-missing)"
+        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
       `);
     });
   });
@@ -594,10 +594,10 @@ malicious content
 
       expect(result.exitCode).toEqual(1);
       expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
-          3:1    invalid-path Path traversal attempt detected: ../../../etc/passwd  path-traversal
+        "[2m<TMP_DIR>/README.md[22m
+          [2m3:1   [22m [31minvalid-path[39m Path traversal attempt detected: ../../../etc/passwd[2m  path-traversal[22m
 
-        ✖ 1 problem (1 invalid-path)"
+        [1m[31m✖ 1 problem[39m[22m[2m ([31m1 invalid-path[39m)[22m"
       `);
     });
 
@@ -643,13 +643,13 @@ ${scenario.sources['file2.js']}
 
       expect(result.exitCode).toEqual(0);
       expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/doc1.md
-          15:1   file-missing Snippet file not found: missing.js  snippet-not-found
+        "[2m<TMP_DIR>/doc1.md[22m
+          [2m15:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
-        <TMP_DIR>/doc3.md
-          15:1   file-missing Snippet file not found: missing.js  snippet-not-found
+        [2m<TMP_DIR>/doc3.md[22m
+          [2m15:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
-        ✖ 2 problems (2 file-missing)"
+        [1m[31m✖ 2 problems[39m[22m[2m ([36m2 file-missing[39m)[22m"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -702,10 +702,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
-          61:1   file-missing Snippet file not found: nonexistent.js  snippet-not-found
+        "[2m<TMP_DIR>/README.md[22m
+          [2m61:1  [22m [36mfile-missing[39m Snippet file not found: nonexistent.js[2m  snippet-not-found[22m
 
-        ✖ 1 problem (1 file-missing)"
+        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -1003,10 +1003,10 @@ old content
 
       expect(result.exitCode).toEqual(0);
       expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
-        "<TMP_DIR>/README.md
-          19:1   file-missing Snippet file not found: missing.js  snippet-not-found
+        "[2m<TMP_DIR>/README.md[22m
+          [2m19:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
-        ✖ 1 problem (1 file-missing)"
+        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
