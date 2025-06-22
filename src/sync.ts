@@ -9,6 +9,7 @@ import type {
   CheckResult,
   ExtractResult,
   Issue,
+  DiscoveryResult,
 } from './types.js';
 import {
   parseMarkdownFile,
@@ -402,23 +403,11 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 export async function discoverCodeBlocks(
   markdownGlob: string = '**/*.md',
   excludeGlob: Array<string> = [],
-): Promise<{
-  markdownFiles: Array<string>;
-  totalCodeBlocks: number;
-  fileDetails: Array<{
-    filePath: string;
-    codeBlocks: number;
-    languages: Array<string>;
-  }>;
-}> {
-  const result = {
-    markdownFiles: [] as Array<string>,
+): Promise<DiscoveryResult> {
+  const result: DiscoveryResult = {
+    markdownFiles: [],
     totalCodeBlocks: 0,
-    fileDetails: [] as Array<{
-      filePath: string;
-      codeBlocks: number;
-      languages: Array<string>;
-    }>,
+    fileDetails: [],
   };
 
   try {

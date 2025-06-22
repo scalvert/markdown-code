@@ -68,3 +68,15 @@ export interface ExtractResult {
   warnings: Array<string>;
   errors: Array<string>;
 }
+
+export interface DiscoveryFileDetail {
+  filePath: string;
+  codeBlocks: number;
+  languages: Array<string>;
+}
+
+export interface DiscoveryResult {
+  markdownFiles: Array<string>;
+  totalCodeBlocks: number;
+  fileDetails: Array<DiscoveryFileDetail>;
+}
