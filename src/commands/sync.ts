@@ -23,7 +23,7 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
     if (argv.includeExtensions)
       overrides.includeExtensions = argv.includeExtensions;
 
-    const config = loadConfig(argv.config, overrides);
+    const config = await loadConfig(argv.config, overrides);
     validateConfig(config);
 
     console.log('Syncing markdown files...');
