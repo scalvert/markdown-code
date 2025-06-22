@@ -28,7 +28,7 @@ describe('integration tests', () => {
       const sourceContent = `export function hello() {
   return "Hello, World!";
 }`;
-      
+
       const markdownContent = `# Test
 
 \`\`\`ts snippet=hello.ts
@@ -46,7 +46,10 @@ old content
       expect(result.updated[0]).toContain('README.md');
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Test
 
@@ -64,7 +67,7 @@ line 2
 line 3
 line 4
 line 5`;
-      
+
       const markdownContent = `# Test
 
 \`\`\`text snippet=lines.txt#L2-L4
@@ -81,7 +84,10 @@ old content
       expect(result.updated).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Test
 
@@ -97,7 +103,7 @@ old content
       const sourceContent = `const value1 = 1;
 const value2 = 2;
 const value3 = 3;`;
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=values.js#L2
@@ -114,7 +120,10 @@ old content
       expect(result.updated).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Test
 
@@ -127,7 +136,7 @@ old content
     it('should handle multiple snippets in one file', async () => {
       const sourceContent1 = 'function one() {}';
       const sourceContent2 = 'function two() {}';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=one.js
@@ -149,7 +158,10 @@ old two
       expect(result.updated).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Test
 
@@ -165,7 +177,7 @@ old two
 
     it('should handle nested directories', async () => {
       const sourceContent = 'export const helper = () => {};';
-      
+
       const markdownContent = `# Test
 
 \`\`\`ts snippet=src/utils/helper.ts
@@ -173,8 +185,8 @@ old content
 \`\`\``;
 
       await project.write({
-        'src': {
-          'utils': {
+        src: {
+          utils: {
             'helper.ts': sourceContent,
           },
         },
@@ -186,7 +198,10 @@ old content
       expect(result.updated).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Test
 
@@ -226,13 +241,16 @@ old content
         },
       ]);
 
-      const markdownAfter = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const markdownAfter = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(markdownAfter).toContain('old content');
     });
 
     it('should preserve already synced content', async () => {
       const sourceContent = 'const synced = true;';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=synced.js
@@ -249,7 +267,10 @@ const synced = true;
       expect(result.updated).toHaveLength(0);
       expect(result.errors).toHaveLength(0);
 
-      const markdownAfter = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const markdownAfter = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(markdownAfter).toBe(markdownContent);
     });
   });
@@ -299,7 +320,7 @@ const synced = true;
 line 2
 line 3
 line 4`;
-      
+
       const markdownContent = `# Test
 
 \`\`\`text snippet=lines.txt#L2-L3
@@ -320,7 +341,7 @@ wrong content
     it('should handle multiple files', async () => {
       const source1 = 'const file1 = true;';
       const source2 = 'const file2 = true;';
-      
+
       const markdown1 = `# File 1
 
 \`\`\`js snippet=file1.js
@@ -352,7 +373,7 @@ const file2 = false;
     it('should handle mixed sync states', async () => {
       const source1 = 'const synced = true;';
       const source2 = 'const updated = true;';
-      
+
       const markdownContent = `# Mixed
 
 \`\`\`js snippet=synced.js
@@ -374,7 +395,10 @@ const old = true;
       expect(result.updated).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('const synced = true;');
       expect(updatedMarkdown).toContain('const updated = true;');
     });
@@ -383,11 +407,11 @@ const old = true;
       const componentContent = `export function Button() {
   return <button>Click me</button>;
 }`;
-      
+
       const utilContent = `export function apiCall() {
   return fetch('/api');
 }`;
-      
+
       const markdownContent = `# Complex
 
 \`\`\`tsx snippet=src/components/Button.tsx
@@ -399,15 +423,15 @@ old api
 \`\`\``;
 
       await project.write({
-        'src': {
-          'components': {
+        src: {
+          components: {
             'Button.tsx': componentContent,
           },
-          'utils': {
+          utils: {
             'api.ts': utilContent,
           },
         },
-        'docs': {
+        docs: {
           'README.md': markdownContent,
         },
       });
@@ -417,7 +441,10 @@ old api
       expect(result.updated).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'docs', 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'docs', 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('export function Button()');
       expect(updatedMarkdown).toContain('export function apiCall()');
     });
@@ -444,9 +471,12 @@ old content
       expect(result.errors).toHaveLength(0);
       expect(result.fileIssues).toHaveLength(1);
 
-      const updatedMarkdown = readFileSync(join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('const exists = true;');
       expect(updatedMarkdown).toContain('old content');
     });
   });
-}); 
+});

@@ -26,7 +26,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "format": "prettier --write \"src/**/*.ts\" \"**/*.md\"",
+    "format": "prettier --write \"**/*.ts\" \"**/*.md\"",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "test": "vitest run",
