@@ -101,7 +101,9 @@ export function parseSnippetDirective(
   return { filePath: snippetPath };
 }
 
-export async function parseMarkdownFile(filePath: string): Promise<MarkdownFile> {
+export async function parseMarkdownFile(
+  filePath: string,
+): Promise<MarkdownFile> {
   const content = await readFile(filePath, 'utf-8');
   const tree = unified().use(remarkParse).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
@@ -137,7 +139,9 @@ export async function parseMarkdownFile(filePath: string): Promise<MarkdownFile>
   };
 }
 
-export async function parseMarkdownForExtraction(filePath: string): Promise<MarkdownFile> {
+export async function parseMarkdownForExtraction(
+  filePath: string,
+): Promise<MarkdownFile> {
   const content = await readFile(filePath, 'utf-8');
   const tree = unified().use(remarkParse).parse(content);
   const codeBlocks: Array<CodeBlock> = [];

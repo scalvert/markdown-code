@@ -1,22 +1,18 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
-import {
-  loadConfig,
-  validateConfig,
-  type ConfigOverrides,
-  DEFAULT_CONFIG,
-} from '../config.js';
+import { DEFAULT_CONFIG } from '../config.js';
 import { extractSnippets } from '../sync.js';
 import { fileExists } from '../utils.js';
+import {
+  getValidatedConfig,
+  handleError,
+  logWarningsAndErrors,
+  type BaseArgs,
+} from './shared.js';
 
-interface InitArgs {
+interface InitArgs extends BaseArgs {
   extract?: boolean;
-  config?: string;
-  snippetRoot?: string;
-  markdownGlob?: string;
-  excludeGlob?: string;
-  includeExtensions?: string;
 }
 
 export const command = 'init';
@@ -40,10 +36,7 @@ async function createDefaultConfig(): Promise<void> {
     return;
   }
 
-  const defaultConfig = {
-    ...DEFAULT_CONFIG,
-    snippetRoot: './snippets',
-  };
+  const defaultConfig = { ...DEFAULT_CONFIG, snippetRoot: './snippets' };
 
   try {
     await writeFile(configPath, JSON.stringify(defaultConfig, null, 2));
@@ -66,52 +59,36 @@ async function createDefaultConfig(): Promise<void> {
   }
 }
 
+function logExtractionResults(result: {
+  extracted: Array<string>;
+  snippetsCreated: number;
+}) {
+  if (result.extracted.length > 0) {
+    console.log(`Extracted ${result.snippetsCreated} snippets from:`);
+    result.extracted.forEach((file) => console.log(`  ${file}`));
+  } else {
+    console.log('No code blocks found to extract.');
+  }
+}
+
+async function handleExtraction(argv: ArgumentsCamelCase<InitArgs>) {
+  console.log('Extracting snippets from existing code blocks...');
+
+  const config = await getValidatedConfig(argv);
+  const result = await extractSnippets(config);
+
+  logWarningsAndErrors(result.warnings, result.errors);
+  logExtractionResults(result);
+}
+
 export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
   try {
     await createDefaultConfig();
 
     if (argv.extract) {
-      console.log('Extracting snippets from existing code blocks...');
-
-      const overrides: ConfigOverrides = {};
-      if (argv.snippetRoot) overrides.snippetRoot = argv.snippetRoot;
-      if (argv.markdownGlob) overrides.markdownGlob = argv.markdownGlob;
-      if (argv.excludeGlob) overrides.excludeGlob = argv.excludeGlob;
-      if (argv.includeExtensions)
-        overrides.includeExtensions = argv.includeExtensions;
-
-      const config = await loadConfig(argv.config, overrides);
-      validateConfig(config);
-
-      const result = await extractSnippets(config);
-
-      if (result.warnings.length > 0) {
-        console.log('Warnings:');
-        for (const warning of result.warnings) {
-          console.log(`  ${warning}`);
-        }
-      }
-
-      if (result.errors.length > 0) {
-        console.error('Errors:');
-        for (const error of result.errors) {
-          console.error(`  ${error}`);
-        }
-        process.exit(1);
-      }
-
-      if (result.extracted.length > 0) {
-        console.log(`Extracted ${result.snippetsCreated} snippets from:`);
-        for (const file of result.extracted) {
-          console.log(`  ${file}`);
-        }
-      } else {
-        console.log('No code blocks found to extract.');
-      }
+      await handleExtraction(argv);
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(errorMessage);
-    process.exit(1);
+    handleError(error);
   }
 };
