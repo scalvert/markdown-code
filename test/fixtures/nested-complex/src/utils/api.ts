@@ -16,10 +16,10 @@ export async function createUser(userData: any) {
     },
     body: JSON.stringify(userData),
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to create user: ${response.statusText}`);
   }
-  
+
   return response.json();
-} 
+}

@@ -81,9 +81,12 @@ describe('CLI', () => {
         3. Run \`md-code\` to sync your code examples"
       `);
 
-      const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');
+      const configContent = readFileSync(
+        path.join(project.baseDir, '.markdown-coderc.json'),
+        'utf-8',
+      );
       const config = JSON.parse(configContent);
-      
+
       expect(config).toMatchInlineSnapshot(`
         {
           "excludeGlob": [
@@ -139,15 +142,18 @@ describe('CLI', () => {
         "Configuration file already exists at .markdown-coderc.json"
       `);
 
-      const configContent = readFileSync(path.join(project.baseDir, '.markdown-coderc.json'), 'utf-8');
+      const configContent = readFileSync(
+        path.join(project.baseDir, '.markdown-coderc.json'),
+        'utf-8',
+      );
       const config = JSON.parse(configContent);
-      
+
       expect(config).toEqual(existingConfig);
     });
 
     it('does not create snippets directory if it already exists', async () => {
       await project.write({
-        'snippets': {
+        snippets: {
           'example.js': 'console.log("existing");',
         },
       });
@@ -156,50 +162,57 @@ describe('CLI', () => {
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
-      expect(result.stdout).toContain('Created .markdown-coderc.json with default configuration');
+      expect(result.stdout).toContain(
+        'Created .markdown-coderc.json with default configuration',
+      );
       expect(result.stdout).not.toContain('Created snippets/ directory');
 
-      const existingFile = readFileSync(path.join(project.baseDir, 'snippets', 'example.js'), 'utf-8');
+      const existingFile = readFileSync(
+        path.join(project.baseDir, 'snippets', 'example.js'),
+        'utf-8',
+      );
       expect(existingFile).toMatchInlineSnapshot(`"console.log("existing");"`);
     });
   });
 
   describe('sync mode (default)', () => {
-      it('syncs files successfully with default behavior', async () => {
-    const scenario = loadScenario('sync-basic');
+    it('syncs files successfully with default behavior', async () => {
+      const scenario = loadScenario('sync-basic');
 
-    await project.write({
-      'hello.ts': scenario.sources['hello.ts'],
-      'README.md': scenario.input,
+      await project.write({
+        'hello.ts': scenario.sources['hello.ts'],
+        'README.md': scenario.input,
+      });
+
+      const result = await runBin();
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "Syncing markdown files...
+        All files are already in sync."
+      `);
+
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`ts snippet=hello.ts
+        export function hello() {
+          return 'Hello, World!';
+        }
+        \`\`\`
+        "
+      `);
+      expect(updatedMarkdown).not.toContain('old content');
     });
-
-    const result = await runBin();
-
-    expect(result.exitCode).toEqual(0);
-    expect(result.stderr).toBe('');
-    expect(result.stdout).toMatchInlineSnapshot(`
-      "Syncing markdown files...
-      Updated files:
-        README.md"
-    `);
-
-    const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-    expect(updatedMarkdown).toMatchInlineSnapshot(`
-      "# Test
-
-      \`\`\`ts snippet=hello.ts
-      export function hello() {
-        return "Hello, World!";
-      } 
-      \`\`\`
-      "
-    `);
-    expect(updatedMarkdown).not.toContain('old content');
-  });
 
     it('reports when files are already in sync', async () => {
       const sourceContent = 'const synced = true;';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=synced.js
@@ -221,22 +234,25 @@ const synced = true;
       `);
     });
 
-      it('handles line ranges', async () => {
-    const scenario = loadScenario('line-ranges-basic');
+    it('handles line ranges', async () => {
+      const scenario = loadScenario('line-ranges-basic');
 
-    await project.write({
-      'lines.txt': scenario.sources['lines.txt'],
-      'README.md': scenario.input,
-    });
+      await project.write({
+        'lines.txt': scenario.sources['lines.txt'],
+        'README.md': scenario.input,
+      });
 
-    const result = await runBin();
+      const result = await runBin();
 
-    expect(result.exitCode).toEqual(0);
-    expect(result.stderr).toBe('');
-    expect(result.stdout).toContain('Updated files:');
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain('Updated files:');
 
-    const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-    expect(updatedMarkdown).toMatchInlineSnapshot(`
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+      expect(updatedMarkdown).toMatchInlineSnapshot(`
       "# Test
 
       \`\`\`text snippet=lines.txt#L2-L4
@@ -246,8 +262,8 @@ const synced = true;
       \`\`\`
       "
     `);
-    expect(updatedMarkdown).not.toContain('line 1');
-  });
+      expect(updatedMarkdown).not.toContain('line 1');
+    });
 
     it('warns about missing files', async () => {
       const markdownContent = `# Test
@@ -263,7 +279,8 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+      expect(normalizePath(result.stderr, project.baseDir))
+        .toMatchInlineSnapshot(`
         "[2m<TMP_DIR>/README.md[22m
           [2m3:1   [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
@@ -279,7 +296,7 @@ old content
   describe('check mode', () => {
     it('passes when files are in sync', async () => {
       const sourceContent = 'const value = "same";';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=test.js
@@ -303,7 +320,7 @@ const value = "same";
 
     it('fails when files are out of sync', async () => {
       const sourceContent = 'const updated = "new";';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=test.js
@@ -318,12 +335,14 @@ const updated = "old";
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
+      expect(
+        normalizePath(result.stderr, project.baseDir),
+      ).toMatchInlineSnapshot(`""`);
     });
 
     it('uses check command', async () => {
       const sourceContent = 'const test = true;';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=test.js
@@ -347,7 +366,7 @@ const test = true;
 
     it('detects whitespace differences', async () => {
       const sourceContent = 'const value = "test";';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=test.js
@@ -362,7 +381,9 @@ const test = true;
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
+      expect(
+        normalizePath(result.stderr, project.baseDir),
+      ).toMatchInlineSnapshot(`""`);
     });
 
     it('warns about missing files in check mode', async () => {
@@ -379,8 +400,11 @@ old content
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`""`);
-      expect(normalizePath(result.stdout, project.baseDir)).toMatchInlineSnapshot(`
+      expect(
+        normalizePath(result.stderr, project.baseDir),
+      ).toMatchInlineSnapshot(`""`);
+      expect(normalizePath(result.stdout, project.baseDir))
+        .toMatchInlineSnapshot(`
         "Checking markdown files...
         [2m<TMP_DIR>/README.md[22m
           [2m3:1   [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
@@ -399,7 +423,7 @@ old content
       };
 
       const sourceContent = 'export const custom = "config";';
-      
+
       const markdownContent = `# Test
 
 \`\`\`ts snippet=test.ts
@@ -408,7 +432,7 @@ old content
 
       await project.write({
         'custom.json': JSON.stringify(configContent),
-        'src': {
+        src: {
           'test.ts': sourceContent,
         },
         'README.md': markdownContent,
@@ -424,7 +448,10 @@ old content
           README.md"
       `);
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('export const custom = "config";');
     });
 
@@ -432,7 +459,9 @@ old content
       const result = await runBin('--config', 'nonexistent.json');
 
       expect(result.exitCode).toEqual(1);
-      expect(result.stderr).toMatchInlineSnapshot(`"Config file not found: nonexistent.json"`);
+      expect(result.stderr).toMatchInlineSnapshot(
+        `"Config file not found: nonexistent.json"`,
+      );
     });
 
     it('uses .markdown-coderc.json when present', async () => {
@@ -443,7 +472,7 @@ old content
       };
 
       const sourceContent = 'const fromConfig = true;';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=config.js
@@ -452,7 +481,7 @@ old content
 
       await project.write({
         '.markdown-coderc.json': JSON.stringify(configContent),
-        'examples': {
+        examples: {
           'config.js': sourceContent,
         },
         'README.md': markdownContent,
@@ -464,7 +493,10 @@ old content
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('Updated files:');
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('const fromConfig = true;');
     });
 
@@ -476,7 +508,7 @@ old content
       };
 
       const sourceContent = 'const override = "test";';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=example.js
@@ -492,9 +524,12 @@ old content
       });
 
       const result = await runBin(
-        '--snippet-root', 'custom-source',
-        '--markdown-glob', 'test.md',
-        '--include-extensions', '.js'
+        '--snippet-root',
+        'custom-source',
+        '--markdown-glob',
+        'test.md',
+        '--include-extensions',
+        '.js',
       );
 
       expect(result.exitCode).toEqual(0);
@@ -505,14 +540,17 @@ old content
           test.md"
       `);
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'test.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'test.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('const override = "test";');
     });
 
     it('supports comma-separated include-extensions', async () => {
       const jsContent = 'const js = "file";';
       const tsContent = 'const ts: string = "file";';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=example.js
@@ -524,7 +562,7 @@ old ts content
 \`\`\``;
 
       await project.write({
-        'source': {
+        source: {
           'example.js': jsContent,
           'example.ts': tsContent,
         },
@@ -532,8 +570,10 @@ old ts content
       });
 
       const result = await runBin(
-        '--snippet-root', 'source',
-        '--include-extensions', '.js,.ts'
+        '--snippet-root',
+        'source',
+        '--include-extensions',
+        '.js,.ts',
       );
 
       expect(result.exitCode).toEqual(0);
@@ -544,14 +584,17 @@ old ts content
           README.md"
       `);
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('const js = "file";');
       expect(updatedMarkdown).toContain('const ts: string = "file";');
     });
 
     it('uses default values when no config or flags provided', async () => {
       const sourceContent = 'const defaultTest = true;';
-      
+
       const markdownContent = `# Test
 
 \`\`\`js snippet=example.js
@@ -573,7 +616,10 @@ old content
           README.md"
       `);
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('const defaultTest = true;');
     });
   });
@@ -593,7 +639,8 @@ malicious content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+      expect(normalizePath(result.stderr, project.baseDir))
+        .toMatchInlineSnapshot(`
         "[2m<TMP_DIR>/README.md[22m
           [2m3:1   [22m [31minvalid-path[39m Path traversal attempt detected: ../../../etc/passwd[2m  path-traversal[22m
 
@@ -642,7 +689,8 @@ ${scenario.sources['file2.js']}
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+      expect(normalizePath(result.stderr, project.baseDir))
+        .toMatchInlineSnapshot(`
         "[2m<TMP_DIR>/doc1.md[22m
           [2m15:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
@@ -662,7 +710,7 @@ ${scenario.sources['file2.js']}
 
     it('handles nested directory structure', async () => {
       const sourceContent = 'export const helper = () => {};';
-      
+
       const markdownContent = `# Test
 
 \`\`\`ts snippet=src/utils/helper.ts
@@ -670,8 +718,8 @@ old content
 \`\`\``;
 
       await project.write({
-        'src': {
-          'utils': {
+        src: {
+          utils: {
             'helper.ts': sourceContent,
           },
         },
@@ -684,7 +732,10 @@ old content
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('Updated files:');
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
       expect(updatedMarkdown).toContain('export const helper = () => {};');
     });
 
@@ -701,7 +752,8 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+      expect(normalizePath(result.stderr, project.baseDir))
+        .toMatchInlineSnapshot(`
         "[2m<TMP_DIR>/README.md[22m
           [2m61:1  [22m [36mfile-missing[39m Snippet file not found: nonexistent.js[2m  snippet-not-found[22m
 
@@ -713,8 +765,11 @@ old content
           README.md"
       `);
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-      
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Complex Multi-Snippet Example
 
@@ -833,11 +888,11 @@ old content
       const scenario = loadScenario('nested-complex');
 
       await project.write({
-        'src': {
-          'components': {
+        src: {
+          components: {
             'Button.tsx': scenario.sources['src/components/Button.tsx'],
           },
-          'utils': {
+          utils: {
             'api.ts': scenario.sources['src/utils/api.ts'],
           },
         },
@@ -850,8 +905,11 @@ old content
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('Updated files:');
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-      
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Nested Directory Documentation
 
@@ -927,8 +985,11 @@ old content
       expect(result.stderr).toBe('');
       expect(result.stdout).toContain('Updated files:');
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-      
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Complex Line Range Patterns
 
@@ -1002,7 +1063,8 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir)).toMatchInlineSnapshot(`
+      expect(normalizePath(result.stderr, project.baseDir))
+        .toMatchInlineSnapshot(`
         "[2m<TMP_DIR>/README.md[22m
           [2m19:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
 
@@ -1014,8 +1076,11 @@ old content
           README.md"
       `);
 
-      const updatedMarkdown = readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8');
-      
+      const updatedMarkdown = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
       expect(updatedMarkdown).toMatchInlineSnapshot(`
         "# Mixed Sync States
 
@@ -1043,4 +1108,4 @@ old content
       expect(updatedMarkdown).not.toContain('const updated = "old content";');
     });
   });
-}); 
+});

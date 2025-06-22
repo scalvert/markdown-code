@@ -92,8 +92,12 @@ echo "bash command"
     expect(result.totalCodeBlocks).toBe(3);
     expect(result.fileDetails).toHaveLength(2);
 
-    const file1Details = result.fileDetails.find(f => f.filePath.includes('file1.md'));
-    const file2Details = result.fileDetails.find(f => f.filePath.includes('file2.md'));
+    const file1Details = result.fileDetails.find((f) =>
+      f.filePath.includes('file1.md'),
+    );
+    const file2Details = result.fileDetails.find((f) =>
+      f.filePath.includes('file2.md'),
+    );
 
     expect(file1Details?.codeBlocks).toBe(1);
     expect(file1Details?.languages).toEqual(['javascript']);
@@ -129,4 +133,4 @@ export function hello() {
     expect(result.totalCodeBlocks).toBe(1);
     expect(result.fileDetails[0]?.filePath).toContain('without-snippets.md');
   });
-}); 
+});
