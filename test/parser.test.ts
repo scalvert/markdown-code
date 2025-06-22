@@ -1,16 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { join } from 'node:path';
-import { extractLines, parseMarkdownFile, loadSnippetContent, replaceCodeBlock, trimBlankLines } from '../src/parser.js';
+import { Project } from 'fixturify-project';
+import {
+  extractLines,
+  parseMarkdownFile,
+  loadSnippetContent,
+  replaceCodeBlock,
+  trimBlankLines,
+} from '../src/parser.js';
 
 describe('parser', () => {
-  const testDir = './test-temp';
+  let project: Project;
+  let testDir: string;
 
   beforeEach(() => {
-    try {
-      rmSync(testDir, { recursive: true });
-    } catch {}
-    mkdirSync(testDir, { recursive: true });
+    project = new Project();
+    testDir = project.baseDir;
+  });
+
+  afterEach(() => {
+    project.dispose();
   });
 
   describe('extractLines', () => {
@@ -74,7 +83,7 @@ old content
 More text here.`;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -104,7 +113,7 @@ old content
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -123,7 +132,7 @@ old content
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -142,7 +151,7 @@ old content
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -164,7 +173,7 @@ snippet block
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -178,7 +187,7 @@ no language
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -199,7 +208,7 @@ content 3
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -215,7 +224,7 @@ button content
 \`\`\``;
 
       const filePath = join(testDir, 'test.md');
-      writeFileSync(filePath, markdownContent);
+      await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
@@ -231,7 +240,7 @@ button content
     it('should load content from file', async () => {
       const content = 'export const test = "hello";';
       const filePath = join(testDir, 'test.ts');
-      writeFileSync(filePath, content);
+      await project.write({ 'test.ts': content });
 
       const result = await loadSnippetContent('test.ts', testDir);
 
@@ -241,9 +250,8 @@ button content
     it('should handle nested paths', async () => {
       const content = 'nested file content';
       const nestedDir = join(testDir, 'nested');
-      mkdirSync(nestedDir);
       const filePath = join(nestedDir, 'file.js');
-      writeFileSync(filePath, content);
+      await project.write({ nested: { 'file.js': content } });
 
       const result = await loadSnippetContent('nested/file.js', testDir);
 
@@ -349,7 +357,8 @@ Some text after.
     });
 
     it('removes both leading and trailing blank lines', () => {
-      const content = '\n\n\nconsole.log("hello");\nconsole.log("world");\n\n\n';
+      const content =
+        '\n\n\nconsole.log("hello");\nconsole.log("world");\n\n\n';
       const result = trimBlankLines(content);
       expect(result).toBe('console.log("hello");\nconsole.log("world");');
     });
@@ -417,4 +426,4 @@ Some text after.
       expect(result).toBe('');
     });
   });
-}); 
+});
