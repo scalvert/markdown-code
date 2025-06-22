@@ -1,23 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { Project } from 'fixturify-project';
 import { discoverCodeBlocks } from '../src/sync.js';
 import { handler } from '../src/commands/check.js';
 
 describe('discovery functionality', () => {
-  const testDir = './test-discovery';
+  let project: Project;
 
   beforeEach(() => {
-    try {
-      rmSync(testDir, { recursive: true });
-    } catch {}
-    mkdirSync(testDir, { recursive: true });
+    project = new Project();
   });
 
   afterEach(() => {
-    try {
-      rmSync(testDir, { recursive: true });
-    } catch {}
+    project.dispose();
   });
 
   it('should discover code blocks in markdown files', async () => {
@@ -38,9 +33,11 @@ Some text here.
 }
 \`\`\``;
 
-    writeFileSync(join(testDir, 'README.md'), markdownContent);
+    await project.write({
+      'README.md': markdownContent,
+    });
 
-    const result = await discoverCodeBlocks(`${testDir}/**/*.md`);
+    const result = await discoverCodeBlocks(`${project.baseDir}/**/*.md`);
 
     expect(result.markdownFiles).toHaveLength(1);
     expect(result.totalCodeBlocks).toBe(2);
@@ -56,9 +53,11 @@ Just some text without code blocks.
 
 More text here.`;
 
-    writeFileSync(join(testDir, 'README.md'), markdownContent);
+    await project.write({
+      'README.md': markdownContent,
+    });
 
-    const result = await discoverCodeBlocks(`${testDir}/**/*.md`);
+    const result = await discoverCodeBlocks(`${project.baseDir}/**/*.md`);
 
     expect(result.markdownFiles).toHaveLength(0);
     expect(result.totalCodeBlocks).toBe(0);
@@ -82,10 +81,12 @@ print('file 2')
 echo "bash command"
 \`\`\``;
 
-    writeFileSync(join(testDir, 'file1.md'), markdown1);
-    writeFileSync(join(testDir, 'file2.md'), markdown2);
+    await project.write({
+      'file1.md': markdown1,
+      'file2.md': markdown2,
+    });
 
-    const result = await discoverCodeBlocks(`${testDir}/**/*.md`);
+    const result = await discoverCodeBlocks(`${project.baseDir}/**/*.md`);
 
     expect(result.markdownFiles).toHaveLength(2);
     expect(result.totalCodeBlocks).toBe(3);
@@ -118,10 +119,12 @@ export function hello() {
 }
 \`\`\``;
 
-    writeFileSync(join(testDir, 'with-snippets.md'), markdownWithSnippets);
-    writeFileSync(join(testDir, 'without-snippets.md'), markdownWithoutSnippets);
+    await project.write({
+      'with-snippets.md': markdownWithSnippets,
+      'without-snippets.md': markdownWithoutSnippets,
+    });
 
-    const result = await discoverCodeBlocks(`${testDir}/**/*.md`);
+    const result = await discoverCodeBlocks(`${project.baseDir}/**/*.md`);
 
     expect(result.totalCodeBlocks).toBe(1);
     expect(result.fileDetails[0]?.filePath).toContain('without-snippets.md');
