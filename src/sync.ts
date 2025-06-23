@@ -314,6 +314,10 @@ function getExtensionForLanguage(
   return null;
 }
 
+export function ensureTrailingNewline(content: string): string {
+  return content.endsWith('\n') ? content : content + '\n';
+}
+
 export async function extractSnippets(config: Config): Promise<ExtractResult> {
   const result: ExtractResult = {
     extracted: [],
@@ -368,7 +372,8 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
-          await writeFile(snippetFilePath, codeBlock.content, 'utf-8');
+          const contentWithNewline = ensureTrailingNewline(codeBlock.content);
+          await writeFile(snippetFilePath, contentWithNewline, 'utf-8');
           result.snippetsCreated++;
 
           const snippetReference = `${dirName}/${snippetFileName}`;
