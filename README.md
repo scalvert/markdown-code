@@ -3,6 +3,7 @@
 ![CI Build](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml/badge.svg)
 [![npm version](https://badge.fury.io/js/markdown-code.svg)](https://badge.fury.io/js/markdown-code)
 [![License](https://img.shields.io/npm/l/markdown-code.svg)](https://github.com/scalvert/markdown-code/blob/main/LICENSE)
+[![codecov](https://codecov.io/gh/scalvert/markdown-code/branch/main/graph/badge.svg)](https://codecov.io/gh/scalvert/markdown-code)
 
 **Stop copy-pasting code into documentation.** Keep your markdown examples automatically synchronized with real source files.
 
