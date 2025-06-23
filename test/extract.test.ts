@@ -46,16 +46,16 @@ describe('extractSnippets', () => {
     `);
 
     const snippetDir = join(snippetRoot, 'example');
-    expect(readFileSync(join(snippetDir, 'snippet1.ts'), 'utf-8')).toBe(
+    expect(readFileSync(join(snippetDir, 'snippet-01.ts'), 'utf-8')).toBe(
       "console.log('ts');\n",
     );
-    expect(readFileSync(join(snippetDir, 'snippet2.js'), 'utf-8')).toBe(
+    expect(readFileSync(join(snippetDir, 'snippet-02.js'), 'utf-8')).toBe(
       "console.log('js');\n",
     );
 
     const updated = readFileSync(filePath, 'utf-8');
-    expect(updated).toContain('```ts snippet=example/snippet1.ts');
-    expect(updated).toContain('```js snippet=example/snippet2.js');
+    expect(updated).toContain('```ts snippet=example/snippet-01.ts');
+    expect(updated).toContain('```js snippet=example/snippet-02.js');
   });
 
   it('skips languages not in includeExtensions', async () => {
@@ -80,8 +80,8 @@ describe('extractSnippets', () => {
         "warnings": [],
       }
     `);
-    expect(existsSync(join(snippetRoot, 'skip', 'snippet1.ts'))).toBe(true);
-    expect(existsSync(join(snippetRoot, 'skip', 'snippet2.py'))).toBe(false);
+    expect(existsSync(join(snippetRoot, 'skip', 'snippet-01.ts'))).toBe(true);
+    expect(existsSync(join(snippetRoot, 'skip', 'snippet-02.py'))).toBe(false);
   });
 
   it('ensures all snippet files have trailing newlines', async () => {
@@ -96,19 +96,19 @@ Content with newline:
 \`\`\`js
 console.log('has newline');
 \`\`\``;
-    
+
     const filePath = join(testDir, 'newlines.md');
     await project.write({ 'newlines.md': md });
 
     await extractSnippets(baseConfig);
 
     const snippetDir = join(snippetRoot, 'newlines');
-    const snippet1 = readFileSync(join(snippetDir, 'snippet1.js'), 'utf-8');
-    const snippet2 = readFileSync(join(snippetDir, 'snippet2.js'), 'utf-8');
+    const snippet1 = readFileSync(join(snippetDir, 'snippet-01.js'), 'utf-8');
+    const snippet2 = readFileSync(join(snippetDir, 'snippet-02.js'), 'utf-8');
 
     expect(snippet1).toBe("console.log('no newline')\n");
     expect(snippet2).toBe("console.log('has newline');\n");
-    
+
     expect(snippet1.endsWith('\n')).toBe(true);
     expect(snippet2.endsWith('\n')).toBe(true);
   });
