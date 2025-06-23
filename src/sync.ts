@@ -318,6 +318,11 @@ export function ensureTrailingNewline(content: string): string {
   return content.endsWith('\n') ? content : content + '\n';
 }
 
+function buildSnippetFileName(index: number, digits: number, extension: string): string {
+  const padded = String(index).padStart(digits, '0');
+  return `snippet-${padded}${extension}`;
+}
+
 export async function extractSnippets(config: Config): Promise<ExtractResult> {
   const result: ExtractResult = {
     extracted: [],
@@ -357,28 +362,27 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
         });
         const digits = Math.max(2, String(eligibleBlocks.length).length);
 
-        for (const codeBlock of markdownFile.codeBlocks) {
+        for (const codeBlock of eligibleBlocks) {
           const lang = codeBlock.language;
           const mappedExtension = getExtensionForLanguage(
             lang,
             config.includeExtensions,
+          )!;
+
+          let snippetFileName = buildSnippetFileName(
+            snippetIndex,
+            digits,
+            mappedExtension,
           );
-
-          if (
-            !mappedExtension ||
-            !config.includeExtensions.includes(mappedExtension)
-          ) {
-            continue;
-          }
-
-          const padded = String(snippetIndex).padStart(digits, '0');
-          let snippetFileName = `snippet-${padded}${mappedExtension}`;
           let snippetFilePath = join(outputDir, snippetFileName);
 
           while (await fileExists(snippetFilePath)) {
             snippetIndex++;
-            const newPadded = String(snippetIndex).padStart(digits, '0');
-            snippetFileName = `snippet-${newPadded}${mappedExtension}`;
+            snippetFileName = buildSnippetFileName(
+              snippetIndex,
+              digits,
+              mappedExtension,
+            );
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
