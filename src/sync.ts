@@ -348,6 +348,14 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
         let hasChanges = false;
         let updatedContent = markdownFile.content;
         let snippetIndex = 1;
+        const eligibleBlocks = markdownFile.codeBlocks.filter((cb) => {
+          const ext = getExtensionForLanguage(
+            cb.language,
+            config.includeExtensions,
+          );
+          return ext && config.includeExtensions.includes(ext);
+        });
+        const digits = Math.max(2, String(eligibleBlocks.length).length);
 
         for (const codeBlock of markdownFile.codeBlocks) {
           const lang = codeBlock.language;
@@ -363,12 +371,14 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
             continue;
           }
 
-          let snippetFileName = `snippet${snippetIndex}${mappedExtension}`;
+          const padded = String(snippetIndex).padStart(digits, '0');
+          let snippetFileName = `snippet-${padded}${mappedExtension}`;
           let snippetFilePath = join(outputDir, snippetFileName);
 
           while (await fileExists(snippetFilePath)) {
             snippetIndex++;
-            snippetFileName = `snippet${snippetIndex}${mappedExtension}`;
+            const newPadded = String(snippetIndex).padStart(digits, '0');
+            snippetFileName = `snippet-${newPadded}${mappedExtension}`;
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
