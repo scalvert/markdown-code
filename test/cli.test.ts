@@ -1108,4 +1108,16 @@ old content
       expect(updatedMarkdown).not.toContain('const updated = "old content";');
     });
   });
+
+  describe('eject command', () => {
+    it('handles no config file gracefully', async () => {
+      const result = await runBin('eject');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatchInlineSnapshot(`
+        "No configuration file found. Nothing to eject."
+      `);
+    });
+  });
 });
