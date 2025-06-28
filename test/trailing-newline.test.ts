@@ -18,10 +18,10 @@ describe('ensureTrailingNewline', () => {
     const content = 'console.log("hello")\r\n';
     const result = ensureTrailingNewline(content);
     expect(result).toBe('console.log("hello")\r\n');
-    
+
     // Verify it ends with newline
     expect(result.endsWith('\n')).toBe(true);
-    
+
     // Verify no double newline was added
     expect(result).not.toBe('console.log("hello")\r\n\n');
   });
@@ -45,4 +45,4 @@ describe('ensureTrailingNewline', () => {
     expect(result).toBe('line1\nline2\r\nline3\r\n');
     expect(result.endsWith('\n')).toBe(true);
   });
-}); 
+});

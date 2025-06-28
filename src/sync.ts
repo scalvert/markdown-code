@@ -318,7 +318,11 @@ export function ensureTrailingNewline(content: string): string {
   return content.endsWith('\n') ? content : content + '\n';
 }
 
-function buildSnippetFileName(index: number, digits: number, extension: string): string {
+function buildSnippetFileName(
+  index: number,
+  digits: number,
+  extension: string,
+): string {
   const padded = String(index).padStart(digits, '0');
   return `snippet-${padded}${extension}`;
 }
