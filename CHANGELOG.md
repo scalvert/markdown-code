@@ -1,3 +1,20 @@
+
+## v0.6.0 (2025-06-28)
+
+#### :rocket: Enhancement
+* [#10](https://github.com/scalvert/markdown-code/pull/10) feat: Adds eject command ([@scalvert](https://github.com/scalvert))
+* [#9](https://github.com/scalvert/markdown-code/pull/9) Improve snippet numbering ([@scalvert](https://github.com/scalvert))
+
+#### :bug: Bug Fix
+* [#8](https://github.com/scalvert/markdown-code/pull/8) Ensure trailing newlines are present in extracted snippets files ([@scalvert](https://github.com/scalvert))
+
+#### :house: Internal
+* [#5](https://github.com/scalvert/markdown-code/pull/5) Add GitHub issue and PR templates ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
 ## v0.5.2 (2025-06-22)
 
 #### :house: Internal
