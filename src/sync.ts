@@ -2,9 +2,9 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve, basename } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
-import { fileExists } from './utils.js';
+import { fileExists, isInWorkingDir } from './utils.js';
 import type {
-  Config,
+  RuntimeConfig,
   SyncResult,
   CheckResult,
   ExtractResult,
@@ -15,6 +15,7 @@ import {
   parseMarkdownFile,
   parseMarkdownForExtraction,
   loadSnippetContent,
+  resolveSnippetPath,
   extractLines,
   replaceCodeBlock,
 } from './parser.js';
@@ -22,7 +23,9 @@ import {
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
 
-export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
+export async function syncMarkdownFiles(
+  config: RuntimeConfig,
+): Promise<SyncResult> {
   const result: SyncResult = {
     updated: [],
     fileIssues: [],
@@ -33,6 +36,8 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
   try {
     const markdownFiles = await fg(config.markdownGlob, {
       ignore: config.excludeGlob,
+      cwd: config.workingDir,
+      absolute: true,
     });
 
     for (const filePath of markdownFiles) {
@@ -48,14 +53,25 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             continue;
           }
 
+          let snippetPath: string;
           try {
-            const fullPath = resolve(
-              config.snippetRoot,
+            snippetPath = await resolveSnippetPath(
               codeBlock.snippet.filePath,
+              config,
+              filePath,
             );
-            const resolvedRoot = resolve(config.snippetRoot);
 
-            if (!fullPath.startsWith(resolvedRoot)) {
+            const workingDir = resolve(config.workingDir);
+            const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
+
+            // Check if path is within allowed directories
+            const allowedRoots = [workingDir];
+            // Only add snippetRoot if it's different from workingDir
+            if (snippetRoot !== workingDir) {
+              allowedRoots.push(snippetRoot);
+            }
+
+            if (!isInWorkingDir(snippetPath, allowedRoots)) {
               fileIssues.push({
                 type: 'invalid-path',
                 message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
@@ -68,7 +84,7 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
           } catch (error) {
             fileIssues.push({
               type: 'load-failed',
-              message: `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
+              message: `Error resolving path ${codeBlock.snippet.filePath}: ${error}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
               ruleId: 'path-validation',
@@ -76,15 +92,10 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
             continue;
           }
 
-          const snippetPath = join(
-            config.snippetRoot,
-            codeBlock.snippet.filePath,
-          );
-
           if (!(await fileExists(snippetPath))) {
             fileIssues.push({
               type: 'file-missing',
-              message: `Snippet file not found: ${snippetPath}`,
+              message: `Snippet file not found: ${codeBlock.snippet.filePath}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
               ruleId: 'snippet-not-found',
@@ -95,7 +106,8 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
           try {
             const snippetContent = await loadSnippetContent(
               codeBlock.snippet.filePath,
-              config.snippetRoot,
+              config,
+              filePath,
             );
             const extractedContent = extractLines(
               snippetContent,
@@ -151,7 +163,9 @@ export async function syncMarkdownFiles(config: Config): Promise<SyncResult> {
   return result;
 }
 
-export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
+export async function checkMarkdownFiles(
+  config: RuntimeConfig,
+): Promise<CheckResult> {
   const result: CheckResult = {
     inSync: true,
     outOfSync: [],
@@ -163,6 +177,8 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
   try {
     const markdownFiles = await fg(config.markdownGlob, {
       ignore: config.excludeGlob,
+      cwd: config.workingDir,
+      absolute: true,
     });
 
     for (const filePath of markdownFiles) {
@@ -177,14 +193,25 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             continue;
           }
 
+          let snippetPath: string;
           try {
-            const fullPath = resolve(
-              config.snippetRoot,
+            snippetPath = await resolveSnippetPath(
               codeBlock.snippet.filePath,
+              config,
+              filePath,
             );
-            const resolvedRoot = resolve(config.snippetRoot);
 
-            if (!fullPath.startsWith(resolvedRoot)) {
+            const workingDir = resolve(config.workingDir);
+            const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
+
+            // Check if path is within allowed directories
+            const allowedRoots = [workingDir];
+            // Only add snippetRoot if it's different from workingDir
+            if (snippetRoot !== workingDir) {
+              allowedRoots.push(snippetRoot);
+            }
+
+            if (!isInWorkingDir(snippetPath, allowedRoots)) {
               fileIssues.push({
                 type: 'invalid-path',
                 message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
@@ -197,7 +224,7 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
           } catch (error) {
             fileIssues.push({
               type: 'load-failed',
-              message: `Error validating path ${codeBlock.snippet.filePath}: ${error}`,
+              message: `Error resolving path ${codeBlock.snippet.filePath}: ${error}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
               ruleId: 'path-validation',
@@ -205,15 +232,10 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
             continue;
           }
 
-          const snippetPath = join(
-            config.snippetRoot,
-            codeBlock.snippet.filePath,
-          );
-
           if (!(await fileExists(snippetPath))) {
             fileIssues.push({
               type: 'file-missing',
-              message: `Snippet file not found: ${snippetPath}`,
+              message: `Snippet file not found: ${codeBlock.snippet.filePath}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
               ruleId: 'snippet-not-found',
@@ -224,7 +246,8 @@ export async function checkMarkdownFiles(config: Config): Promise<CheckResult> {
           try {
             const snippetContent = await loadSnippetContent(
               codeBlock.snippet.filePath,
-              config.snippetRoot,
+              config,
+              filePath,
             );
             const extractedContent = extractLines(
               snippetContent,
@@ -327,7 +350,9 @@ function buildSnippetFileName(
   return `snippet-${padded}${extension}`;
 }
 
-export async function extractSnippets(config: Config): Promise<ExtractResult> {
+export async function extractSnippets(
+  config: RuntimeConfig,
+): Promise<ExtractResult> {
   const result: ExtractResult = {
     extracted: [],
     snippetsCreated: 0,
@@ -338,6 +363,8 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
   try {
     const markdownFiles = await fg(config.markdownGlob, {
       ignore: config.excludeGlob,
+      cwd: config.workingDir,
+      absolute: true,
     });
 
     for (const filePath of markdownFiles) {
@@ -426,6 +453,7 @@ export async function extractSnippets(config: Config): Promise<ExtractResult> {
 export async function discoverCodeBlocks(
   markdownGlob: string = '**/*.md',
   excludeGlob: Array<string> = [],
+  workingDir: string = process.cwd(),
 ): Promise<DiscoveryResult> {
   const result: DiscoveryResult = {
     markdownFiles: [],
@@ -436,6 +464,8 @@ export async function discoverCodeBlocks(
   try {
     const markdownFiles = await fg(markdownGlob, {
       ignore: excludeGlob,
+      cwd: workingDir,
+      absolute: true,
     });
 
     for (const filePath of markdownFiles) {

@@ -1,10 +1,16 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { resolve, dirname, isAbsolute } from 'node:path';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import { visit } from 'unist-util-visit';
 import type { Code } from 'mdast';
-import type { MarkdownFile, CodeBlock, SnippetDirective } from './types.js';
+import type {
+  MarkdownFile,
+  CodeBlock,
+  SnippetDirective,
+  RuntimeConfig,
+} from './types.js';
+import { fileExists, isInWorkingDir } from './utils.js';
 
 export function parseSnippetDirective(
   info: string,
@@ -174,19 +180,69 @@ export async function parseMarkdownForExtraction(
   };
 }
 
+export async function resolveSnippetPath(
+  snippetPath: string,
+  config: RuntimeConfig,
+  markdownFilePath?: string,
+): Promise<string> {
+  const workingDir = config.workingDir;
+  const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
+
+  if (snippetPath.startsWith('./') || snippetPath.startsWith('../')) {
+    if (!markdownFilePath) {
+      throw new Error('Markdown file path required for relative snippet paths');
+    }
+    const markdownDir = dirname(resolve(markdownFilePath));
+    return resolve(markdownDir, snippetPath);
+  }
+
+  if (isAbsolute(snippetPath)) {
+    return snippetPath;
+  }
+
+  const workingDirRelativePath = resolve(workingDir, snippetPath);
+  if (await fileExists(workingDirRelativePath)) {
+    return workingDirRelativePath;
+  }
+
+  const snippetRootPath = resolve(snippetRoot, snippetPath);
+  if (await fileExists(snippetRootPath)) {
+    return snippetRootPath;
+  }
+
+  return snippetRootPath;
+}
+
 export async function loadSnippetContent(
   snippetPath: string,
-  snippetRoot: string,
+  config: RuntimeConfig,
+  markdownFilePath?: string,
 ): Promise<string> {
-  const fullPath = resolve(snippetRoot, snippetPath);
-  const resolvedRoot = resolve(snippetRoot);
+  const resolvedPath = await resolveSnippetPath(
+    snippetPath,
+    config,
+    markdownFilePath,
+  );
 
-  // Security check: ensure the resolved path is within the snippet root
-  if (!fullPath.startsWith(resolvedRoot)) {
+  const workingDir = resolve(config.workingDir);
+  const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
+
+  // Resolve symlinks to get the real path
+  const realResolvedPath = await realpath(resolvedPath);
+
+  // Check if the resolved path is within allowed directories
+  // Allow access to both workingDir and snippetRoot
+  const allowedRoots = [workingDir];
+  // Only add snippetRoot if it's different from workingDir
+  if (snippetRoot !== workingDir) {
+    allowedRoots.push(snippetRoot);
+  }
+
+  if (!isInWorkingDir(realResolvedPath, allowedRoots)) {
     throw new Error(`Path traversal attempt detected: ${snippetPath}`);
   }
 
-  return await readFile(fullPath, 'utf-8');
+  return await readFile(realResolvedPath, 'utf-8');
 }
 
 export function trimBlankLines(content: string): string {

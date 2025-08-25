@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { writeFile, unlink, rmdir } from 'node:fs/promises';
 import { Project } from 'fixturify-project';
 import {
   extractLines,
@@ -242,7 +243,14 @@ button content
       const filePath = join(testDir, 'test.ts');
       await project.write({ 'test.ts': content });
 
-      const result = await loadSnippetContent('test.ts', testDir);
+      const config = {
+        snippetRoot: '.',
+        workingDir: testDir,
+        markdownGlob: '**/*.md',
+        excludeGlob: [],
+        includeExtensions: ['.ts', '.js'],
+      };
+      const result = await loadSnippetContent('test.ts', config);
 
       expect(result).toBe(content);
     });
@@ -253,9 +261,136 @@ button content
       const filePath = join(nestedDir, 'file.js');
       await project.write({ nested: { 'file.js': content } });
 
-      const result = await loadSnippetContent('nested/file.js', testDir);
+      const config = {
+        snippetRoot: '.',
+        workingDir: testDir,
+        markdownGlob: '**/*.md',
+        excludeGlob: [],
+        includeExtensions: ['.ts', '.js'],
+      };
+      const result = await loadSnippetContent('nested/file.js', config);
 
       expect(result).toBe(content);
+    });
+
+    it('should prevent path traversal attacks outside workingDir', async () => {
+      const config = {
+        snippetRoot: 'snippets',
+        workingDir: testDir,
+        markdownGlob: '**/*.md',
+        excludeGlob: [],
+        includeExtensions: ['.ts', '.js'],
+      };
+
+      // Create files to test access control
+      await project.write({
+        'within-working.txt': 'content within working dir',
+        snippets: {
+          'safe.txt': 'safe content in snippets',
+          docs: {
+            'test.md': '# Test',
+          },
+        },
+      });
+
+      // Create a file outside the working directory
+      const parentDir = dirname(testDir);
+      const secretFile = join(parentDir, 'outside-working.txt');
+      await writeFile(secretFile, 'secret content outside working dir');
+
+      try {
+        // Test 1: Accessing files within workingDir should work (by design for mixed sources)
+        const withinResult = await loadSnippetContent(
+          'within-working.txt',
+          config,
+        );
+        expect(withinResult).toBe('content within working dir');
+
+        // Test 2: Accessing files within snippetRoot should work
+        const safeResult = await loadSnippetContent('safe.txt', config);
+        expect(safeResult).toBe('safe content in snippets');
+
+        // Test 3: Path traversal outside workingDir should fail
+        // This would resolve to a path outside testDir
+        await expect(
+          loadSnippetContent(
+            '../../../outside-working.txt',
+            config,
+            join(testDir, 'snippets/docs/test.md'),
+          ),
+        ).rejects.toThrow('Path traversal attempt detected');
+      } finally {
+        // Clean up the secret file
+        await unlink(secretFile).catch(() => {});
+      }
+    });
+
+    it.skipIf(process.platform === 'win32')(
+      'should reject symlink escape outside workingDir',
+      async () => {
+        const { symlink, unlink: fsUnlink, mkdir } = await import(
+          'node:fs/promises'
+        );
+        const { basename } = await import('node:path');
+
+        const config = {
+          snippetRoot: '.',
+          workingDir: testDir,
+          markdownGlob: '**/*.md',
+          excludeGlob: [],
+          includeExtensions: ['.ts', '.js'],
+        };
+
+        await project.write({ 'link.txt': 'inside' });
+
+        const parentDir = dirname(testDir);
+        const outsideFile = join(parentDir, 'outside-real.txt');
+        await writeFile(outsideFile, 'secret content');
+
+        const linkPath = join(testDir, 'link.txt');
+
+        await fsUnlink(linkPath);
+        await symlink(outsideFile, linkPath);
+
+        try {
+          await expect(loadSnippetContent('link.txt', config)).rejects.toThrow(
+            'Path traversal attempt detected',
+          );
+        } finally {
+          await unlink(outsideFile).catch(() => {});
+        }
+      },
+    );
+
+    it('should handle snippetRoot outside workingDir with shared prefix safely', async () => {
+      const { mkdir } = await import('node:fs/promises');
+      const { basename } = await import('node:path');
+
+      const siblingSnippets = join(
+        dirname(testDir),
+        `${basename(testDir)}-snippets`,
+      );
+      await mkdir(siblingSnippets, { recursive: true });
+      await writeFile(
+        join(siblingSnippets, 'only-outside.js'),
+        'console.log(42);',
+      );
+
+      const config = {
+        snippetRoot: siblingSnippets,
+        workingDir: testDir,
+        markdownGlob: '**/*.md',
+        excludeGlob: [],
+        includeExtensions: ['.ts', '.js'],
+      };
+
+      try {
+        const result = await loadSnippetContent('only-outside.js', config);
+        expect(result).toContain('console.log(42);');
+      } finally {
+        await unlink(join(siblingSnippets, 'only-outside.js')).catch(() => {});
+        await rmdir(siblingSnippets).catch(() => {});
+      }
     });
   });
 

@@ -240,6 +240,12 @@ const synced = true;
       await project.write({
         'lines.txt': scenario.sources['lines.txt'],
         'README.md': scenario.input,
+        '.markdown-coderc.json': JSON.stringify({
+          snippetRoot: '.',
+          markdownGlob: '**/*.md',
+          excludeGlob: [],
+          includeExtensions: ['.txt'],
+        }),
       });
 
       const result = await runBin();
