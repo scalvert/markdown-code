@@ -1,3 +1,13 @@
+
+## v0.6.1 (2025-08-26)
+
+#### :bug: Bug Fix
+* [#11](https://github.com/scalvert/markdown-code/pull/11) fix: Fixes snippet path resolution to use workingDir ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
 ## v0.6.0 (2025-06-28)
 
 #### :rocket: Enhancement
