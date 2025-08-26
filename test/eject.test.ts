@@ -196,15 +196,19 @@ interface Test {}
       const markdownFiles = await fg.default(baseConfig.markdownGlob);
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
-      
+
       // The parser should handle line ranges correctly
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
         (cb) => cb.snippet,
       );
-      
+
       expect(codeBlocksWithSnippets).toHaveLength(2);
-      expect(codeBlocksWithSnippets[0].snippet?.filePath).toBe('example/snippet-01.js');
-      expect(codeBlocksWithSnippets[1].snippet?.filePath).toBe('example/snippet-02.ts');
+      expect(codeBlocksWithSnippets[0].snippet?.filePath).toBe(
+        'example/snippet-01.js',
+      );
+      expect(codeBlocksWithSnippets[1].snippet?.filePath).toBe(
+        'example/snippet-02.ts',
+      );
     });
 
     it('should preserve code block content exactly', async () => {
@@ -306,7 +310,10 @@ function createUser(name: string, age: number): User {
         }
       `);
 
-      const markdownAfterExtract = readFileSync(join(testDir, 'README.md'), 'utf-8');
+      const markdownAfterExtract = readFileSync(
+        join(testDir, 'README.md'),
+        'utf-8',
+      );
       expect(markdownAfterExtract).toContain('snippet=readme/snippet-01.js');
       expect(markdownAfterExtract).toContain('snippet=readme/snippet-02.ts');
       expect(existsSync(join(snippetRoot, 'readme'))).toBe(true);
@@ -362,7 +369,10 @@ function createUser(name: string, age: number): User {
       }
 
       // Step 3: Verify the eject was successful
-      const markdownAfterEject = readFileSync(join(testDir, 'README.md'), 'utf-8');
+      const markdownAfterEject = readFileSync(
+        join(testDir, 'README.md'),
+        'utf-8',
+      );
       expect(markdownAfterEject).toMatchInlineSnapshot(`
         "# Test Project
 
@@ -399,14 +409,14 @@ function createUser(name: string, age: number): User {
     it('should handle missing snippet directories gracefully', async () => {
       const { fileExists } = await import('../src/utils.js');
       const nonExistentPath = join(testDir, 'does-not-exist');
-      
+
       expect(await fileExists(nonExistentPath)).toBe(false);
     });
 
     it('should handle missing config files gracefully', async () => {
       const { configExists } = await import('../src/config.js');
       const nonExistentConfig = join(testDir, '.does-not-exist.json');
-      
+
       expect(await configExists(nonExistentConfig)).toBe(false);
     });
 
@@ -476,4 +486,4 @@ interface MyType {}
       expect(updatedContent).not.toContain('snippet=');
     });
   });
-}); 
+});

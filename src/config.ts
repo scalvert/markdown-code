@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { Config } from './types.js';
+import type { Config, RuntimeConfig } from './types.js';
 import { fileExists } from './utils.js';
 
 export const DEFAULT_CONFIG: Config = {
@@ -60,7 +60,8 @@ export async function configExists(configPath?: string): Promise<boolean> {
 export async function loadConfig(
   configPath?: string,
   overrides: ConfigOverrides = {},
-): Promise<Config> {
+  workingDir?: string,
+): Promise<RuntimeConfig> {
   let config = { ...DEFAULT_CONFIG };
 
   if (!configPath) {
@@ -112,7 +113,11 @@ export async function loadConfig(
       .filter((ext) => ext.length > 0);
   }
 
-  return config;
+  // Create RuntimeConfig with workingDir
+  return {
+    ...config,
+    workingDir: workingDir ?? process.cwd(),
+  };
 }
 
 export function validateConfig(config: Config): void {

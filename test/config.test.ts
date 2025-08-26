@@ -105,7 +105,12 @@ describe('config', () => {
     });
     const config = await loadConfig(filePath, { markdownGlob: 'docs/*.md' });
 
-    expect(config).toMatchInlineSnapshot(`
+    // Check that workingDir is set but don't snapshot it (it's runtime-specific)
+    expect(config.workingDir).toBeDefined();
+
+    // Snapshot only the config properties
+    const { workingDir, ...configWithoutRuntime } = config;
+    expect(configWithoutRuntime).toMatchInlineSnapshot(`
       {
         "excludeGlob": [
           "node_modules/**",

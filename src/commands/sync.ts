@@ -1,3 +1,4 @@
+import { relative } from 'node:path';
 import type { ArgumentsCamelCase } from 'yargs';
 import { syncMarkdownFiles } from '../sync.js';
 import { format, hasErrors, hasIssues } from '../formatter.js';
@@ -33,7 +34,10 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
 
     if (result.updated.length > 0) {
       console.log('Updated files:');
-      result.updated.forEach((file) => console.log(`  ${file}`));
+      result.updated.forEach((file) => {
+        const relativePath = relative(config.workingDir, file);
+        console.log(`  ${relativePath}`);
+      });
     } else {
       console.log('All files are already in sync.');
     }

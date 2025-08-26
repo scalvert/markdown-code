@@ -29,6 +29,10 @@ export interface Config {
   includeExtensions: Array<string>;
 }
 
+export interface RuntimeConfig extends Config {
+  workingDir: string;
+}
+
 export interface Issue {
   type:
     | 'sync-needed'

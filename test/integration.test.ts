@@ -3,19 +3,20 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Project } from 'fixturify-project';
 import { syncMarkdownFiles, checkMarkdownFiles } from '../src/sync.js';
-import type { Config } from '../src/types.js';
+import type { RuntimeConfig } from '../src/types.js';
 
 describe('integration tests', () => {
   let project: Project;
-  let config: Config;
+  let config: RuntimeConfig;
 
   beforeEach(() => {
     project = new Project();
     config = {
-      snippetRoot: project.baseDir,
-      markdownGlob: `${project.baseDir}/**/*.md`,
+      snippetRoot: '.',
+      markdownGlob: '*.md',
       includeExtensions: ['.ts', '.js', '.py', '.json'],
-      excludeGlob: ['node_modules/**'],
+      excludeGlob: ['node_modules/**', 'test/**'],
+      workingDir: project.baseDir,
     };
   });
 
@@ -436,6 +437,7 @@ old api
         },
       });
 
+      config.markdownGlob = '**/*.md';
       const result = await syncMarkdownFiles(config);
 
       expect(result.updated).toHaveLength(1);
@@ -477,6 +479,165 @@ old content
       );
       expect(updatedMarkdown).toContain('const exists = true;');
       expect(updatedMarkdown).toContain('old content');
+    });
+  });
+
+  describe('mixed snippet sources', () => {
+    it('should resolve snippets from project root when not in snippetRoot', async () => {
+      const sourceContent = `export function hello() {
+  return "Hello from source!";
+}`;
+
+      const extractedContent = `export function extracted() {
+  return "Hello from extracted!";
+}`;
+
+      const markdownContent = `# Mixed Sources Test
+
+## Source file reference
+\`\`\`ts snippet=src/utils/helper.ts
+old content
+\`\`\`
+
+## Extracted snippet reference
+\`\`\`ts snippet=snippets/extracted-example.ts
+old content
+\`\`\``;
+
+      await project.write({
+        src: {
+          utils: {
+            'helper.ts': sourceContent,
+          },
+        },
+        snippets: {
+          'extracted-example.ts': extractedContent,
+        },
+        'README.md': markdownContent,
+      });
+
+      config.snippetRoot = 'snippets';
+      const result = await syncMarkdownFiles(config);
+
+      expect(result.updated).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+      expect(result.fileIssues).toHaveLength(0);
+
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
+      expect(updatedMarkdown).toContain('Hello from source!');
+      expect(updatedMarkdown).toContain('Hello from extracted!');
+    });
+
+    it('should prioritize project root files over snippetRoot files', async () => {
+      const projectFileContent = `console.log("From project root");`;
+      const snippetFileContent = `console.log("From snippet root");`;
+
+      const markdownContent = `# Priority Test
+
+\`\`\`js snippet=same-name.js
+old content
+\`\`\``;
+
+      await project.write({
+        'same-name.js': projectFileContent,
+        snippets: {
+          'same-name.js': snippetFileContent,
+        },
+        'README.md': markdownContent,
+      });
+
+      config.snippetRoot = 'snippets';
+      const result = await syncMarkdownFiles(config);
+
+      expect(result.updated).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
+      expect(updatedMarkdown).toContain('From project root');
+      expect(updatedMarkdown).not.toContain('From snippet root');
+    });
+
+    it('should handle relative paths from markdown file location', async () => {
+      const helperContent = `export const helper = () => "Helper";`;
+      const utilContent = `export const util = () => "Util";`;
+
+      const markdownContent = `# Relative Paths Test
+
+## Relative to markdown file
+\`\`\`ts snippet=../src/helper.ts
+old content
+\`\`\`
+
+## Another relative path
+\`\`\`ts snippet=./utils/util.ts
+old content
+\`\`\``;
+
+      await project.write({
+        src: {
+          'helper.ts': helperContent,
+        },
+        docs: {
+          utils: {
+            'util.ts': utilContent,
+          },
+          'guide.md': markdownContent,
+        },
+      });
+
+      config.snippetRoot = 'snippets';
+      config.markdownGlob = '**/*.md';
+      const result = await syncMarkdownFiles(config);
+
+      expect(result.updated).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+      expect(result.fileIssues).toHaveLength(0);
+
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'docs/guide.md'),
+        'utf-8',
+      );
+
+      expect(updatedMarkdown).toContain('Helper');
+      expect(updatedMarkdown).toContain('Util');
+    });
+
+    it('should fall back to snippetRoot when file not found at project root', async () => {
+      const snippetContent = `console.log("Only in snippets");`;
+
+      const markdownContent = `# Fallback Test
+
+\`\`\`js snippet=only-in-snippets.js
+old content
+\`\`\``;
+
+      await project.write({
+        snippets: {
+          'only-in-snippets.js': snippetContent,
+        },
+        'README.md': markdownContent,
+      });
+
+      config.snippetRoot = 'snippets';
+      const result = await syncMarkdownFiles(config);
+
+      expect(result.updated).toHaveLength(1);
+      expect(result.errors).toHaveLength(0);
+
+      const updatedMarkdown = readFileSync(
+        join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+
+      expect(updatedMarkdown).toContain('Only in snippets');
     });
   });
 });
