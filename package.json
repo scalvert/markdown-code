@@ -29,7 +29,9 @@
     "format": "prettier --write \"**/*.ts\" \"**/*.md\"",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
+    "test:all": "npm run lint && npm run test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
