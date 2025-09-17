@@ -59,8 +59,18 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
   try {
     const config = await getValidatedConfig(argv);
 
-    console.log('Checking markdown files...');
+    const isInteractive = process.stdout.isTTY && !process.env.CI;
+    if (isInteractive) {
+      process.stdout.write('Checking markdown files...');
+    } else {
+      console.log('Checking markdown files...');
+    }
+
     const result = await checkMarkdownFiles(config);
+
+    if (isInteractive) {
+      process.stdout.write('\x1b[2K\r');
+    }
 
     let hasDiscoveryIssues = false;
 
