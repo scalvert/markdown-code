@@ -32,6 +32,8 @@ export const DEFAULT_CONFIG: Config = {
     '.swift',
     '.kt',
   ],
+  remoteTimeout: 30000,
+  allowInsecureHttp: false,
 };
 
 export interface ConfigOverrides {
@@ -39,6 +41,8 @@ export interface ConfigOverrides {
   markdownGlob?: string;
   excludeGlob?: string;
   includeExtensions?: string;
+  remoteTimeout?: number;
+  allowInsecureHttp?: boolean;
 }
 
 export async function configExists(configPath?: string): Promise<boolean> {
@@ -113,6 +117,14 @@ export async function loadConfig(
       .filter((ext) => ext.length > 0);
   }
 
+  if (overrides.remoteTimeout !== undefined) {
+    config.remoteTimeout = overrides.remoteTimeout;
+  }
+
+  if (overrides.allowInsecureHttp !== undefined) {
+    config.allowInsecureHttp = overrides.allowInsecureHttp;
+  }
+
   // Create RuntimeConfig with workingDir
   return {
     ...config,
@@ -135,5 +147,17 @@ export function validateConfig(config: Config): void {
 
   if (!Array.isArray(config.includeExtensions)) {
     throw new Error('Config: includeExtensions must be an array');
+  }
+
+  if (config.remoteTimeout !== undefined) {
+    if (typeof config.remoteTimeout !== 'number' || config.remoteTimeout < 0) {
+      throw new Error('Config: remoteTimeout must be a positive number');
+    }
+  }
+
+  if (config.allowInsecureHttp !== undefined) {
+    if (typeof config.allowInsecureHttp !== 'boolean') {
+      throw new Error('Config: allowInsecureHttp must be a boolean');
+    }
   }
 }

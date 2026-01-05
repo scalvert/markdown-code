@@ -53,6 +53,46 @@ export async function syncMarkdownFiles(
             continue;
           }
 
+          if (codeBlock.snippet.isRemote) {
+            try {
+              const snippetContent = await loadSnippetContent(
+                codeBlock.snippet.filePath,
+                config,
+                filePath,
+              );
+              const extractedContent = extractLines(
+                snippetContent,
+                codeBlock.snippet.startLine,
+                codeBlock.snippet.endLine,
+              );
+
+              if (
+                extractedContent === '' &&
+                (codeBlock.snippet.startLine ?? codeBlock.snippet.endLine)
+              ) {
+                continue;
+              }
+
+              if (extractedContent !== codeBlock.content) {
+                updatedContent = replaceCodeBlock(
+                  updatedContent,
+                  codeBlock,
+                  extractedContent,
+                );
+                hasChanges = true;
+              }
+            } catch (error) {
+              fileIssues.push({
+                type: 'remote-error',
+                message: `Error fetching remote snippet: ${error instanceof Error ? error.message : error}`,
+                line: codeBlock.lineNumber ?? 1,
+                column: codeBlock.columnNumber ?? 1,
+                ruleId: 'remote-fetch-error',
+              });
+            }
+            continue;
+          }
+
           let snippetPath: string;
           try {
             snippetPath = await resolveSnippetPath(
@@ -64,9 +104,7 @@ export async function syncMarkdownFiles(
             const workingDir = resolve(config.workingDir);
             const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
 
-            // Check if path is within allowed directories
             const allowedRoots = [workingDir];
-            // Only add snippetRoot if it's different from workingDir
             if (snippetRoot !== workingDir) {
               allowedRoots.push(snippetRoot);
             }
@@ -193,6 +231,51 @@ export async function checkMarkdownFiles(
             continue;
           }
 
+          if (codeBlock.snippet.isRemote) {
+            try {
+              const snippetContent = await loadSnippetContent(
+                codeBlock.snippet.filePath,
+                config,
+                filePath,
+              );
+              const extractedContent = extractLines(
+                snippetContent,
+                codeBlock.snippet.startLine,
+                codeBlock.snippet.endLine,
+              );
+
+              if (extractedContent !== codeBlock.content) {
+                const endLineText = codeBlock.snippet.endLine
+                  ? `-L${codeBlock.snippet.endLine}`
+                  : '';
+                const rangeText = codeBlock.snippet.startLine
+                  ? `#L${codeBlock.snippet.startLine}${endLineText}`
+                  : '';
+
+                const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
+
+                fileIssues.push({
+                  type: 'sync-needed',
+                  message: `Code block out of sync with ${snippetRef}`,
+                  line: codeBlock.lineNumber ?? 1,
+                  column: codeBlock.columnNumber ?? 1,
+                  ruleId: 'content-mismatch',
+                });
+
+                isFileInSync = false;
+              }
+            } catch (error) {
+              fileIssues.push({
+                type: 'remote-error',
+                message: `Error fetching remote snippet: ${error instanceof Error ? error.message : error}`,
+                line: codeBlock.lineNumber ?? 1,
+                column: codeBlock.columnNumber ?? 1,
+                ruleId: 'remote-fetch-error',
+              });
+            }
+            continue;
+          }
+
           let snippetPath: string;
           try {
             snippetPath = await resolveSnippetPath(
@@ -204,9 +287,7 @@ export async function checkMarkdownFiles(
             const workingDir = resolve(config.workingDir);
             const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
 
-            // Check if path is within allowed directories
             const allowedRoots = [workingDir];
-            // Only add snippetRoot if it's different from workingDir
             if (snippetRoot !== workingDir) {
               allowedRoots.push(snippetRoot);
             }

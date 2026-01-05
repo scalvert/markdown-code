@@ -11,6 +11,8 @@ function getIssueColor(type: string): (text: string) => string {
     case 'invalid-path':
     case 'load-failed':
       return pc.red;
+    case 'remote-error':
+      return pc.magenta;
     default:
       return pc.white;
   }
@@ -22,6 +24,7 @@ function getPluralForm(type: string): string {
     'file-missing': 'file-missing',
     'invalid-path': 'invalid-paths',
     'load-failed': 'load-failed',
+    'remote-error': 'remote-errors',
   };
 
   return pluralMap[type] ?? `${type}s`;
@@ -108,7 +111,8 @@ export function hasErrors(fileIssues: Array<FileIssues>): boolean {
       (issue) =>
         issue.type === 'sync-needed' ||
         issue.type === 'invalid-path' ||
-        issue.type === 'load-failed',
+        issue.type === 'load-failed' ||
+        issue.type === 'remote-error',
     ),
   );
 }

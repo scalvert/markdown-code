@@ -2,6 +2,7 @@ export interface SnippetDirective {
   filePath: string;
   startLine?: number;
   endLine?: number;
+  isRemote?: boolean;
 }
 
 export interface CodeBlock {
@@ -27,6 +28,8 @@ export interface Config {
   markdownGlob: string;
   excludeGlob: Array<string>;
   includeExtensions: Array<string>;
+  remoteTimeout?: number;
+  allowInsecureHttp?: boolean;
 }
 
 export interface RuntimeConfig extends Config {
@@ -39,7 +42,8 @@ export interface Issue {
     | 'file-missing'
     | 'invalid-path'
     | 'load-failed'
-    | 'out-of-sync';
+    | 'out-of-sync'
+    | 'remote-error';
   message: string;
   line: number;
   column: number;

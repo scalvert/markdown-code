@@ -4,7 +4,7 @@ import { parseSnippetDirective } from '../src/parser.js';
 describe('snippet directive parsing', () => {
   it('should parse basic snippet path', () => {
     const result = parseSnippetDirective('snippet=test.ts');
-    expect(result).toEqual({ filePath: 'test.ts' });
+    expect(result).toEqual({ filePath: 'test.ts', isRemote: false });
   });
 
   it('should parse snippet with line range', () => {
@@ -13,6 +13,7 @@ describe('snippet directive parsing', () => {
       filePath: 'utils.js',
       startLine: 5,
       endLine: 10,
+      isRemote: false,
     });
   });
 
@@ -22,6 +23,7 @@ describe('snippet directive parsing', () => {
       filePath: 'main.py',
       startLine: 15,
       endLine: 15,
+      isRemote: false,
     });
   });
 
@@ -30,6 +32,7 @@ describe('snippet directive parsing', () => {
     expect(result).toEqual({
       filePath: 'file.cpp',
       startLine: 20,
+      isRemote: false,
     });
   });
 
@@ -41,6 +44,7 @@ describe('snippet directive parsing', () => {
       filePath: 'src/components/Button.tsx',
       startLine: 1,
       endLine: 5,
+      isRemote: false,
     });
   });
 
@@ -52,6 +56,7 @@ describe('snippet directive parsing', () => {
       filePath: 'packages/core/src/utils/helpers.ts',
       startLine: 100,
       endLine: 150,
+      isRemote: false,
     });
   });
 
@@ -61,6 +66,7 @@ describe('snippet directive parsing', () => {
       filePath: 'config.test.js',
       startLine: 5,
       endLine: 10,
+      isRemote: false,
     });
   });
 
@@ -70,6 +76,7 @@ describe('snippet directive parsing', () => {
       filePath: 'my-file_name.ts',
       startLine: 1,
       endLine: 2,
+      isRemote: false,
     });
   });
 
@@ -79,6 +86,7 @@ describe('snippet directive parsing', () => {
       filePath: 'large-file.js',
       startLine: 1000,
       endLine: 2000,
+      isRemote: false,
     });
   });
 
@@ -88,6 +96,7 @@ describe('snippet directive parsing', () => {
       filePath: 'test.ts',
       startLine: 0,
       endLine: 5,
+      isRemote: false,
     });
   });
 
@@ -96,6 +105,7 @@ describe('snippet directive parsing', () => {
     expect(result).toMatchInlineSnapshot(`
         {
           "filePath": "test.ts#L-5-L10",
+          "isRemote": false,
         }
       `);
   });
@@ -118,6 +128,7 @@ describe('snippet directive parsing', () => {
       filePath: 'test.ts',
       startLine: 1,
       endLine: 5,
+      isRemote: false,
     });
   });
 
@@ -126,6 +137,7 @@ describe('snippet directive parsing', () => {
     expect(result).toMatchInlineSnapshot(`
         {
           "filePath": "test.ts#Labc-Ldef",
+          "isRemote": false,
         }
       `);
   });
@@ -135,6 +147,7 @@ describe('snippet directive parsing', () => {
     expect(result).toEqual({
       filePath: 'test.ts',
       startLine: 5,
+      isRemote: false,
     });
   });
 
@@ -144,6 +157,7 @@ describe('snippet directive parsing', () => {
       filePath: 'file#with#hash.ts',
       startLine: 1,
       endLine: 5,
+      isRemote: false,
     });
   });
 
@@ -153,6 +167,7 @@ describe('snippet directive parsing', () => {
       filePath: 'Makefile',
       startLine: 1,
       endLine: 10,
+      isRemote: false,
     });
   });
 
@@ -162,6 +177,7 @@ describe('snippet directive parsing', () => {
       filePath: 'test.ts',
       startLine: 10,
       endLine: 5,
+      isRemote: false,
     });
   });
 
@@ -171,6 +187,7 @@ describe('snippet directive parsing', () => {
       filePath: 'test.ts',
       startLine: 5,
       endLine: 5,
+      isRemote: false,
     });
   });
 
@@ -180,6 +197,7 @@ describe('snippet directive parsing', () => {
       filePath: 'test.ts',
       startLine: 5,
       endLine: 10,
+      isRemote: false,
     });
   });
 
@@ -189,6 +207,87 @@ describe('snippet directive parsing', () => {
       filePath: 'test.ts',
       startLine: 5,
       endLine: 5,
+      isRemote: false,
+    });
+  });
+
+  describe('remote URL parsing', () => {
+    it('should parse remote URL without line range', () => {
+      const result = parseSnippetDirective(
+        'snippet=https://raw.githubusercontent.com/user/repo/main/file.ts',
+      );
+      expect(result).toEqual({
+        filePath: 'https://raw.githubusercontent.com/user/repo/main/file.ts',
+        isRemote: true,
+      });
+    });
+
+    it('should parse remote URL with line range', () => {
+      const result = parseSnippetDirective(
+        'snippet=https://raw.githubusercontent.com/user/repo/main/file.ts#L10-L20',
+      );
+      expect(result).toEqual({
+        filePath: 'https://raw.githubusercontent.com/user/repo/main/file.ts',
+        startLine: 10,
+        endLine: 20,
+        isRemote: true,
+      });
+    });
+
+    it('should parse remote URL with single line', () => {
+      const result = parseSnippetDirective(
+        'snippet=https://example.com/file.ts#L15',
+      );
+      expect(result).toEqual({
+        filePath: 'https://example.com/file.ts',
+        startLine: 15,
+        endLine: 15,
+        isRemote: true,
+      });
+    });
+
+    it('should parse HTTP URL with line range', () => {
+      const result = parseSnippetDirective(
+        'snippet=http://example.com/code.js#L1-L10',
+      );
+      expect(result).toEqual({
+        filePath: 'http://example.com/code.js',
+        startLine: 1,
+        endLine: 10,
+        isRemote: true,
+      });
+    });
+
+    it('should not mark local paths as remote', () => {
+      const result = parseSnippetDirective('snippet=src/file.ts#L1-L5');
+      expect(result).toEqual({
+        filePath: 'src/file.ts',
+        startLine: 1,
+        endLine: 5,
+        isRemote: false,
+      });
+    });
+
+    it('should not mark paths with http in name as remote', () => {
+      const result = parseSnippetDirective('snippet=http-client.ts#L1-L5');
+      expect(result).toEqual({
+        filePath: 'http-client.ts',
+        startLine: 1,
+        endLine: 5,
+        isRemote: false,
+      });
+    });
+
+    it('should handle remote URL with numeric line spec', () => {
+      const result = parseSnippetDirective(
+        'snippet=https://example.com/file.ts#42',
+      );
+      expect(result).toEqual({
+        filePath: 'https://example.com/file.ts',
+        startLine: 42,
+        endLine: 42,
+        isRemote: true,
+      });
     });
   });
 });

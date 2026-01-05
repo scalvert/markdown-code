@@ -103,6 +103,7 @@ More text here.`;
           },
           "snippet": {
             "filePath": "test.ts",
+            "isRemote": false,
           },
         }
       `);
@@ -122,6 +123,7 @@ old content
         {
           "endLine": 10,
           "filePath": "utils.js",
+          "isRemote": false,
           "startLine": 5,
         }
       `);
@@ -141,6 +143,7 @@ old content
         {
           "endLine": 15,
           "filePath": "main.py",
+          "isRemote": false,
           "startLine": 15,
         }
       `);
@@ -159,6 +162,7 @@ old content
       expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
         {
           "filePath": "main.cpp",
+          "isRemote": false,
           "startLine": 20,
         }
       `);
@@ -233,6 +237,7 @@ button content
         filePath: 'src/components/Button.tsx',
         startLine: 15,
         endLine: 25,
+        isRemote: false,
       });
     });
   });
