@@ -333,9 +333,11 @@ button content
     it.skipIf(process.platform === 'win32')(
       'should reject symlink escape outside workingDir',
       async () => {
-        const { symlink, unlink: fsUnlink, mkdir } = await import(
-          'node:fs/promises'
-        );
+        const {
+          symlink,
+          unlink: fsUnlink,
+          mkdir,
+        } = await import('node:fs/promises');
         const { basename } = await import('node:path');
 
         const config = {

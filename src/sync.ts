@@ -82,9 +82,10 @@ export async function syncMarkdownFiles(
                 hasChanges = true;
               }
             } catch (error) {
+              const errMsg = error instanceof Error ? error.message : error;
               fileIssues.push({
                 type: 'remote-error',
-                message: `Error fetching remote snippet: ${error instanceof Error ? error.message : error}`,
+                message: `Error fetching remote snippet: ${errMsg}`,
                 line: codeBlock.lineNumber ?? 1,
                 column: codeBlock.columnNumber ?? 1,
                 ruleId: 'remote-fetch-error',
@@ -265,9 +266,10 @@ export async function checkMarkdownFiles(
                 isFileInSync = false;
               }
             } catch (error) {
+              const errMsg = error instanceof Error ? error.message : error;
               fileIssues.push({
                 type: 'remote-error',
-                message: `Error fetching remote snippet: ${error instanceof Error ? error.message : error}`,
+                message: `Error fetching remote snippet: ${errMsg}`,
                 line: codeBlock.lineNumber ?? 1,
                 column: codeBlock.columnNumber ?? 1,
                 ruleId: 'remote-fetch-error',

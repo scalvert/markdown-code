@@ -65,7 +65,8 @@ export function validateRemoteUrl(
 
   if (parsed.protocol === 'http:' && !options.allowInsecureHttp) {
     throw new Error(
-      `Insecure HTTP URLs are not allowed. Use HTTPS or set allowInsecureHttp: true in config. URL: ${url}`,
+      'Insecure HTTP URLs are not allowed. ' +
+        `Use HTTPS or set allowInsecureHttp: true in config. URL: ${url}`,
     );
   }
 

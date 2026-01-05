@@ -32,9 +32,7 @@ describe('remote', () => {
 
     it('should detect GitHub raw URLs', () => {
       expect(
-        isRemoteUrl(
-          'https://raw.githubusercontent.com/user/repo/main/file.ts',
-        ),
+        isRemoteUrl('https://raw.githubusercontent.com/user/repo/main/file.ts'),
       ).toBe(true);
     });
 
@@ -66,9 +64,7 @@ describe('remote', () => {
     });
 
     it('should preserve non-line fragments as part of URL', () => {
-      const result = parseRemoteUrl(
-        'https://example.com/file.ts#section-name',
-      );
+      const result = parseRemoteUrl('https://example.com/file.ts#section-name');
       expect(result).toEqual({
         baseUrl: 'https://example.com/file.ts#section-name',
       });
