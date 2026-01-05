@@ -7,7 +7,6 @@ const DEFAULT_TIMEOUT = 30000; // 30 seconds
 
 /**
  * Check if a path is a remote URL (HTTP or HTTPS)
- * Uses URL.canParse() for robust detection (Node 18.17+)
  */
 export function isRemoteUrl(path: string): boolean {
   if (!URL.canParse(path)) {
@@ -19,7 +18,6 @@ export function isRemoteUrl(path: string): boolean {
 
 /**
  * Parse a remote URL and extract line specification from hash fragment.
- * Uses Node's built-in URL class for robust parsing.
  *
  * Example: https://raw.githubusercontent.com/user/repo/main/file.ts#L10-L20
  * Returns: { baseUrl: "https://..../file.ts", lineSpec: "L10-L20" }
@@ -55,7 +53,6 @@ export function parseRemoteUrl(url: string): {
 
 /**
  * Validate URL protocol for security.
- * Uses URL class for parsing - throws if URL is malformed.
  */
 export function validateRemoteUrl(
   url: string,
@@ -79,7 +76,6 @@ export function validateRemoteUrl(
 
 /**
  * Fetch content from a remote URL.
- * Strips hash fragment before fetching (fragments are client-side only).
  */
 export async function fetchRemoteContent(
   url: string,
