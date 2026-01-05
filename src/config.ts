@@ -151,7 +151,7 @@ export function validateConfig(config: Config): void {
 
   if (config.remoteTimeout !== undefined) {
     if (typeof config.remoteTimeout !== 'number' || config.remoteTimeout < 0) {
-      throw new Error('Config: remoteTimeout must be a positive number');
+      throw new Error('Config: remoteTimeout must be a non-negative number');
     }
   }
 
