@@ -112,6 +112,7 @@ describe('config', () => {
     const { workingDir, ...configWithoutRuntime } = config;
     expect(configWithoutRuntime).toMatchInlineSnapshot(`
       {
+        "allowInsecureHttp": false,
         "excludeGlob": [
           "node_modules/**",
           ".git/**",
@@ -139,6 +140,7 @@ describe('config', () => {
           ".kt",
         ],
         "markdownGlob": "docs/*.md",
+        "remoteTimeout": 30000,
         "snippetRoot": "./snips",
       }
     `);

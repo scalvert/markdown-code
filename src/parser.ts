@@ -11,6 +11,7 @@ import type {
   RuntimeConfig,
 } from './types.js';
 import { fileExists, isInWorkingDir } from './utils.js';
+import { isRemoteUrl, fetchRemoteContent } from './remote.js';
 
 export function parseSnippetDirective(
   info: string,
@@ -22,61 +23,59 @@ export function parseSnippetDirective(
   }
 
   const snippetPath = snippetMatch[1];
-
-  // Handle file paths with multiple hash symbols
+  const isRemote = isRemoteUrl(snippetPath);
   const lastHashIndex = snippetPath.lastIndexOf('#');
 
   if (lastHashIndex === -1) {
-    return { filePath: snippetPath };
+    return { filePath: snippetPath, isRemote };
   }
 
   const filePath = snippetPath.substring(0, lastHashIndex);
   const lineSpec = snippetPath.substring(lastHashIndex + 1);
 
-  // Handle line specifications
   if (lineSpec.startsWith('L')) {
-    const lineRange = lineSpec.substring(1); // Remove 'L' prefix
+    const lineRange = lineSpec.substring(1);
     const rangeParts = lineRange.split('-');
 
     if (rangeParts.length === 1) {
       const line = parseInt(rangeParts[0]!, 10);
       if (isNaN(line) || line < 0 || rangeParts[0] === '') {
-        return { filePath: snippetPath }; // Treat as file path if invalid number
+        return { filePath: snippetPath, isRemote };
       }
       return {
         filePath,
         startLine: line,
         endLine: line,
+        isRemote,
       };
     }
 
     if (rangeParts.length === 2) {
-      // Handle malformed cases like L-5-L10 which becomes ['', '5'] after removing 'L'
       if (rangeParts[0] === '') {
-        return { filePath: snippetPath }; // Treat as file path if malformed
+        return { filePath: snippetPath, isRemote };
       }
 
       const startLine = parseInt(rangeParts[0]!, 10);
 
       if (isNaN(startLine) || startLine < 0) {
-        return { filePath: snippetPath }; // Treat as file path if invalid start line
+        return { filePath: snippetPath, isRemote };
       }
 
-      // Handle case where there's a dash but no end line (e.g., "L20-")
       if (rangeParts[1] === '') {
         return {
           filePath,
           startLine,
+          isRemote,
         };
       }
 
-      const endLine = parseInt(rangeParts[1]!.replace(/^L/, ''), 10); // Remove optional 'L' prefix
+      const endLine = parseInt(rangeParts[1]!.replace(/^L/, ''), 10);
 
       if (isNaN(endLine) || endLine < 0) {
-        // For mixed valid/invalid numbers, return just the valid start line
         return {
           filePath,
           startLine,
+          isRemote,
         };
       }
 
@@ -84,27 +83,26 @@ export function parseSnippetDirective(
         filePath,
         startLine,
         endLine,
+        isRemote,
       };
     }
 
-    // Handle cases with more than 2 parts (malformed like L-5-L10)
     if (rangeParts.length > 2) {
-      return { filePath: snippetPath }; // Treat as file path if malformed
+      return { filePath: snippetPath, isRemote };
     }
   } else {
-    // Handle single line number without L prefix (e.g., test.ts#5)
     const lineNumber = parseInt(lineSpec, 10);
     if (!isNaN(lineNumber)) {
       return {
         filePath,
         startLine: lineNumber,
         endLine: lineNumber,
+        isRemote,
       };
     }
   }
 
-  // If we can't parse the line specification, treat entire thing as file path
-  return { filePath: snippetPath };
+  return { filePath: snippetPath, isRemote };
 }
 
 export async function parseMarkdownFile(
@@ -185,6 +183,10 @@ export async function resolveSnippetPath(
   config: RuntimeConfig,
   markdownFilePath?: string,
 ): Promise<string> {
+  if (isRemoteUrl(snippetPath)) {
+    return snippetPath;
+  }
+
   const workingDir = config.workingDir;
   const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
 
@@ -218,6 +220,13 @@ export async function loadSnippetContent(
   config: RuntimeConfig,
   markdownFilePath?: string,
 ): Promise<string> {
+  if (isRemoteUrl(snippetPath)) {
+    return await fetchRemoteContent(snippetPath, {
+      timeout: config.remoteTimeout,
+      allowInsecureHttp: config.allowInsecureHttp,
+    });
+  }
+
   const resolvedPath = await resolveSnippetPath(
     snippetPath,
     config,
