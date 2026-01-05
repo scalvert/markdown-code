@@ -89,6 +89,7 @@ describe('CLI', () => {
 
       expect(config).toMatchInlineSnapshot(`
         {
+          "allowInsecureHttp": false,
           "excludeGlob": [
             "node_modules/**",
             ".git/**",
@@ -116,6 +117,7 @@ describe('CLI', () => {
             ".kt",
           ],
           "markdownGlob": "**/*.md",
+          "remoteTimeout": 30000,
           "snippetRoot": "./snippets",
         }
       `);
