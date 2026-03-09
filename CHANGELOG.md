@@ -1,4 +1,22 @@
 
+
+## v1.0.0 (2026-03-09)
+
+#### :boom: Breaking Change
+* [#33](https://github.com/scalvert/markdown-code/pull/33) chore!: bump minimum Node version to 22 (current lowest LTS) ([@steve-calvert-glean](https://github.com/steve-calvert-glean))
+
+#### :rocket: Enhancement
+* [#32](https://github.com/scalvert/markdown-code/pull/32) feat: add support for fetching code snippets from remote URLs ([@steve-calvert-glean](https://github.com/steve-calvert-glean))
+
+#### :bug: Bug Fix
+* [#44](https://github.com/scalvert/markdown-code/pull/44) fix: pre-1.0 cleanup — resolve all remaining checklist items ([@steve-calvert-glean](https://github.com/steve-calvert-glean))
+* [#42](https://github.com/scalvert/markdown-code/pull/42) fix: resolve 10 bugs found by agent council evaluation ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 2
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+- Steve Calvert ([@steve-calvert-glean](https://github.com/steve-calvert-glean))
+
+
 ## v0.6.1 (2025-08-26)
 
 #### :bug: Bug Fix
