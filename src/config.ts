@@ -78,7 +78,8 @@ export async function loadConfig(
       const err = error as NodeJS.ErrnoException;
       if (err.code !== 'ENOENT') {
         console.warn(
-          `Warning: Could not parse .markdown-coderc.json: ${err.message}. Using default configuration.`,
+          `Warning: Could not parse .markdown-coderc.json: ${err.message}. ` +
+            'Using default configuration.',
         );
       }
     }
