@@ -282,16 +282,16 @@ export function extractLines(
   startLine?: number,
   endLine?: number,
 ): string {
-  if (!startLine && !endLine) {
+  if (startLine === undefined && endLine === undefined) {
     return trimBlankLines(content);
   }
 
   const lines = content.split('\n');
   let extractedLines: Array<string>;
 
-  if (startLine && endLine) {
+  if (startLine !== undefined && endLine !== undefined) {
     extractedLines = lines.slice(startLine - 1, endLine);
-  } else if (startLine) {
+  } else if (startLine !== undefined) {
     extractedLines = lines.slice(startLine - 1);
   } else {
     extractedLines = lines;
@@ -305,53 +305,18 @@ export function replaceCodeBlock(
   codeBlock: CodeBlock,
   newContent: string,
 ): string {
-  const lines = markdownContent.split('\n');
-  let inCodeBlock = false;
-  let codeBlockStart = -1;
-  let codeBlockEnd = -1;
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
+  const { start, end } = codeBlock.position;
+  const blockText = markdownContent.slice(start, end);
 
-    if (!line) {
-      continue;
-    }
-
-    if (
-      line.startsWith('```') &&
-      codeBlock.snippet &&
-      line.includes('snippet=')
-    ) {
-      // Extract the snippet directive from the line
-      const snippetMatch = line.match(/snippet=([^\s]+)/);
-      if (snippetMatch?.[0]) {
-        const lineSnippet = parseSnippetDirective(snippetMatch[0]);
-        // Match if the parsed snippet directives are equivalent
-        if (
-          lineSnippet &&
-          lineSnippet.filePath === codeBlock.snippet.filePath &&
-          lineSnippet.startLine === codeBlock.snippet.startLine &&
-          lineSnippet.endLine === codeBlock.snippet.endLine
-        ) {
-          inCodeBlock = true;
-          codeBlockStart = i;
-          continue;
-        }
-      }
-    }
-
-    if (inCodeBlock && line.trim() === '```') {
-      codeBlockEnd = i;
-      break;
-    }
-  }
-
-  if (codeBlockStart === -1 || codeBlockEnd === -1) {
+  const firstNewlineIndex = blockText.indexOf('\n');
+  if (firstNewlineIndex === -1) {
     return markdownContent;
   }
 
-  const beforeBlock = lines.slice(0, codeBlockStart + 1);
-  const afterBlock = lines.slice(codeBlockEnd);
-  const newContentLines = newContent.split('\n');
+  const lastNewlineIndex = blockText.lastIndexOf('\n');
+  const openingFence = blockText.slice(0, firstNewlineIndex);
+  const closingFence = blockText.slice(lastNewlineIndex + 1);
 
-  return [...beforeBlock, ...newContentLines, ...afterBlock].join('\n');
+  const newBlock = `${openingFence}\n${newContent}\n${closingFence}`;
+  return markdownContent.slice(0, start) + newBlock + markdownContent.slice(end);
 }

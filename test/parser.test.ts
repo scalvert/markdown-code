@@ -411,11 +411,15 @@ old content
 
 End text.`;
 
+      // start: index of first backtick of opening fence (after "# Title\n\n")
+      // end: index after last backtick of closing fence
+      const start = markdownContent.indexOf('```ts snippet=test.ts');
+      const end = markdownContent.indexOf('\n\nEnd text.');
       const codeBlock = {
         language: 'ts',
         content: 'old content',
         snippet: { filePath: 'test.ts' },
-        position: { start: 0, end: 0 },
+        position: { start, end },
       };
 
       const newContent = 'new content line 1\nnew content line 2';
@@ -435,11 +439,14 @@ function old() {
 }
 \`\`\``;
 
+      // Block starts at 0, ends after the closing ```
+      const start = 0;
+      const end = markdownContent.length;
       const codeBlock = {
         language: 'js',
         content: 'function old() {\n  return "old";\n}',
         snippet: { filePath: 'utils.js' },
-        position: { start: 0, end: 0 },
+        position: { start, end },
       };
 
       const newContent = `function updated() {
@@ -467,11 +474,13 @@ Some text after.
 
 ## After`;
 
+      const start = markdownContent.indexOf('```ts snippet=test.ts');
+      const end = markdownContent.indexOf('\n\nSome text after.');
       const codeBlock = {
         language: 'ts',
         content: 'old',
         snippet: { filePath: 'test.ts' },
-        position: { start: 0, end: 0 },
+        position: { start, end },
       };
 
       const result = replaceCodeBlock(markdownContent, codeBlock, 'new');

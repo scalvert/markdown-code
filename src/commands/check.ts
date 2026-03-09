@@ -2,8 +2,13 @@ import type { ArgumentsCamelCase } from 'yargs';
 import { configExists } from '../config.js';
 import { checkMarkdownFiles, discoverCodeBlocks } from '../sync.js';
 import { format, hasErrors, hasIssues } from '../formatter.js';
-import type { FileIssues } from '../types.js';
-import { getValidatedConfig, handleError, type BaseArgs } from './shared.js';
+import type { FileIssues, RuntimeConfig } from '../types.js';
+import {
+  getValidatedConfig,
+  handleError,
+  logWarningsAndErrors,
+  type BaseArgs,
+} from './shared.js';
 
 interface CheckArgs extends BaseArgs {}
 
@@ -12,7 +17,7 @@ export const describe =
   'Check if markdown files are in sync (exit non-zero on mismatch)';
 
 async function handleDiscoveryMode(
-  config: any,
+  config: RuntimeConfig,
   configPath?: string,
 ): Promise<boolean> {
   if (await configExists(configPath)) {
@@ -22,6 +27,7 @@ async function handleDiscoveryMode(
   const discovery = await discoverCodeBlocks(
     config.markdownGlob,
     config.excludeGlob,
+    config.workingDir,
   );
 
   if (discovery.totalCodeBlocks === 0) {
@@ -71,6 +77,8 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
     if (isInteractive) {
       process.stdout.write('\x1b[2K\r');
     }
+
+    logWarningsAndErrors(result.warnings, result.errors);
 
     let hasDiscoveryIssues = false;
 

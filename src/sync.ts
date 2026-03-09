@@ -48,7 +48,7 @@ export async function syncMarkdownFiles(
         let hasChanges = false;
         let updatedContent = markdownFile.content;
 
-        for (const codeBlock of markdownFile.codeBlocks) {
+        for (const codeBlock of [...markdownFile.codeBlocks].reverse()) {
           if (!codeBlock.snippet) {
             continue;
           }
@@ -509,8 +509,9 @@ export async function extractSnippets(
           const newCodeBlockStart =
             '```' + lang + ' snippet=' + snippetReference;
 
+          const escapedLang = lang.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           updatedContent = updatedContent.replace(
-            new RegExp('^```' + lang + '$', 'm'),
+            new RegExp('^```' + escapedLang + '$', 'm'),
             newCodeBlockStart,
           );
 
