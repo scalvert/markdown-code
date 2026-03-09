@@ -1,4 +1,4 @@
-import { writeFile, rm, unlink } from 'node:fs/promises';
+import { writeFile, rm, unlink, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
@@ -6,7 +6,7 @@ import fg from 'fast-glob';
 import { configExists } from '../config.js';
 import { parseMarkdownFile } from '../parser.js';
 import type { RuntimeConfig } from '../types.js';
-import { fileExists } from '../utils.js';
+import { fileExists, isInWorkingDir } from '../utils.js';
 import {
   getValidatedConfig,
   handleError,
@@ -107,7 +107,7 @@ async function removeSnippetDirectives(config: RuntimeConfig) {
   return result;
 }
 
-async function deleteSnippetDirectory(snippetRoot: string) {
+async function deleteSnippetDirectory(snippetRoot: string, workingDir: string) {
   const result = {
     deleted: false,
     warnings: [] as string[],
@@ -115,15 +115,26 @@ async function deleteSnippetDirectory(snippetRoot: string) {
   };
 
   try {
-    const resolvedPath = resolve(snippetRoot);
+    const resolvedPath = resolve(workingDir, snippetRoot);
 
-    if (await fileExists(resolvedPath)) {
-      await rm(resolvedPath, { recursive: true, force: true });
-      result.deleted = true;
-      console.log(`Deleted snippet directory: ${snippetRoot}`);
-    } else {
+    let realPath: string;
+    try {
+      realPath = await realpath(resolvedPath);
+    } catch {
       result.warnings.push(`Snippet directory not found: ${snippetRoot}`);
+      return result;
     }
+
+    if (!isInWorkingDir(realPath, workingDir)) {
+      result.errors.push(
+        `Snippet directory is outside the working directory: ${snippetRoot}`,
+      );
+      return result;
+    }
+
+    await rm(realPath, { recursive: true, force: true });
+    result.deleted = true;
+    console.log(`Deleted snippet directory: ${snippetRoot}`);
   } catch (error) {
     result.errors.push(`Error deleting snippet directory: ${error}`);
   }
@@ -186,7 +197,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     }
 
     console.log('Deleting snippet directory...');
-    const snippetResult = await deleteSnippetDirectory(config.snippetRoot);
+    const snippetResult = await deleteSnippetDirectory(config.snippetRoot, config.workingDir);
 
     console.log('Deleting configuration file...');
     const configResult = await deleteConfigFile(argv.config);
