@@ -5,6 +5,7 @@ import type { ArgumentsCamelCase, Argv } from 'yargs';
 import fg from 'fast-glob';
 import { configExists } from '../config.js';
 import { parseMarkdownFile } from '../parser.js';
+import type { RuntimeConfig } from '../types.js';
 import { fileExists } from '../utils.js';
 import {
   getValidatedConfig,
@@ -49,7 +50,7 @@ async function confirmEjection(): Promise<boolean> {
   }
 }
 
-async function removeSnippetDirectives(config: any) {
+async function removeSnippetDirectives(config: RuntimeConfig) {
   const result = {
     processed: [] as string[],
     warnings: [] as string[],
@@ -59,6 +60,8 @@ async function removeSnippetDirectives(config: any) {
   try {
     const markdownFiles = await fg(config.markdownGlob, {
       ignore: config.excludeGlob,
+      cwd: config.workingDir,
+      absolute: true,
     });
 
     for (const filePath of markdownFiles) {
@@ -75,16 +78,18 @@ async function removeSnippetDirectives(config: any) {
         let updatedContent = markdownFile.content;
         let hasChanges = false;
 
-        for (const codeBlock of codeBlocksWithSnippets) {
-          const originalHeader = `\`\`\`${codeBlock.language} snippet=${
-            codeBlock.snippet!.filePath
-          }`;
-          const newHeader = `\`\`\`${codeBlock.language}`;
-
-          if (updatedContent.includes(originalHeader)) {
-            updatedContent = updatedContent.replace(originalHeader, newHeader);
-            hasChanges = true;
+        // Process in reverse order so earlier position offsets remain valid
+        for (const codeBlock of [...codeBlocksWithSnippets].reverse()) {
+          const fenceStart = codeBlock.position.start;
+          const fenceLineEnd = updatedContent.indexOf('\n', fenceStart);
+          if (fenceLineEnd === -1) {
+            continue;
           }
+          updatedContent =
+            updatedContent.slice(0, fenceStart) +
+            `\`\`\`${codeBlock.language}` +
+            updatedContent.slice(fenceLineEnd);
+          hasChanges = true;
         }
 
         if (hasChanges) {
@@ -200,11 +205,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
 
     logWarningsAndErrors(allWarnings, allErrors);
 
-    if (allErrors.length === 0) {
-      console.log('✅ Ejection completed successfully!');
-    } else {
-      console.log('⚠️  Ejection completed with errors. See above for details.');
-    }
+    console.log('✅ Ejection completed successfully!');
   } catch (error) {
     handleError(error);
   }

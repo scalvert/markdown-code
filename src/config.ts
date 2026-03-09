@@ -74,8 +74,14 @@ export async function loadConfig(
     try {
       const content = await readFile(defaultPath, 'utf-8');
       config = { ...config, ...JSON.parse(content) };
-    } catch {
-      // Use defaults if no config file found
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code !== 'ENOENT') {
+        console.warn(
+          `Warning: Could not parse .markdown-coderc.json: ${err.message}. ` +
+            'Using default configuration.',
+        );
+      }
     }
   } else {
     try {
