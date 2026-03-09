@@ -90,6 +90,10 @@ Use the `snippet=` directive in your fenced code blocks:
 ```
 
 ```ts snippet=path/to/file.ts#L5
+// This will include only line 5
+```
+
+```ts snippet=path/to/file.ts#L5-
 // This will include from line 5 to end of file
 ```
 ````

@@ -34,6 +34,18 @@ export function handleError(error: unknown): never {
   process.exit(1);
 }
 
+export function logExtractionResults(result: {
+  extracted: Array<string>;
+  snippetsCreated: number;
+}): void {
+  if (result.extracted.length > 0) {
+    console.log(`Extracted ${result.snippetsCreated} snippets from:`);
+    result.extracted.forEach((file) => console.log(`  ${file}`));
+  } else {
+    console.log('No code blocks found to extract.');
+  }
+}
+
 export function logWarningsAndErrors(
   warnings: Array<string>,
   errors: Array<string>,

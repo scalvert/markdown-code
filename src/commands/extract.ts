@@ -3,6 +3,7 @@ import { extractSnippets } from '../sync.js';
 import {
   getValidatedConfig,
   handleError,
+  logExtractionResults,
   logWarningsAndErrors,
   type BaseArgs,
 } from './shared.js';
@@ -11,18 +12,6 @@ interface ExtractArgs extends BaseArgs {}
 
 export const command = 'extract';
 export const describe = 'Extract code blocks from markdown to snippet files';
-
-function logExtractionResults(result: {
-  extracted: Array<string>;
-  snippetsCreated: number;
-}) {
-  if (result.extracted.length > 0) {
-    console.log(`Extracted ${result.snippetsCreated} snippets from:`);
-    result.extracted.forEach((file) => console.log(`  ${file}`));
-  } else {
-    console.log('No code blocks found to extract.');
-  }
-}
 
 export const handler = async (argv: ArgumentsCamelCase<ExtractArgs>) => {
   try {

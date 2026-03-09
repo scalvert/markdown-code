@@ -1,9 +1,10 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir, realpath } from 'node:fs/promises';
 import { join, resolve, basename } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
 import { fileExists, isInWorkingDir } from './utils.js';
 import type {
+  CodeBlock,
   RuntimeConfig,
   SyncResult,
   CheckResult,
@@ -22,6 +23,132 @@ import {
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
+
+// Resolves a single code block's snippet content, pushing any issue into fileIssues.
+// Returns the extracted content string, or null if the block should be skipped.
+async function resolveCodeBlockContent(
+  codeBlock: CodeBlock,
+  config: RuntimeConfig,
+  markdownFilePath: string,
+  fileIssues: Array<Issue>,
+): Promise<string | null> {
+  const snippet = codeBlock.snippet!;
+
+  if (snippet.isRemote) {
+    try {
+      const snippetContent = await loadSnippetContent(
+        snippet.filePath,
+        config,
+        markdownFilePath,
+      );
+      const extractedContent = extractLines(
+        snippetContent,
+        snippet.startLine,
+        snippet.endLine,
+      );
+      if (extractedContent === '' && (snippet.startLine ?? snippet.endLine)) {
+        return null;
+      }
+      return extractedContent;
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : error;
+      fileIssues.push({
+        type: 'remote-error',
+        message: `Error fetching remote snippet: ${errMsg}`,
+        line: codeBlock.lineNumber ?? 1,
+        column: codeBlock.columnNumber ?? 1,
+        ruleId: 'remote-fetch-error',
+      });
+      return null;
+    }
+  }
+
+  let snippetPath: string;
+  try {
+    snippetPath = await resolveSnippetPath(
+      snippet.filePath,
+      config,
+      markdownFilePath,
+    );
+  } catch (error) {
+    fileIssues.push({
+      type: 'load-failed',
+      message: `Error resolving path ${snippet.filePath}: ${error}`,
+      line: codeBlock.lineNumber ?? 1,
+      column: codeBlock.columnNumber ?? 1,
+      ruleId: 'path-validation',
+    });
+    return null;
+  }
+
+  // Resolve symlinks to get the real path, and detect missing files in one step
+  let realSnippetPath: string;
+  try {
+    realSnippetPath = await realpath(snippetPath);
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code === 'ENOENT') {
+      fileIssues.push({
+        type: 'file-missing',
+        message: `Snippet file not found: ${snippet.filePath}`,
+        line: codeBlock.lineNumber ?? 1,
+        column: codeBlock.columnNumber ?? 1,
+        ruleId: 'snippet-not-found',
+      });
+    } else {
+      fileIssues.push({
+        type: 'load-failed',
+        message: `Error accessing snippet ${snippet.filePath}: ${err.message}`,
+        line: codeBlock.lineNumber ?? 1,
+        column: codeBlock.columnNumber ?? 1,
+        ruleId: 'snippet-load-error',
+      });
+    }
+    return null;
+  }
+
+  const workingDir = resolve(config.workingDir);
+  const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
+  const allowedRoots =
+    snippetRoot !== workingDir ? [workingDir, snippetRoot] : [workingDir];
+
+  if (!isInWorkingDir(realSnippetPath, allowedRoots)) {
+    fileIssues.push({
+      type: 'invalid-path',
+      message: `Path traversal attempt detected: ${snippet.filePath}`,
+      line: codeBlock.lineNumber ?? 1,
+      column: codeBlock.columnNumber ?? 1,
+      ruleId: 'path-traversal',
+    });
+    return null;
+  }
+
+  try {
+    const snippetContent = await loadSnippetContent(
+      snippet.filePath,
+      config,
+      markdownFilePath,
+    );
+    const extractedContent = extractLines(
+      snippetContent,
+      snippet.startLine,
+      snippet.endLine,
+    );
+    if (extractedContent === '' && (snippet.startLine ?? snippet.endLine)) {
+      return null;
+    }
+    return extractedContent;
+  } catch (error) {
+    fileIssues.push({
+      type: 'load-failed',
+      message: `Error loading snippet ${snippetPath}: ${error}`,
+      line: codeBlock.lineNumber ?? 1,
+      column: codeBlock.columnNumber ?? 1,
+      ruleId: 'snippet-load-error',
+    });
+    return null;
+  }
+}
 
 export async function syncMarkdownFiles(
   config: RuntimeConfig,
@@ -53,138 +180,28 @@ export async function syncMarkdownFiles(
             continue;
           }
 
-          if (codeBlock.snippet.isRemote) {
-            try {
-              const snippetContent = await loadSnippetContent(
-                codeBlock.snippet.filePath,
-                config,
-                filePath,
-              );
-              const extractedContent = extractLines(
-                snippetContent,
-                codeBlock.snippet.startLine,
-                codeBlock.snippet.endLine,
-              );
+          const extractedContent = await resolveCodeBlockContent(
+            codeBlock,
+            config,
+            filePath,
+            fileIssues,
+          );
 
-              if (
-                extractedContent === '' &&
-                (codeBlock.snippet.startLine ?? codeBlock.snippet.endLine)
-              ) {
-                continue;
-              }
-
-              if (extractedContent !== codeBlock.content) {
-                updatedContent = replaceCodeBlock(
-                  updatedContent,
-                  codeBlock,
-                  extractedContent,
-                );
-                hasChanges = true;
-              }
-            } catch (error) {
-              const errMsg = error instanceof Error ? error.message : error;
-              fileIssues.push({
-                type: 'remote-error',
-                message: `Error fetching remote snippet: ${errMsg}`,
-                line: codeBlock.lineNumber ?? 1,
-                column: codeBlock.columnNumber ?? 1,
-                ruleId: 'remote-fetch-error',
-              });
-            }
-            continue;
-          }
-
-          let snippetPath: string;
-          try {
-            snippetPath = await resolveSnippetPath(
-              codeBlock.snippet.filePath,
-              config,
-              filePath,
+          if (
+            extractedContent !== null &&
+            extractedContent !== codeBlock.content
+          ) {
+            updatedContent = replaceCodeBlock(
+              updatedContent,
+              codeBlock,
+              extractedContent,
             );
-
-            const workingDir = resolve(config.workingDir);
-            const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
-
-            const allowedRoots = [workingDir];
-            if (snippetRoot !== workingDir) {
-              allowedRoots.push(snippetRoot);
-            }
-
-            if (!isInWorkingDir(snippetPath, allowedRoots)) {
-              fileIssues.push({
-                type: 'invalid-path',
-                message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
-                line: codeBlock.lineNumber ?? 1,
-                column: codeBlock.columnNumber ?? 1,
-                ruleId: 'path-traversal',
-              });
-              continue;
-            }
-          } catch (error) {
-            fileIssues.push({
-              type: 'load-failed',
-              message: `Error resolving path ${codeBlock.snippet.filePath}: ${error}`,
-              line: codeBlock.lineNumber ?? 1,
-              column: codeBlock.columnNumber ?? 1,
-              ruleId: 'path-validation',
-            });
-            continue;
-          }
-
-          if (!(await fileExists(snippetPath))) {
-            fileIssues.push({
-              type: 'file-missing',
-              message: `Snippet file not found: ${codeBlock.snippet.filePath}`,
-              line: codeBlock.lineNumber ?? 1,
-              column: codeBlock.columnNumber ?? 1,
-              ruleId: 'snippet-not-found',
-            });
-            continue;
-          }
-
-          try {
-            const snippetContent = await loadSnippetContent(
-              codeBlock.snippet.filePath,
-              config,
-              filePath,
-            );
-            const extractedContent = extractLines(
-              snippetContent,
-              codeBlock.snippet.startLine,
-              codeBlock.snippet.endLine,
-            );
-
-            if (
-              extractedContent === '' &&
-              (codeBlock.snippet.startLine ?? codeBlock.snippet.endLine)
-            ) {
-              continue;
-            }
-
-            if (extractedContent !== codeBlock.content) {
-              updatedContent = replaceCodeBlock(
-                updatedContent,
-                codeBlock,
-                extractedContent,
-              );
-              hasChanges = true;
-            }
-          } catch (error) {
-            fileIssues.push({
-              type: 'load-failed',
-              message: `Error loading snippet ${snippetPath}: ${error}`,
-              line: codeBlock.lineNumber ?? 1,
-              column: codeBlock.columnNumber ?? 1,
-              ruleId: 'snippet-load-error',
-            });
+            hasChanges = true;
           }
         }
 
         if (fileIssues.length > 0) {
-          result.fileIssues.push({
-            filePath,
-            issues: fileIssues,
-          });
+          result.fileIssues.push({ filePath, issues: fileIssues });
         }
 
         if (hasChanges) {
@@ -232,148 +249,38 @@ export async function checkMarkdownFiles(
             continue;
           }
 
-          if (codeBlock.snippet.isRemote) {
-            try {
-              const snippetContent = await loadSnippetContent(
-                codeBlock.snippet.filePath,
-                config,
-                filePath,
-              );
-              const extractedContent = extractLines(
-                snippetContent,
-                codeBlock.snippet.startLine,
-                codeBlock.snippet.endLine,
-              );
+          const extractedContent = await resolveCodeBlockContent(
+            codeBlock,
+            config,
+            filePath,
+            fileIssues,
+          );
 
-              if (extractedContent !== codeBlock.content) {
-                const endLineText = codeBlock.snippet.endLine
-                  ? `-L${codeBlock.snippet.endLine}`
-                  : '';
-                const rangeText = codeBlock.snippet.startLine
-                  ? `#L${codeBlock.snippet.startLine}${endLineText}`
-                  : '';
+          if (
+            extractedContent !== null &&
+            extractedContent !== codeBlock.content
+          ) {
+            const endLineText = codeBlock.snippet.endLine
+              ? `-L${codeBlock.snippet.endLine}`
+              : '';
+            const rangeText = codeBlock.snippet.startLine
+              ? `#L${codeBlock.snippet.startLine}${endLineText}`
+              : '';
+            const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
 
-                const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
-
-                fileIssues.push({
-                  type: 'sync-needed',
-                  message: `Code block out of sync with ${snippetRef}`,
-                  line: codeBlock.lineNumber ?? 1,
-                  column: codeBlock.columnNumber ?? 1,
-                  ruleId: 'content-mismatch',
-                });
-
-                isFileInSync = false;
-              }
-            } catch (error) {
-              const errMsg = error instanceof Error ? error.message : error;
-              fileIssues.push({
-                type: 'remote-error',
-                message: `Error fetching remote snippet: ${errMsg}`,
-                line: codeBlock.lineNumber ?? 1,
-                column: codeBlock.columnNumber ?? 1,
-                ruleId: 'remote-fetch-error',
-              });
-            }
-            continue;
-          }
-
-          let snippetPath: string;
-          try {
-            snippetPath = await resolveSnippetPath(
-              codeBlock.snippet.filePath,
-              config,
-              filePath,
-            );
-
-            const workingDir = resolve(config.workingDir);
-            const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
-
-            const allowedRoots = [workingDir];
-            if (snippetRoot !== workingDir) {
-              allowedRoots.push(snippetRoot);
-            }
-
-            if (!isInWorkingDir(snippetPath, allowedRoots)) {
-              fileIssues.push({
-                type: 'invalid-path',
-                message: `Path traversal attempt detected: ${codeBlock.snippet.filePath}`,
-                line: codeBlock.lineNumber ?? 1,
-                column: codeBlock.columnNumber ?? 1,
-                ruleId: 'path-traversal',
-              });
-              continue;
-            }
-          } catch (error) {
             fileIssues.push({
-              type: 'load-failed',
-              message: `Error resolving path ${codeBlock.snippet.filePath}: ${error}`,
+              type: 'sync-needed',
+              message: `Code block out of sync with ${snippetRef}`,
               line: codeBlock.lineNumber ?? 1,
               column: codeBlock.columnNumber ?? 1,
-              ruleId: 'path-validation',
+              ruleId: 'content-mismatch',
             });
-            continue;
-          }
-
-          if (!(await fileExists(snippetPath))) {
-            fileIssues.push({
-              type: 'file-missing',
-              message: `Snippet file not found: ${codeBlock.snippet.filePath}`,
-              line: codeBlock.lineNumber ?? 1,
-              column: codeBlock.columnNumber ?? 1,
-              ruleId: 'snippet-not-found',
-            });
-            continue;
-          }
-
-          try {
-            const snippetContent = await loadSnippetContent(
-              codeBlock.snippet.filePath,
-              config,
-              filePath,
-            );
-            const extractedContent = extractLines(
-              snippetContent,
-              codeBlock.snippet.startLine,
-              codeBlock.snippet.endLine,
-            );
-
-            if (extractedContent !== codeBlock.content) {
-              const endLineText = codeBlock.snippet.endLine
-                ? `-L${codeBlock.snippet.endLine}`
-                : '';
-              const rangeText = codeBlock.snippet.startLine
-                ? `#L${codeBlock.snippet.startLine}${endLineText}`
-                : '';
-
-              const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
-
-              fileIssues.push({
-                type: 'sync-needed',
-                message: `Code block out of sync with ${snippetRef}`,
-                line: codeBlock.lineNumber ?? 1,
-                column: codeBlock.columnNumber ?? 1,
-                ruleId: 'content-mismatch',
-              });
-
-              isFileInSync = false;
-            }
-          } catch (error) {
-            fileIssues.push({
-              type: 'load-failed',
-              message: `Error loading snippet ${snippetPath}: ${error}`,
-              line: codeBlock.lineNumber ?? 1,
-              column: codeBlock.columnNumber ?? 1,
-              ruleId: 'snippet-load-error',
-            });
+            isFileInSync = false;
           }
         }
 
         if (fileIssues.length > 0) {
-          result.fileIssues.push({
-            filePath,
-            issues: fileIssues,
-          });
+          result.fileIssues.push({ filePath, issues: fileIssues });
         }
 
         if (!isFileInSync) {
@@ -442,6 +349,16 @@ export async function extractSnippets(
     warnings: [],
     errors: [],
   };
+
+  if (config.workingDir) {
+    const resolvedSnippetRoot = resolve(config.workingDir, config.snippetRoot || '.');
+    if (!isInWorkingDir(resolvedSnippetRoot, config.workingDir)) {
+      result.errors.push(
+        `Snippet root is outside the working directory: ${config.snippetRoot}`,
+      );
+      return result;
+    }
+  }
 
   try {
     const markdownFiles = await fg(config.markdownGlob, {

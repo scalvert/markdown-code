@@ -7,6 +7,7 @@ import { fileExists } from '../utils.js';
 import {
   getValidatedConfig,
   handleError,
+  logExtractionResults,
   logWarningsAndErrors,
   type BaseArgs,
 } from './shared.js';
@@ -56,18 +57,6 @@ async function createDefaultConfig(): Promise<void> {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to create configuration: ${errorMessage}`);
-  }
-}
-
-function logExtractionResults(result: {
-  extracted: Array<string>;
-  snippetsCreated: number;
-}) {
-  if (result.extracted.length > 0) {
-    console.log(`Extracted ${result.snippetsCreated} snippets from:`);
-    result.extracted.forEach((file) => console.log(`  ${file}`));
-  } else {
-    console.log('No code blocks found to extract.');
   }
 }
 
