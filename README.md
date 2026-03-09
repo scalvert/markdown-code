@@ -1,8 +1,12 @@
-# markdown-code
+<div align="center">
 
-![CI Build](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml/badge.svg)
+<img src="./markdown-code.png" alt="markdown-code" width="600" />
+
+[![CI Build](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml/badge.svg)](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml)
 [![npm version](https://badge.fury.io/js/markdown-code.svg)](https://badge.fury.io/js/markdown-code)
 [![License](https://img.shields.io/npm/l/markdown-code.svg)](https://github.com/scalvert/markdown-code/blob/main/LICENSE)
+
+</div>
 
 **Stop copy-pasting code into documentation.** Keep your markdown examples automatically synchronized with real source files.
 
