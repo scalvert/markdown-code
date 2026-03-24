@@ -54,6 +54,16 @@ function greet(name) {
 
 **Result**: Your documentation stays accurate as your code evolves.
 
+## Agent Skill
+
+Install the markdown-code skill to give your AI coding agent knowledge of this tool's workflows and commands:
+
+```bash
+npx skills add scalvert/markdown-code
+```
+
+Works with any agent that supports the [skills ecosystem](https://github.com/vercel-labs/skills).
+
 ## Installation
 
 No installation required - use it directly:
