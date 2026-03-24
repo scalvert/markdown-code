@@ -62,7 +62,7 @@ Install the markdown-code skill to give your AI coding agent knowledge of this t
 npx skills add scalvert/markdown-code
 ```
 
-Supports Claude Code, Cursor, Gemini CLI, Codex, and [40+ other agents](https://github.com/vercel-labs/skills).
+Works with any agent that supports the [skills ecosystem](https://github.com/vercel-labs/skills).
 
 ## Installation
 
