@@ -54,15 +54,15 @@ function greet(name) {
 
 **Result**: Your documentation stays accurate as your code evolves.
 
-## Claude Code Skill
+## Agent Skill
 
-If you use [Claude Code](https://claude.ai/code), you can install the markdown-code skill to give your agent knowledge of this tool's workflows and commands:
+Install the markdown-code skill to give your AI coding agent knowledge of this tool's workflows and commands:
 
 ```bash
 npx skills add scalvert/markdown-code
 ```
 
-This teaches Claude Code when and how to use markdown-code — including the extract vs. sync workflows, snippet directive syntax, and CI integration.
+Supports Claude Code, Cursor, Gemini CLI, Codex, and [40+ other agents](https://github.com/vercel-labs/skills).
 
 ## Installation
 
