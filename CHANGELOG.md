@@ -1,5 +1,15 @@
 
 
+
+## v1.1.0 (2026-03-24)
+
+#### :rocket: Enhancement
+* [#50](https://github.com/scalvert/markdown-code/pull/50) feat: add SKILL.md for markdown-code plugin ([@steve-calvert-glean](https://github.com/steve-calvert-glean))
+
+#### Committers: 1
+- Steve Calvert ([@steve-calvert-glean](https://github.com/steve-calvert-glean))
+
+
 ## v1.0.0 (2026-03-09)
 
 #### :boom: Breaking Change
