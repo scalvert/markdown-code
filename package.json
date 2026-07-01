@@ -16,6 +16,7 @@
   "author": "",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "md-code": "dist/cli.js",
     "markdown-code": "dist/cli.js"
@@ -31,7 +32,8 @@
     "lint:fix": "eslint src --fix",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
-    "test:all": "npm run lint && npm run test",
+    "test:watch": "vitest",
+    "test:all": "npm run lint && npm run typecheck && npm run build && npm run test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

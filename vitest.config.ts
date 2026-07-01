@@ -7,9 +7,5 @@ export default defineConfig({
     env: {
       FORCE_COLOR: '0',
     },
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-    },
   },
 });
