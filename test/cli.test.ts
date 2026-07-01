@@ -2,7 +2,7 @@ import path from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createBinTester, BinTesterProject } from '@scalvert/bin-tester';
+import { createBintastic, BintasticProject } from 'bintastic';
 import { loadScenario } from './fixtures/index.js';
 import { VERSION } from '../src/version.js';
 
@@ -13,9 +13,9 @@ function normalizeOutput(output: string, baseDir: string): string {
 }
 
 describe('CLI', () => {
-  let project: BinTesterProject;
+  let project: BintasticProject;
 
-  const { setupProject, teardownProject, runBin } = createBinTester({
+  const { setupProject, teardownProject, runBin } = createBintastic({
     binPath: fileURLToPath(new URL('../dist/cli.js', import.meta.url)),
   });
 
