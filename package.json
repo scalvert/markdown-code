@@ -16,6 +16,7 @@
   "author": "",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "md-code": "dist/cli.js",
     "markdown-code": "dist/cli.js"
@@ -31,7 +32,8 @@
     "lint:fix": "eslint src --fix",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
-    "test:all": "npm run lint && npm run test",
+    "test:watch": "vitest",
+    "test:all": "npm run lint && npm run typecheck && npm run build && npm run test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -49,11 +51,11 @@
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@release-it-plugins/lerna-changelog": "^5.0.0",
-    "@scalvert/bin-tester": "^2.0.0",
     "@types/node": "^25.6.0",
     "@types/yargs": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "bintastic": "^4.2.0",
     "eslint": "^9.36.0",
     "globals": "^17.5.0",
     "prettier": "^3.8.2",

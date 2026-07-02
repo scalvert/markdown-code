@@ -12,7 +12,6 @@ Follow these guidelines when modifying the repository.
 - Format code with `npm run format`.
 - Execute tests with `npm test`. Additional test commands:
   - `npm run test:watch` for watch mode
-  - `npm run test:coverage` for coverage reports
 
 ## Repository Structure
 
@@ -41,7 +40,7 @@ Follow these guidelines when modifying the repository.
 
 ## Continuous Integration
 
-- GitHub Actions (`.github/workflows/ci.yml`) install dependencies, run linting, build the project, and execute tests on Node 20, 22, and 24.
+- GitHub Actions (`.github/workflows/ci.yml`) install dependencies, run linting, typecheck, build the project, and execute tests on Node 22 and 24.
 
 ## Useful Scripts
 

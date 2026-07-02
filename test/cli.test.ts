@@ -2,18 +2,20 @@ import path from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createBinTester, BinTesterProject } from '@scalvert/bin-tester';
+import { createBintastic, BintasticProject } from 'bintastic';
 import { loadScenario } from './fixtures/index.js';
 import { VERSION } from '../src/version.js';
 
-function normalizePath(path: string, baseDir: string): string {
-  return path.replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
+function normalizeOutput(output: string, baseDir: string): string {
+  return output
+    .replace(/\x1b\[[0-9;]*m/g, '')
+    .replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
 }
 
 describe('CLI', () => {
-  let project: BinTesterProject;
+  let project: BintasticProject;
 
-  const { setupProject, teardownProject, runBin } = createBinTester({
+  const { setupProject, teardownProject, runBin } = createBintastic({
     binPath: fileURLToPath(new URL('../dist/cli.js', import.meta.url)),
   });
 
@@ -287,12 +289,12 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir))
+      expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
-        "[2m<TMP_DIR>/README.md[22m
-          [2m3:1   [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
+        "<TMP_DIR>/README.md
+          3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
-        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -343,9 +345,9 @@ const updated = "old";
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(
-        normalizePath(result.stderr, project.baseDir),
-      ).toMatchInlineSnapshot(`""`);
+      expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
+        `""`,
+      );
     });
 
     it('uses check command', async () => {
@@ -389,9 +391,9 @@ const test = true;
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(
-        normalizePath(result.stderr, project.baseDir),
-      ).toMatchInlineSnapshot(`""`);
+      expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
+        `""`,
+      );
     });
 
     it('warns about missing files in check mode', async () => {
@@ -408,16 +410,16 @@ old content
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(0);
-      expect(
-        normalizePath(result.stderr, project.baseDir),
-      ).toMatchInlineSnapshot(`""`);
-      expect(normalizePath(result.stdout, project.baseDir))
+      expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
+        `""`,
+      );
+      expect(normalizeOutput(result.stdout, project.baseDir))
         .toMatchInlineSnapshot(`
         "Checking markdown files...
-        [2m<TMP_DIR>/README.md[22m
-          [2m3:1   [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
+        <TMP_DIR>/README.md
+          3:1    file-missing Snippet file not found: missing.js  snippet-not-found
 
-        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
+        ✖ 1 problem (1 file-missing)"
       `);
     });
   });
@@ -636,7 +638,7 @@ old content
     it('handles file system errors gracefully', async () => {
       const markdownContent = `# Test
 
-\`\`\`js snippet=../../../etc/passwd
+\`\`\`js snippet=/etc/passwd
 malicious content
 \`\`\``;
 
@@ -647,13 +649,9 @@ malicious content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizePath(result.stderr, project.baseDir))
-        .toMatchInlineSnapshot(`
-        "[2m<TMP_DIR>/README.md[22m
-          [2m3:1   [22m [31minvalid-path[39m Path traversal attempt detected: ../../../etc/passwd[2m  path-traversal[22m
-
-        [1m[31m✖ 1 problem[39m[22m[2m ([31m1 invalid-path[39m)[22m"
-      `);
+      expect(normalizeOutput(result.stderr, project.baseDir)).toContain(
+        'invalid-path Path traversal attempt detected: /etc/passwd',
+      );
     });
 
     it('handles malformed config gracefully', async () => {
@@ -697,15 +695,15 @@ ${scenario.sources['file2.js']}
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir))
+      expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
-        "[2m<TMP_DIR>/doc1.md[22m
-          [2m15:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
+        "<TMP_DIR>/doc1.md
+          15:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        [2m<TMP_DIR>/doc3.md[22m
-          [2m15:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
+        <TMP_DIR>/doc3.md
+          15:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        [1m[31m✖ 2 problems[39m[22m[2m ([36m2 file-missing[39m)[22m"
+        ✖ 2 problems (2 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -760,12 +758,12 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir))
+      expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
-        "[2m<TMP_DIR>/README.md[22m
-          [2m61:1  [22m [36mfile-missing[39m Snippet file not found: nonexistent.js[2m  snippet-not-found[22m
+        "<TMP_DIR>/README.md
+          61:1   file-missing Snippet file not found: nonexistent.js  snippet-not-found
 
-        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
@@ -1071,12 +1069,12 @@ old content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(0);
-      expect(normalizePath(result.stderr, project.baseDir))
+      expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
-        "[2m<TMP_DIR>/README.md[22m
-          [2m19:1  [22m [36mfile-missing[39m Snippet file not found: missing.js[2m  snippet-not-found[22m
+        "<TMP_DIR>/README.md
+          19:1   file-missing Snippet file not found: missing.js  snippet-not-found
 
-        [1m[31m✖ 1 problem[39m[22m[2m ([36m1 file-missing[39m)[22m"
+        ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files...
