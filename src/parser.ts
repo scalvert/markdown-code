@@ -2,6 +2,8 @@ import { readFile, realpath } from 'node:fs/promises';
 import { resolve, dirname, isAbsolute } from 'node:path';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkMdx from 'remark-mdx';
 import { visit } from 'unist-util-visit';
 import type { Code } from 'mdast';
 import type {
@@ -105,11 +107,26 @@ export function parseSnippetDirective(
   return { filePath: snippetPath, isRemote };
 }
 
+
+/**
+ * Builds the unified processor for a given file. `.mdx` files are parsed with
+ * remark-mdx (JSX, import/export, expressions) plus remark-frontmatter —
+ * frontmatter must be registered so `{...}` inside YAML is never handed to the
+ * MDX expression parser. `.md` files keep the exact historical parser so
+ * existing behavior (and byte offsets) are unchanged.
+ */
+export function createMarkdownProcessor(filePath: string) {
+  if (filePath.toLowerCase().endsWith('.mdx')) {
+    return unified().use(remarkParse).use(remarkFrontmatter).use(remarkMdx);
+  }
+  return unified().use(remarkParse);
+}
+
 export async function parseMarkdownFile(
   filePath: string,
 ): Promise<MarkdownFile> {
   const content = await readFile(filePath, 'utf-8');
-  const tree = unified().use(remarkParse).parse(content);
+  const tree = createMarkdownProcessor(filePath).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
 
   visit(tree, 'code', (node: Code) => {
@@ -147,7 +164,7 @@ export async function parseMarkdownForExtraction(
   filePath: string,
 ): Promise<MarkdownFile> {
   const content = await readFile(filePath, 'utf-8');
-  const tree = unified().use(remarkParse).parse(content);
+  const tree = createMarkdownProcessor(filePath).parse(content);
   const codeBlocks: Array<CodeBlock> = [];
 
   visit(tree, 'code', (node: Code) => {
@@ -317,6 +334,20 @@ export function replaceCodeBlock(
   const openingFence = blockText.slice(0, firstNewlineIndex);
   const closingFence = blockText.slice(lastNewlineIndex + 1);
 
-  const newBlock = `${openingFence}\n${newContent}\n${closingFence}`;
+  // Fences indented inside lists or (in MDX) JSX elements store DEDENTED
+  // content in the mdast node; the parser strips up to the opening fence's
+  // indentation from every line. Re-apply that indentation when splicing so
+  // the fence body stays aligned with its fence markers. Fences at column 1
+  // get an empty prefix, keeping historical output byte-identical.
+  const indent = ' '.repeat(Math.max(0, (codeBlock.columnNumber ?? 1) - 1));
+  const indentedContent =
+    indent === ''
+      ? newContent
+      : newContent
+          .split('\n')
+          .map((line) => (line === '' ? line : indent + line))
+          .join('\n');
+
+  const newBlock = `${openingFence}\n${indentedContent}\n${closingFence}`;
   return markdownContent.slice(0, start) + newBlock + markdownContent.slice(end);
 }
