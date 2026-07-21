@@ -1,5 +1,5 @@
 import { writeFile, mkdir, realpath } from 'node:fs/promises';
-import { join, resolve, basename } from 'node:path';
+import { join, resolve, basename, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
 import { fileExists, isInWorkingDir } from './utils.js';
@@ -375,7 +375,7 @@ export async function extractSnippets(
           continue;
         }
 
-        const baseFileName = basename(filePath, '.md');
+        const baseFileName = basename(filePath, extname(filePath));
         const dirName = baseFileName.toLowerCase();
         const outputDir = join(config.snippetRoot, dirName);
 
@@ -392,6 +392,13 @@ export async function extractSnippets(
           return ext && config.includeExtensions.includes(ext);
         });
         const digits = Math.max(2, String(eligibleBlocks.length).length);
+
+        // Pass 1 (document order): write snippet files and record which
+        // annotation belongs to which block.
+        const annotations: Array<{
+          codeBlock: (typeof eligibleBlocks)[number];
+          snippetReference: string;
+        }> = [];
 
         for (const codeBlock of eligibleBlocks) {
           const lang = codeBlock.language;
@@ -421,19 +428,39 @@ export async function extractSnippets(
           await writeFile(snippetFilePath, contentWithNewline, 'utf-8');
           result.snippetsCreated++;
 
-          const snippetReference = `${dirName}/${snippetFileName}`;
-
-          const newCodeBlockStart =
-            '```' + lang + ' snippet=' + snippetReference;
-
-          const escapedLang = lang.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          updatedContent = updatedContent.replace(
-            new RegExp('^```' + escapedLang + '$', 'm'),
-            newCodeBlockStart,
-          );
+          annotations.push({
+            codeBlock,
+            snippetReference: `${dirName}/${snippetFileName}`,
+          });
 
           hasChanges = true;
           snippetIndex++;
+        }
+
+        // Pass 2 (descending offset order): splice ` snippet=<ref>` into each
+        // block's opening fence line. Pure insertion at a position derived
+        // from the parser's own offsets — the only bytes that change in the
+        // markdown are the annotations themselves, and processing bottom-up
+        // keeps every remaining offset valid. This replaces the previous
+        // first-match regex, which could annotate the wrong same-language
+        // fence and missed fences with meta or indentation.
+        annotations.sort(
+          (a, b) => b.codeBlock.position.start - a.codeBlock.position.start,
+        );
+
+        for (const { codeBlock, snippetReference } of annotations) {
+          const { start, end } = codeBlock.position;
+          const blockText = markdownFile.content.slice(start, end);
+          const firstNewlineIndex = blockText.indexOf('\n');
+          if (firstNewlineIndex === -1) {
+            continue;
+          }
+          const insertPos = start + firstNewlineIndex;
+          updatedContent =
+            updatedContent.slice(0, insertPos) +
+            ' snippet=' +
+            snippetReference +
+            updatedContent.slice(insertPos);
         }
 
         if (hasChanges) {

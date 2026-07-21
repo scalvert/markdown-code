@@ -155,9 +155,38 @@ Perfect for keeping documentation in sync with your actual project source code.
 3. When source files change, `npx markdown-code check` (or `md-code check`) detects drift
 4. Run `npx markdown-code sync` (or `md-code sync`) to update documentation with latest changes
 
+## MDX Support
+
+`.mdx` files (Docusaurus, Nextra, etc.) are fully supported. Point the glob at
+them:
+
+```json
+{
+  "markdownGlob": "docs/**/*.{md,mdx}"
+}
+```
+
+MDX files are parsed with `remark-mdx` + `remark-frontmatter`, so fences nested
+inside JSX components are found, JSX indentation never produces phantom code
+blocks, and `{...}` inside YAML frontmatter parses cleanly. Snippet directives
+coexist with other fence meta (e.g. ```` ```ts title="app.ts" snippet=app.ts ````).
+
+Two guarantees worth knowing:
+
+- **Non-destructive extraction**: `extract` only inserts ` snippet=<ref>` into
+  opening fence lines (offset-addressed, never regex-matched) — stripping the
+  annotations reproduces your original file byte-for-byte.
+- **Fail-safe parsing**: a file that isn't valid MDX (e.g. HTML `<!-- -->`
+  comments, which MDX forbids) is reported and left untouched.
+
+Note: framework-specific MDX extensions (like Docusaurus `{#heading-id}`
+anchors) are not part of the MDX grammar and will be reported as parse errors;
+those files are skipped safely.
+
 ## Features
 
 - **Automatic Sync**: Replace fenced code blocks with contents from real files
+- **MDX Support**: Parse `.mdx` files, including fences nested in JSX
 - **Extract Mode**: Create snippet files from existing code blocks in markdown
 - **Line Range Support**: Extract specific line ranges using `#Lx-Ly` syntax
 - **Check Mode**: Verify documentation is in sync without making changes

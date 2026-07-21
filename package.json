@@ -43,6 +43,8 @@
     "mdast": "^3.0.0",
     "picocolors": "^1.1.1",
     "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-mdx": "^3.1.1",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.4",
     "unist-util-visit": "^5.1.0",
