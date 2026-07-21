@@ -1,6 +1,22 @@
 
 
 
+## v1.2.0 (2026-07-21)
+
+#### :rocket: Enhancement
+
+- [#75](https://github.com/scalvert/markdown-code/pull/75) Add MDX support with non-destructive, offset-addressed extraction ([@scalvert](https://github.com/scalvert))
+
+#### :bug: Bug Fix
+
+- [#72](https://github.com/scalvert/markdown-code/pull/72) [bug] Fix package entrypoint for publishing ([@scalvert](https://github.com/scalvert))
+
+#### Committers: 1
+
+- Steve Calvert ([@scalvert](https://github.com/scalvert))
+
+
+
 ## v1.1.0 (2026-03-24)
 
 #### :rocket: Enhancement
