@@ -271,8 +271,22 @@ export async function loadSnippetContent(
   return await readFile(realResolvedPath, 'utf-8');
 }
 
+export type LineEnding = '\n' | '\r\n';
+
+export function getLineEnding(content: string): LineEnding {
+  return content.match(/\r\n|\n/)?.[0] === '\r\n' ? '\r\n' : '\n';
+}
+
+export function normalizeLineEndings(
+  content: string,
+  lineEnding: LineEnding,
+): string {
+  return content.replace(/\r\n|\r|\n/g, lineEnding);
+}
+
 export function trimBlankLines(content: string): string {
-  const lines = content.split('\n');
+  const lineEnding = getLineEnding(content);
+  const lines = content.split(/\r\n|\n|\r/);
 
   // Find first non-blank line
   let start = 0;
@@ -291,7 +305,7 @@ export function trimBlankLines(content: string): string {
     return '';
   }
 
-  return lines.slice(start, end + 1).join('\n');
+  return lines.slice(start, end + 1).join(lineEnding);
 }
 
 export function extractLines(
@@ -303,7 +317,8 @@ export function extractLines(
     return trimBlankLines(content);
   }
 
-  const lines = content.split('\n');
+  const lineEnding = getLineEnding(content);
+  const lines = content.split(/\r\n|\n|\r/);
   let extractedLines: Array<string>;
 
   if (startLine !== undefined && endLine !== undefined) {
@@ -314,7 +329,7 @@ export function extractLines(
     extractedLines = lines;
   }
 
-  return trimBlankLines(extractedLines.join('\n'));
+  return trimBlankLines(extractedLines.join(lineEnding));
 }
 
 export function replaceCodeBlock(
@@ -325,13 +340,17 @@ export function replaceCodeBlock(
   const { start, end } = codeBlock.position;
   const blockText = markdownContent.slice(start, end);
 
+  const lineEnding = getLineEnding(blockText);
   const firstNewlineIndex = blockText.indexOf('\n');
   if (firstNewlineIndex === -1) {
     return markdownContent;
   }
 
   const lastNewlineIndex = blockText.lastIndexOf('\n');
-  const openingFence = blockText.slice(0, firstNewlineIndex);
+  const openingFence = blockText.slice(
+    0,
+    firstNewlineIndex - (lineEnding.length - 1),
+  );
   const closingFence = blockText.slice(lastNewlineIndex + 1);
 
   // Fences indented inside lists or (in MDX) JSX elements store DEDENTED
@@ -340,14 +359,17 @@ export function replaceCodeBlock(
   // the fence body stays aligned with its fence markers. Fences at column 1
   // get an empty prefix, keeping historical output byte-identical.
   const indent = ' '.repeat(Math.max(0, (codeBlock.columnNumber ?? 1) - 1));
+  const normalizedContent = normalizeLineEndings(newContent, lineEnding);
   const indentedContent =
     indent === ''
-      ? newContent
-      : newContent
-          .split('\n')
+      ? normalizedContent
+      : normalizedContent
+          .split(lineEnding)
           .map((line) => (line === '' ? line : indent + line))
-          .join('\n');
+          .join(lineEnding);
 
-  const newBlock = `${openingFence}\n${indentedContent}\n${closingFence}`;
-  return markdownContent.slice(0, start) + newBlock + markdownContent.slice(end);
+  const newBlock = `${openingFence}${lineEnding}${indentedContent}${lineEnding}${closingFence}`;
+  return (
+    markdownContent.slice(0, start) + newBlock + markdownContent.slice(end)
+  );
 }

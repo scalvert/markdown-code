@@ -19,6 +19,8 @@ import {
   resolveSnippetPath,
   extractLines,
   replaceCodeBlock,
+  getLineEnding,
+  normalizeLineEndings,
 } from './parser.js';
 
 const require = createRequire(import.meta.url);
@@ -30,9 +32,13 @@ async function resolveCodeBlockContent(
   codeBlock: CodeBlock,
   config: RuntimeConfig,
   markdownFilePath: string,
+  markdownContent: string,
   fileIssues: Array<Issue>,
 ): Promise<string | null> {
   const snippet = codeBlock.snippet!;
+  const lineEnding = getLineEnding(
+    markdownContent.slice(codeBlock.position.start, codeBlock.position.end),
+  );
 
   if (snippet.isRemote) {
     try {
@@ -49,7 +55,7 @@ async function resolveCodeBlockContent(
       if (extractedContent === '' && (snippet.startLine ?? snippet.endLine)) {
         return null;
       }
-      return extractedContent;
+      return normalizeLineEndings(extractedContent, lineEnding);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : error;
       fileIssues.push({
@@ -137,7 +143,7 @@ async function resolveCodeBlockContent(
     if (extractedContent === '' && (snippet.startLine ?? snippet.endLine)) {
       return null;
     }
-    return extractedContent;
+    return normalizeLineEndings(extractedContent, lineEnding);
   } catch (error) {
     fileIssues.push({
       type: 'load-failed',
@@ -184,6 +190,7 @@ export async function syncMarkdownFiles(
             codeBlock,
             config,
             filePath,
+            markdownFile.content,
             fileIssues,
           );
 
@@ -253,6 +260,7 @@ export async function checkMarkdownFiles(
             codeBlock,
             config,
             filePath,
+            markdownFile.content,
             fileIssues,
           );
 
@@ -327,8 +335,11 @@ function getExtensionForLanguage(
   return null;
 }
 
-export function ensureTrailingNewline(content: string): string {
-  return content.endsWith('\n') ? content : content + '\n';
+export function ensureTrailingNewline(
+  content: string,
+  lineEnding: '\n' | '\r\n' = '\n',
+): string {
+  return content.endsWith('\n') ? content : content + lineEnding;
 }
 
 function buildSnippetFileName(
@@ -424,7 +435,15 @@ export async function extractSnippets(
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
-          const contentWithNewline = ensureTrailingNewline(codeBlock.content);
+          const blockText = markdownFile.content.slice(
+            codeBlock.position.start,
+            codeBlock.position.end,
+          );
+          const lineEnding = getLineEnding(blockText);
+          const contentWithNewline = ensureTrailingNewline(
+            normalizeLineEndings(codeBlock.content, lineEnding),
+            lineEnding,
+          );
           await writeFile(snippetFilePath, contentWithNewline, 'utf-8');
           result.snippetsCreated++;
 
@@ -451,11 +470,12 @@ export async function extractSnippets(
         for (const { codeBlock, snippetReference } of annotations) {
           const { start, end } = codeBlock.position;
           const blockText = markdownFile.content.slice(start, end);
+          const lineEnding = getLineEnding(blockText);
           const firstNewlineIndex = blockText.indexOf('\n');
           if (firstNewlineIndex === -1) {
             continue;
           }
-          const insertPos = start + firstNewlineIndex;
+          const insertPos = start + firstNewlineIndex - (lineEnding.length - 1);
           updatedContent =
             updatedContent.slice(0, insertPos) +
             ' snippet=' +
