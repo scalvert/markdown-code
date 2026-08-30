@@ -90,12 +90,10 @@ describe('snippet directive parsing', () => {
     });
   });
 
-  it('should handle zero line numbers gracefully', () => {
+  it('should reject zero line numbers without dropping the reference', () => {
     const result = parseSnippetDirective('snippet=test.ts#L0-L5');
     expect(result).toEqual({
-      filePath: 'test.ts',
-      startLine: 0,
-      endLine: 5,
+      filePath: 'test.ts#L0-L5',
       isRemote: false,
     });
   });
@@ -108,6 +106,18 @@ describe('snippet directive parsing', () => {
           "isRemote": false,
         }
       `);
+  });
+
+  it('should only recognize standalone snippet metadata tokens', () => {
+    expect(parseSnippetDirective('not-snippet=test.ts')).toBeUndefined();
+    expect(parseSnippetDirective('title="snippet=test.ts"')).toBeUndefined();
+    expect(
+      parseSnippetDirective('description="example snippet=test.ts"'),
+    ).toBeUndefined();
+    expect(parseSnippetDirective('lang=ts snippet=test.ts')).toEqual({
+      filePath: 'test.ts',
+      isRemote: false,
+    });
   });
 
   it('should return undefined for missing snippet directive', () => {
@@ -142,13 +152,14 @@ describe('snippet directive parsing', () => {
       `);
   });
 
-  it('should handle mixed valid/invalid line numbers', () => {
-    const result = parseSnippetDirective('snippet=test.ts#L5-Labc');
-    expect(result).toEqual({
-      filePath: 'test.ts',
-      startLine: 5,
-      isRemote: false,
-    });
+  it('should reject malformed numeric suffixes without partial ranges', () => {
+    for (const lineSpec of ['L5-Labc', 'L5-L10tail', 'L5tail', '5tail']) {
+      const result = parseSnippetDirective(`snippet=test.ts#${lineSpec}`);
+      expect(result).toEqual({
+        filePath: `test.ts#${lineSpec}`,
+        isRemote: false,
+      });
+    }
   });
 
   it('should handle multiple hash symbols', () => {
@@ -171,12 +182,10 @@ describe('snippet directive parsing', () => {
     });
   });
 
-  it('should handle reversed line ranges', () => {
+  it('should reject reversed line ranges without dropping the reference', () => {
     const result = parseSnippetDirective('snippet=test.ts#L10-L5');
     expect(result).toEqual({
-      filePath: 'test.ts',
-      startLine: 10,
-      endLine: 5,
+      filePath: 'test.ts#L10-L5',
       isRemote: false,
     });
   });
