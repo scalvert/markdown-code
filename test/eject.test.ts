@@ -1,9 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, parse as parsePath } from 'node:path';
 import { Project } from 'fixturify-project';
 import { extractSnippets } from '../src/sync.js';
-import type { Config } from '../src/types.js';
+import {
+  deleteSnippetDirectory,
+  removeSnippetDirectives,
+} from '../src/commands/eject.js';
+import type { Config, RuntimeConfig } from '../src/types.js';
+
+const readlineState = vi.hoisted(() => ({ answer: 'n' }));
+
+vi.mock('node:readline/promises', () => ({
+  createInterface: () => ({
+    question: async () => readlineState.answer,
+    close: () => {},
+  }),
+}));
 
 // Test individual functions without readline interaction
 describe('eject command functionality', () => {
@@ -15,6 +28,7 @@ describe('eject command functionality', () => {
   beforeEach(() => {
     project = new Project();
     testDir = project.baseDir;
+    readlineState.answer = 'n';
     snippetRoot = join(testDir, 'snippets');
     baseConfig = {
       snippetRoot,
@@ -29,6 +43,61 @@ describe('eject command functionality', () => {
   });
 
   describe('snippet directive removal', () => {
+    it('preserves fence metadata, indentation, and style', async () => {
+      const original = `# Test
+
+  ~~~~typescript title="example.ts" snippet=examples/example.ts#L2-L4 data-mode="full"
+    const example = true;
+  ~~~~
+`;
+      const expected = `# Test
+
+  ~~~~typescript title="example.ts" data-mode="full"
+    const example = true;
+  ~~~~
+`;
+      const filePath = join(testDir, 'README.md');
+      const config: RuntimeConfig = { ...baseConfig, workingDir: testDir };
+
+      await project.write({ 'README.md': original });
+
+      const result = await removeSnippetDirectives(config);
+
+      expect(result).toMatchObject({
+        processed: [filePath],
+        warnings: [],
+        errors: [],
+      });
+      expect(readFileSync(filePath, 'utf-8')).toBe(expected);
+    });
+
+    it('should remove directives from multiple fences without changing their order', async () => {
+      const original = `~~~ts snippet=first.ts title="first"
+const first = 1;
+~~~
+
+  \`\`\`js data-x="second" snippet=second.js
+  const second = 2;
+  \`\`\`
+`;
+      const filePath = join(testDir, 'README.md');
+      const config: RuntimeConfig = { ...baseConfig, workingDir: testDir };
+
+      await project.write({ 'README.md': original });
+
+      const result = await removeSnippetDirectives(config);
+
+      expect(result.errors).toEqual([]);
+      expect(readFileSync(filePath, 'utf-8')).toBe(`~~~ts title="first"
+const first = 1;
+~~~
+
+  \`\`\`js data-x="second"
+  const second = 2;
+  \`\`\`
+`);
+    });
+
     it('should remove snippet directives from markdown files', async () => {
       const markdownWithDirectives = `# Test Project
 
@@ -296,8 +365,13 @@ function createUser(name: string, age: number): User {
         '.markdown-coderc.json': configContent,
       });
 
+      const runtimeConfig: RuntimeConfig = {
+        ...baseConfig,
+        workingDir: testDir,
+      };
+
       // Step 1: Run extract to create snippets and directives
-      const extractResult = await extractSnippets(baseConfig);
+      const extractResult = await extractSnippets(runtimeConfig);
 
       expect(extractResult).toMatchInlineSnapshot(`
         {
@@ -319,54 +393,24 @@ function createUser(name: string, age: number): User {
       expect(existsSync(join(snippetRoot, 'readme'))).toBe(true);
       expect(existsSync(join(testDir, '.markdown-coderc.json'))).toBe(true);
 
-      // Step 2: Simulate the eject process (without readline interaction)
-      const { parseMarkdownFile } = await import('../src/parser.js');
-      const { writeFile, rm, unlink } = await import('node:fs/promises');
-      const { resolve } = await import('node:path');
-      const { fileExists } = await import('../src/utils.js');
-      const fg = await import('fast-glob');
+      // Step 2: Run the eject cleanup without readline interaction
+      const directiveResult = await removeSnippetDirectives(runtimeConfig);
+      expect(directiveResult.errors).toEqual([]);
 
-      // Remove snippet directives
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
-      for (const filePath of markdownFiles) {
-        const markdownFile = await parseMarkdownFile(filePath);
-        const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
-          (cb) => cb.snippet,
-        );
-
-        if (codeBlocksWithSnippets.length === 0) continue;
-
-        let updatedContent = markdownFile.content;
-        let hasChanges = false;
-
-        for (const codeBlock of codeBlocksWithSnippets) {
-          const originalHeader = `\`\`\`${codeBlock.language} snippet=${
-            codeBlock.snippet!.filePath
-          }`;
-          const newHeader = `\`\`\`${codeBlock.language}`;
-
-          if (updatedContent.includes(originalHeader)) {
-            updatedContent = updatedContent.replace(originalHeader, newHeader);
-            hasChanges = true;
-          }
-        }
-
-        if (hasChanges) {
-          await writeFile(filePath, updatedContent, 'utf-8');
-        }
-      }
-
-      // Delete snippet directory
-      const resolvedSnippetPath = resolve(snippetRoot);
-      if (await fileExists(resolvedSnippetPath)) {
-        await rm(resolvedSnippetPath, { recursive: true, force: true });
-      }
+      const snippetResult = await deleteSnippetDirectory(
+        runtimeConfig.snippetRoot,
+        runtimeConfig.workingDir,
+      );
+      expect(snippetResult).toMatchObject({
+        deleted: true,
+        warnings: [],
+        errors: [],
+      });
 
       // Delete config file
-      const configPath = resolve(join(testDir, '.markdown-coderc.json'));
-      if (await fileExists(configPath)) {
-        await unlink(configPath);
-      }
+      const { unlink } = await import('node:fs/promises');
+      const configPath = join(testDir, '.markdown-coderc.json');
+      await unlink(configPath);
 
       // Step 3: Verify the eject was successful
       const markdownAfterEject = readFileSync(
@@ -405,7 +449,56 @@ function createUser(name: string, age: number): User {
     });
   });
 
+  describe('handler', () => {
+    it('cancels before changing any files when confirmation is declined', async () => {
+      const configPath = join(testDir, '.markdown-coderc.json');
+      const markdown = `~~~ts snippet=example.ts
+const example = true;
+~~~
+`;
+
+      await project.write({
+        '.markdown-coderc.json': JSON.stringify({
+          snippetRoot: join(testDir, 'snippets'),
+          markdownGlob: join(testDir, '*.md'),
+          excludeGlob: [],
+          includeExtensions: ['.ts'],
+        }),
+        'README.md': markdown,
+        snippets: { 'example.ts': 'const example = true;\n' },
+      });
+
+      const { handler } = await import('../src/commands/eject.js');
+      await handler({ config: configPath } as Parameters<typeof handler>[0]);
+
+      expect(readFileSync(join(testDir, 'README.md'), 'utf-8')).toBe(markdown);
+      expect(existsSync(join(testDir, 'snippets', 'example.ts'))).toBe(true);
+      expect(existsSync(configPath)).toBe(true);
+    });
+  });
+
   describe('edge cases', () => {
+    it('refuses to recursively delete the working directory or filesystem root', async () => {
+      const sentinel = join(testDir, 'sentinel.txt');
+      await project.write({ 'sentinel.txt': 'keep me' });
+
+      const workingDirResult = await deleteSnippetDirectory('.', testDir);
+      const filesystemRootResult = await deleteSnippetDirectory(
+        parsePath(testDir).root,
+        testDir,
+      );
+
+      expect(workingDirResult.deleted).toBe(false);
+      expect(workingDirResult.errors).toEqual([
+        'Refusing to delete the working directory: .',
+      ]);
+      expect(filesystemRootResult.deleted).toBe(false);
+      expect(filesystemRootResult.errors).toEqual([
+        `Refusing to delete filesystem root: ${parsePath(testDir).root}`,
+      ]);
+      expect(existsSync(sentinel)).toBe(true);
+    });
+
     it('should handle missing snippet directories gracefully', async () => {
       const { fileExists } = await import('../src/utils.js');
       const nonExistentPath = join(testDir, 'does-not-exist');

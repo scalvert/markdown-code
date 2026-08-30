@@ -1,11 +1,11 @@
 import { writeFile, rm, unlink, realpath } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { parse as parsePath, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
 import fg from 'fast-glob';
 import { configExists } from '../config.js';
 import { parseMarkdownFile } from '../parser.js';
-import type { RuntimeConfig } from '../types.js';
+import type { CodeBlock, RuntimeConfig } from '../types.js';
 import { fileExists, isInWorkingDir } from '../utils.js';
 import {
   getValidatedConfig,
@@ -50,7 +50,43 @@ async function confirmEjection(): Promise<boolean> {
   }
 }
 
-async function removeSnippetDirectives(config: RuntimeConfig) {
+function removeSnippetDirectiveFromFence(
+  content: string,
+  codeBlock: CodeBlock,
+): string {
+  const fenceStart = codeBlock.position.start;
+  const fenceLineEnd = content.indexOf('\n', fenceStart);
+
+  if (fenceLineEnd === -1) {
+    throw new Error('Could not find the end of the snippet fence opening line');
+  }
+
+  const openingFence = content.slice(fenceStart, fenceLineEnd);
+  const directiveMatch = openingFence.match(/snippet=[^\s]+/);
+
+  if (directiveMatch?.index === undefined) {
+    throw new Error(
+      'Could not find the snippet directive in the fence opening line',
+    );
+  }
+
+  const directiveStart = directiveMatch.index;
+  const separatorStart =
+    directiveStart > 0 && /[ \t]/.test(openingFence[directiveStart - 1]!)
+      ? directiveStart - 1
+      : directiveStart;
+  const updatedOpeningFence =
+    openingFence.slice(0, separatorStart) +
+    openingFence.slice(directiveStart + directiveMatch[0].length);
+
+  return (
+    content.slice(0, fenceStart) +
+    updatedOpeningFence +
+    content.slice(fenceLineEnd)
+  );
+}
+
+export async function removeSnippetDirectives(config: RuntimeConfig) {
   const result = {
     processed: [] as string[],
     warnings: [] as string[],
@@ -78,17 +114,12 @@ async function removeSnippetDirectives(config: RuntimeConfig) {
         let updatedContent = markdownFile.content;
         let hasChanges = false;
 
-        // Process in reverse order so earlier position offsets remain valid
+        // Process in reverse order so earlier position offsets remain valid.
         for (const codeBlock of [...codeBlocksWithSnippets].reverse()) {
-          const fenceStart = codeBlock.position.start;
-          const fenceLineEnd = updatedContent.indexOf('\n', fenceStart);
-          if (fenceLineEnd === -1) {
-            continue;
-          }
-          updatedContent =
-            updatedContent.slice(0, fenceStart) +
-            `\`\`\`${codeBlock.language}` +
-            updatedContent.slice(fenceLineEnd);
+          updatedContent = removeSnippetDirectiveFromFence(
+            updatedContent,
+            codeBlock,
+          );
           hasChanges = true;
         }
 
@@ -107,7 +138,10 @@ async function removeSnippetDirectives(config: RuntimeConfig) {
   return result;
 }
 
-async function deleteSnippetDirectory(snippetRoot: string, workingDir: string) {
+export async function deleteSnippetDirectory(
+  snippetRoot: string,
+  workingDir: string,
+) {
   const result = {
     deleted: false,
     warnings: [] as string[],
@@ -125,7 +159,22 @@ async function deleteSnippetDirectory(snippetRoot: string, workingDir: string) {
       return result;
     }
 
-    if (!isInWorkingDir(realPath, workingDir)) {
+    const realWorkingDir = await realpath(resolve(workingDir));
+    const filesystemRoot = parsePath(realPath).root;
+
+    if (realPath === filesystemRoot) {
+      result.errors.push(`Refusing to delete filesystem root: ${snippetRoot}`);
+      return result;
+    }
+
+    if (realPath === realWorkingDir) {
+      result.errors.push(
+        `Refusing to delete the working directory: ${snippetRoot}`,
+      );
+      return result;
+    }
+
+    if (!isInWorkingDir(realPath, realWorkingDir)) {
       result.errors.push(
         `Snippet directory is outside the working directory: ${snippetRoot}`,
       );
@@ -187,6 +236,11 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     console.log('Removing snippet directives from markdown files...');
     const directiveResult = await removeSnippetDirectives(config);
 
+    if (directiveResult.errors.length > 0) {
+      logWarningsAndErrors(directiveResult.warnings, directiveResult.errors);
+      return;
+    }
+
     if (directiveResult.processed.length > 0) {
       console.log(
         `Removed snippet directives from ${directiveResult.processed.length} files:`,
@@ -197,7 +251,18 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     }
 
     console.log('Deleting snippet directory...');
-    const snippetResult = await deleteSnippetDirectory(config.snippetRoot, config.workingDir);
+    const snippetResult = await deleteSnippetDirectory(
+      config.snippetRoot,
+      config.workingDir,
+    );
+
+    if (snippetResult.errors.length > 0) {
+      logWarningsAndErrors(
+        [...directiveResult.warnings, ...snippetResult.warnings],
+        snippetResult.errors,
+      );
+      return;
+    }
 
     console.log('Deleting configuration file...');
     const configResult = await deleteConfigFile(argv.config);
