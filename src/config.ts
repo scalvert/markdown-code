@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { Config, RuntimeConfig } from './types.js';
+import type { Config, IssueSeverity, RuntimeConfig } from './types.js';
 import { fileExists } from './utils.js';
 
 export const DEFAULT_CONFIG: Config = {
@@ -32,6 +32,7 @@ export const DEFAULT_CONFIG: Config = {
     '.swift',
     '.kt',
   ],
+  missingSnippetSeverity: 'error',
   remoteTimeout: 30000,
   allowInsecureHttp: false,
 };
@@ -41,6 +42,7 @@ export interface ConfigOverrides {
   markdownGlob?: string;
   excludeGlob?: string;
   includeExtensions?: string;
+  missingSnippetSeverity?: IssueSeverity;
   remoteTimeout?: number;
   allowInsecureHttp?: boolean;
 }
@@ -123,6 +125,10 @@ export async function loadConfig(
       .filter((ext) => ext.length > 0);
   }
 
+  if (overrides.missingSnippetSeverity !== undefined) {
+    config.missingSnippetSeverity = overrides.missingSnippetSeverity;
+  }
+
   if (overrides.remoteTimeout !== undefined) {
     config.remoteTimeout = overrides.remoteTimeout;
   }
@@ -153,6 +159,16 @@ export function validateConfig(config: Config): void {
 
   if (!Array.isArray(config.includeExtensions)) {
     throw new Error('Config: includeExtensions must be an array');
+  }
+
+  if (
+    config.missingSnippetSeverity !== undefined &&
+    config.missingSnippetSeverity !== 'error' &&
+    config.missingSnippetSeverity !== 'warning'
+  ) {
+    throw new Error(
+      'Config: missingSnippetSeverity must be either "error" or "warning"',
+    );
   }
 
   if (config.remoteTimeout !== undefined) {

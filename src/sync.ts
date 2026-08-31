@@ -96,6 +96,7 @@ async function resolveCodeBlockContent(
     if (err.code === 'ENOENT') {
       fileIssues.push({
         type: 'file-missing',
+        severity: config.missingSnippetSeverity ?? 'error',
         message: `Snippet file not found: ${snippet.filePath}`,
         line: codeBlock.lineNumber ?? 1,
         column: codeBlock.columnNumber ?? 1,
@@ -291,6 +292,15 @@ export async function checkMarkdownFiles(
           result.fileIssues.push({ filePath, issues: fileIssues });
         }
 
+        if (
+          fileIssues.some(
+            (issue) =>
+              issue.type !== 'file-missing' || issue.severity !== 'warning',
+          )
+        ) {
+          isFileInSync = false;
+        }
+
         if (!isFileInSync) {
           result.outOfSync.push(filePath);
           result.inSync = false;
@@ -364,7 +374,7 @@ export async function extractSnippets(
   const workingDir = config.workingDir ? resolve(config.workingDir) : undefined;
   const snippetRoot = resolve(
     workingDir ?? process.cwd(),
-    config.snippetRoot || '.',
+    config.snippetRoot || ".",
   );
 
   if (workingDir && !isInWorkingDir(snippetRoot, workingDir)) {

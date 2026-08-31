@@ -23,11 +23,14 @@ export interface MarkdownFile {
   codeBlocks: Array<CodeBlock>;
 }
 
+export type IssueSeverity = 'error' | 'warning';
+
 export interface Config {
   snippetRoot: string;
   markdownGlob: string;
   excludeGlob: Array<string>;
   includeExtensions: Array<string>;
+  missingSnippetSeverity?: IssueSeverity;
   remoteTimeout?: number;
   allowInsecureHttp?: boolean;
 }
@@ -46,6 +49,7 @@ export interface Issue {
     | 'remote-error';
   message: string;
   line: number;
+  severity?: IssueSeverity;
   column: number;
   ruleId?: string;
 }

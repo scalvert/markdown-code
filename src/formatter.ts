@@ -1,8 +1,15 @@
 import { resolve } from 'node:path';
 import pc from 'picocolors';
-import type { FileIssues, Issue } from './types.js';
+import type { FileIssues, Issue, IssueSeverity } from './types.js';
 
-function getIssueColor(type: string): (text: string) => string {
+function getIssueColor(
+  type: string,
+  severity: IssueSeverity = 'error',
+): (text: string) => string {
+  if (type === 'file-missing' && severity === 'warning') {
+    return pc.yellow;
+  }
+
   switch (type) {
     case 'sync-needed':
       return pc.yellow;
@@ -33,8 +40,10 @@ function getPluralForm(type: string): string {
 function formatIssue(issue: Issue): string {
   const { line, column, type, message, ruleId } = issue;
   const position = pc.dim(`${line}:${column}`.padEnd(6));
-  const colorFn = getIssueColor(type);
-  const severity = colorFn(type.padEnd(12));
+  const colorFn = getIssueColor(type, issue.severity);
+  const label =
+    type === 'file-missing' && issue.severity === 'warning' ? 'warning' : type;
+  const severity = colorFn(label.padEnd(12));
   const rule = ruleId ? pc.dim(`  ${ruleId}`) : '';
 
   return `  ${position} ${severity} ${message}${rule}`;
@@ -79,7 +88,13 @@ function formatSummary(allFileIssues: Array<FileIssues>): string {
   const parts: Array<string> = [];
   Object.entries(issueCountsByType).forEach(([type, count]) => {
     const label = count === 1 ? type : getPluralForm(type);
-    const colorFn = getIssueColor(type);
+    const typeIssues = allFileIssues.flatMap((file) =>
+      file.issues.filter((issue) => issue.type === type),
+    );
+    const hasError = typeIssues.some(
+      (issue) => issue.type !== 'file-missing' || issue.severity !== 'warning',
+    );
+    const colorFn = getIssueColor(type, hasError ? 'error' : 'warning');
     parts.push(colorFn(`${count} ${label}`));
   });
 
@@ -108,11 +123,7 @@ export function format(fileIssues: Array<FileIssues>): string {
 export function hasErrors(fileIssues: Array<FileIssues>): boolean {
   return fileIssues.some((file) =>
     file.issues.some(
-      (issue) =>
-        issue.type === 'sync-needed' ||
-        issue.type === 'invalid-path' ||
-        issue.type === 'load-failed' ||
-        issue.type === 'remote-error',
+      (issue) => issue.type !== 'file-missing' || issue.severity !== 'warning',
     ),
   );
 }

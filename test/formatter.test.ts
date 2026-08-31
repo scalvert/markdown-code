@@ -31,8 +31,46 @@ describe('hasErrors', () => {
     expect(hasErrors(makeFileIssues('remote-error'))).toBe(true);
   });
 
-  it('returns false for file-missing (intentionally non-fatal)', () => {
-    expect(hasErrors(makeFileIssues('file-missing'))).toBe(false);
+  it('returns true for file-missing by default', () => {
+    expect(hasErrors(makeFileIssues('file-missing'))).toBe(true);
+  });
+
+  it('returns false for warning issues', () => {
+    expect(
+      hasErrors([
+        {
+          filePath: '/project/README.md',
+          issues: [
+            {
+              type: 'file-missing',
+              severity: 'warning',
+              message: 'test message',
+              line: 1,
+              column: 1,
+            },
+          ],
+        },
+      ]),
+    ).toBe(false);
+  });
+
+  it('keeps non-missing issues fatal regardless of severity', () => {
+    expect(
+      hasErrors([
+        {
+          filePath: '/project/README.md',
+          issues: [
+            {
+              type: 'sync-needed',
+              severity: 'warning',
+              message: 'test message',
+              line: 1,
+              column: 1,
+            },
+          ],
+        },
+      ]),
+    ).toBe(true);
   });
 
   it('returns false for empty issues array', () => {

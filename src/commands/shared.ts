@@ -1,5 +1,6 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
+import type { IssueSeverity } from '../types.js';
 
 export interface BaseArgs {
   config?: string;
@@ -7,6 +8,7 @@ export interface BaseArgs {
   markdownGlob?: string;
   excludeGlob?: string;
   includeExtensions?: string;
+  missingSnippetSeverity?: IssueSeverity;
 }
 
 export function buildConfigOverrides(
@@ -18,6 +20,9 @@ export function buildConfigOverrides(
   if (argv.excludeGlob) overrides.excludeGlob = argv.excludeGlob;
   if (argv.includeExtensions)
     overrides.includeExtensions = argv.includeExtensions;
+  if (argv.missingSnippetSeverity !== undefined) {
+    overrides.missingSnippetSeverity = argv.missingSnippetSeverity;
+  }
   return overrides;
 }
 

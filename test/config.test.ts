@@ -24,6 +24,7 @@ describe('config', () => {
       markdownGlob: '**/*.md',
       excludeGlob: ['node_modules/**'],
       includeExtensions: ['.ts', '.js'],
+      missingSnippetSeverity: 'error',
     };
 
     expect(() => validateConfig(config)).not.toThrow();
@@ -78,6 +79,20 @@ describe('config', () => {
 
     expect(() => validateConfig(config)).toThrow(
       'includeExtensions must be an array',
+    );
+  });
+
+  it('should throw error for invalid missingSnippetSeverity', () => {
+    const config = {
+      snippetRoot: './examples',
+      markdownGlob: '**/*.md',
+      excludeGlob: [],
+      includeExtensions: ['.ts'],
+      missingSnippetSeverity: 'info',
+    } as Config;
+
+    expect(() => validateConfig(config)).toThrow(
+      'missingSnippetSeverity must be either "error" or "warning"',
     );
   });
 
@@ -140,10 +155,27 @@ describe('config', () => {
           ".kt",
         ],
         "markdownGlob": "docs/*.md",
+        "missingSnippetSeverity": "error",
         "remoteTimeout": 30000,
         "snippetRoot": "./snips",
       }
     `);
+  });
+
+  it('loadConfig supports missing snippet severity overrides', async () => {
+    const { loadConfig } = await import('../src/config.js');
+    const filePath = join(tempDir, 'warning.json');
+    await project.write({
+      'warning.json': JSON.stringify({ missingSnippetSeverity: 'warning' }),
+    });
+
+    const config = await loadConfig(filePath);
+    const overriddenConfig = await loadConfig(filePath, {
+      missingSnippetSeverity: 'error',
+    });
+
+    expect(config.missingSnippetSeverity).toBe('warning');
+    expect(overriddenConfig.missingSnippetSeverity).toBe('error');
   });
 
   it('loadConfig throws for missing config file', async () => {
