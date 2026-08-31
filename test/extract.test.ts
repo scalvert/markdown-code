@@ -111,6 +111,38 @@ describe('extractSnippets', () => {
     expect(existsSync(join(snippetRoot, 'skip', 'snippet-02.py'))).toBe(false);
   });
 
+  it('preserves CRLF line endings in extracted snippets and markdown', async () => {
+    const lineEnding = '\r\n';
+    const md = [
+      '# CRLF Test',
+      '',
+      '```ts',
+      'const first = 1;',
+      'const second = 2;',
+      '```',
+    ].join(lineEnding);
+    const filePath = join(testDir, 'crlf.md');
+    await project.write({ 'crlf.md': md });
+
+    const result = await extractSnippets(baseConfig);
+
+    expect(result.errors).toEqual([]);
+    expect(result.snippetsCreated).toBe(1);
+    expect(
+      readFileSync(join(snippetRoot, 'crlf', 'snippet-01.ts'), 'utf-8'),
+    ).toBe(`const first = 1;${lineEnding}const second = 2;${lineEnding}`);
+    expect(readFileSync(filePath, 'utf-8')).toBe(
+      [
+        '# CRLF Test',
+        '',
+        '```ts snippet=crlf/snippet-01.ts',
+        'const first = 1;',
+        'const second = 2;',
+        '```',
+      ].join(lineEnding),
+    );
+  });
+
   it('ensures all snippet files have trailing newlines', async () => {
     const md = `# Newline Test
 

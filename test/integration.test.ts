@@ -62,6 +62,42 @@ old content
       `);
     });
 
+    it('should preserve CRLF when syncing and checking', async () => {
+      const lineEnding = '\r\n';
+      const sourceContent = 'const updated = true;\nconst second = true;';
+      const markdownContent = [
+        '# Test',
+        '',
+        '```js snippet=test.js',
+        'old content',
+        '```',
+      ].join(lineEnding);
+
+      await project.write({
+        'test.js': sourceContent,
+        'README.md': markdownContent,
+      });
+
+      const syncResult = await syncMarkdownFiles(config);
+
+      expect(syncResult.updated).toHaveLength(1);
+      expect(syncResult.errors).toHaveLength(0);
+      expect(readFileSync(join(project.baseDir, 'README.md'), 'utf-8')).toBe(
+        [
+          '# Test',
+          '',
+          '```js snippet=test.js',
+          'const updated = true;',
+          'const second = true;',
+          '```',
+        ].join(lineEnding),
+      );
+
+      const checkResult = await checkMarkdownFiles(config);
+      expect(checkResult.inSync).toBe(true);
+      expect(checkResult.outOfSync).toEqual([]);
+    });
+
     it('should sync with line ranges', async () => {
       const sourceContent = `line 1
 line 2

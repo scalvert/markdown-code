@@ -69,6 +69,13 @@ line 5`;
       const result = extractLines(testContent, 10);
       expect(result).toBe('');
     });
+
+    it('should preserve CRLF when extracting a single line', () => {
+      const content = 'line 1\r\nline 2\r\nline 3';
+
+      expect(extractLines(content, 2, 2)).toBe('line 2');
+      expect(extractLines(content, 1, 3)).toBe(content);
+    });
   });
 
   describe('parseMarkdownFile', () => {
@@ -459,6 +466,43 @@ function old() {
       expect(result).toContain('function updated()');
       expect(result).toContain('const value = "new"');
       expect(result).not.toContain('function old()');
+    });
+
+    it.each([
+      { name: 'LF', lineEnding: '\n' },
+      { name: 'CRLF', lineEnding: '\r\n' },
+    ])('should preserve $name line endings', ({ lineEnding }) => {
+      const markdownContent = [
+        '```ts snippet=test.ts',
+        'old content',
+        '```',
+        'After',
+      ].join(lineEnding);
+      const codeBlock = {
+        language: 'ts',
+        content: 'old content',
+        snippet: { filePath: 'test.ts' },
+        position: {
+          start: 0,
+          end: markdownContent.indexOf(`${lineEnding}After`),
+        },
+      };
+
+      const result = replaceCodeBlock(
+        markdownContent,
+        codeBlock,
+        'new line 1\r\nnew line 2',
+      );
+
+      expect(result).toBe(
+        [
+          '```ts snippet=test.ts',
+          'new line 1',
+          'new line 2',
+          '```',
+          'After',
+        ].join(lineEnding),
+      );
     });
 
     it('should preserve surrounding content', () => {
