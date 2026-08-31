@@ -350,20 +350,23 @@ export async function extractSnippets(
     errors: [],
   };
 
-  if (config.workingDir) {
-    const resolvedSnippetRoot = resolve(config.workingDir, config.snippetRoot || '.');
-    if (!isInWorkingDir(resolvedSnippetRoot, config.workingDir)) {
-      result.errors.push(
-        `Snippet root is outside the working directory: ${config.snippetRoot}`,
-      );
-      return result;
-    }
+  const workingDir = config.workingDir ? resolve(config.workingDir) : undefined;
+  const snippetRoot = resolve(
+    workingDir ?? process.cwd(),
+    config.snippetRoot || '.',
+  );
+
+  if (workingDir && !isInWorkingDir(snippetRoot, workingDir)) {
+    result.errors.push(
+      `Snippet root is outside the working directory: ${config.snippetRoot}`,
+    );
+    return result;
   }
 
   try {
     const markdownFiles = await fg(config.markdownGlob, {
       ignore: config.excludeGlob,
-      cwd: config.workingDir,
+      cwd: workingDir ?? process.cwd(),
       absolute: true,
     });
 
@@ -377,7 +380,7 @@ export async function extractSnippets(
 
         const baseFileName = basename(filePath, extname(filePath));
         const dirName = baseFileName.toLowerCase();
-        const outputDir = join(config.snippetRoot, dirName);
+        const outputDir = join(snippetRoot, dirName);
 
         await mkdir(outputDir, { recursive: true });
 

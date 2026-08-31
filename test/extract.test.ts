@@ -58,6 +58,33 @@ describe('extractSnippets', () => {
     expect(updated).toContain('```js snippet=example/snippet-02.js');
   });
 
+  it('resolves relative snippetRoot from workingDir', async () => {
+    const md = ['```ts', "console.log('ts');", '```'].join('\n');
+    const filePath = join(testDir, 'example.md');
+    await project.write({ 'example.md': md });
+
+    const config = {
+      ...baseConfig,
+      workingDir: testDir,
+      snippetRoot: 'snippets',
+      markdownGlob: '**/*.md',
+    };
+    expect(process.cwd()).not.toBe(config.workingDir);
+
+    const result = await extractSnippets(config);
+
+    expect(result.errors).toEqual([]);
+    expect(
+      readFileSync(
+        join(testDir, 'snippets', 'example', 'snippet-01.ts'),
+        'utf-8',
+      ),
+    ).toBe("console.log('ts');\n");
+    expect(readFileSync(filePath, 'utf-8')).toContain(
+      '```ts snippet=example/snippet-01.ts',
+    );
+  });
+
   it('skips languages not in includeExtensions', async () => {
     const md = `\`\`\`ts\nconsole.log('ts');\n\`\`\`\n\n\`\`\`py\nprint('py')\n\`\`\``;
     const filePath = join(testDir, 'skip.md');
