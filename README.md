@@ -213,6 +213,7 @@ those files are skipped safely.
 | `--markdown-glob`      | Override markdown file pattern | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`                     |
 | `--exclude-glob`       | Override exclusion patterns    | `npx markdown-code --exclude-glob "node_modules/**,dist/**"` or `md-code --exclude-glob "node_modules/**,dist/**"` |
 | `--include-extensions` | Override file extensions       | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py`                 |
+| `--missing-snippet-severity` | Missing snippet severity (`error` or `warning`) | `npx markdown-code --missing-snippet-severity warning` or `md-code --missing-snippet-severity warning` |
 
 ## Configuration
 
@@ -247,7 +248,8 @@ Create a `.markdown-coderc.json` file in your project root:
     ".rb",
     ".swift",
     ".kt"
-  ]
+  ],
+  "missingSnippetSeverity": "error"
 }
 ```
 
@@ -259,6 +261,7 @@ Create a `.markdown-coderc.json` file in your project root:
 | **markdownGlob**      | Glob pattern to find Markdown files                     | `"**/*.md"`                                                                                                                                                                                                                              |
 | **excludeGlob**       | Array of glob patterns to exclude from processing       | Common build/dependency directories                                                                                                                                                                                                      |
 | **includeExtensions** | File extensions to consider for snippets and extraction | `[".ts", ".js", ".tsx", ".jsx", ".py", ".rb", ".go", ".rs", ".java", ".cpp", ".c", ".cs", ".php", ".sh", ".bash", ".zsh", ".fish", ".json", ".yaml", ".yml", ".toml", ".xml", ".html", ".css", ".scss", ".less", ".sql", ".md", ".txt"]` |
+| **missingSnippetSeverity** | Severity for missing snippet files; controls whether `check` exits non-zero | `"error"` (allowed values: `"error"`, `"warning"`) |
 
 ## Contributing
 

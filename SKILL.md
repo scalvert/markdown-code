@@ -97,11 +97,12 @@ npx markdown-code check
   "snippetRoot": "./snippets",
   "markdownGlob": "**/*.md",
   "excludeGlob": ["node_modules/**", ".git/**", "dist/**"],
-  "includeExtensions": [".ts", ".js", ".go", ".sh", ".py"]
+  "includeExtensions": [".ts", ".js", ".go", ".sh", ".py"],
+  "missingSnippetSeverity": "error"
 }
 ```
 
-`includeExtensions` must include the file extension of your snippet files or `extract` will not process them.
+`includeExtensions` must include the file extension of your snippet files or `extract` will not process them. `missingSnippetSeverity` accepts `error` (the default, causing `check` to exit non-zero) or `warning` (an explicit opt-in that reports missing files without failing `check`).
 
 ## Updating Examples
 

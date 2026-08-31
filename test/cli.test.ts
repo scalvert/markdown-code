@@ -33,29 +33,8 @@ describe('CLI', () => {
 
       expect(result.exitCode).toEqual(0);
       expect(result.stderr).toBe('');
-      expect(result.stdout).toMatchInlineSnapshot(`
-        "Keep code examples in Markdown synchronized with actual source files
-
-        Commands:
-          md-code check    Check if markdown files are in sync (exit non-zero on
-                           mismatch)
-          md-code extract  Extract code blocks from markdown to snippet files
-          md-code init     Create a default configuration file
-          md-code sync     Update markdown files with snippet content (default)[default]
-
-        Options:
-              --config              Path to configuration file                  [string]
-              --snippet-root        Directory containing source files (default: ".")
-                                                                                [string]
-              --markdown-glob       Glob pattern for markdown files (default: "**/*.md")
-                                                                                [string]
-              --exclude-glob        Comma-separated list of glob patterns to exclude
-                                                                                [string]
-              --include-extensions  Comma-separated list of file extensions to include
-                                                                                [string]
-          -h, --help                Show help                                  [boolean]
-          -v, --version             Show version number                        [boolean]"
-      `);
+      expect(result.stdout).toContain('--missing-snippet-severity');
+      expect(result.stdout).toContain('[choices: "error", "warning"]');
     });
 
     it('shows version information', async () => {
@@ -119,6 +98,7 @@ describe('CLI', () => {
             ".kt",
           ],
           "markdownGlob": "**/*.md",
+          "missingSnippetSeverity": "error",
           "remoteTimeout": 30000,
           "snippetRoot": "./snippets",
         }
@@ -275,7 +255,7 @@ const synced = true;
       expect(updatedMarkdown).not.toContain('line 1');
     });
 
-    it('warns about missing files', async () => {
+    it('fails on missing files by default', async () => {
       const markdownContent = `# Test
 
 \`\`\`js snippet=missing.js
@@ -288,7 +268,7 @@ old content
 
       const result = await runBin();
 
-      expect(result.exitCode).toEqual(0);
+      expect(result.exitCode).toEqual(1);
       expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
         "<TMP_DIR>/README.md
@@ -297,8 +277,7 @@ old content
         ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files...
-        All files are already in sync."
+        "Syncing markdown files..."
       `);
     });
   });
@@ -396,7 +375,7 @@ const test = true;
       );
     });
 
-    it('warns about missing files in check mode', async () => {
+    it('fails on missing files in check mode by default', async () => {
       const markdownContent = `# Test
 
 \`\`\`js snippet=missing.js
@@ -409,7 +388,7 @@ old content
 
       const result = await runBin('check');
 
-      expect(result.exitCode).toEqual(0);
+      expect(result.exitCode).toEqual(1);
       expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
         `""`,
       );
@@ -421,6 +400,27 @@ old content
 
         ✖ 1 problem (1 file-missing)"
       `);
+    });
+
+    it('allows missing files with the warning severity option', async () => {
+      await project.write({
+        'README.md': `# Test
+
+\`\`\`js snippet=missing.js
+old content
+\`\`\``,
+      });
+
+      const result = await runBin(
+        'check',
+        '--missing-snippet-severity',
+        'warning',
+      );
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stdout).toContain('warning');
+      expect(result.stdout).toContain('file-missing');
+      expect(result.stderr).toBe('');
     });
   });
 
@@ -694,7 +694,7 @@ ${scenario.sources['file2.js']}
 
       const result = await runBin();
 
-      expect(result.exitCode).toEqual(0);
+      expect(result.exitCode).toEqual(1);
       expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
         "<TMP_DIR>/doc1.md
@@ -706,10 +706,7 @@ ${scenario.sources['file2.js']}
         ✖ 2 problems (2 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files...
-        Updated files:
-          doc1.md
-          doc3.md"
+        "Syncing markdown files..."
       `);
       expect(result.stdout).not.toContain('doc2.md');
     });
@@ -757,7 +754,7 @@ old content
 
       const result = await runBin();
 
-      expect(result.exitCode).toEqual(0);
+      expect(result.exitCode).toEqual(1);
       expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
         "<TMP_DIR>/README.md
@@ -766,9 +763,7 @@ old content
         ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files...
-        Updated files:
-          README.md"
+        "Syncing markdown files..."
       `);
 
       const updatedMarkdown = readFileSync(
@@ -1068,7 +1063,7 @@ old content
 
       const result = await runBin();
 
-      expect(result.exitCode).toEqual(0);
+      expect(result.exitCode).toEqual(1);
       expect(normalizeOutput(result.stderr, project.baseDir))
         .toMatchInlineSnapshot(`
         "<TMP_DIR>/README.md
@@ -1077,9 +1072,7 @@ old content
         ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files...
-        Updated files:
-          README.md"
+        "Syncing markdown files..."
       `);
 
       const updatedMarkdown = readFileSync(

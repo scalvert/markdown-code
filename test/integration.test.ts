@@ -352,6 +352,51 @@ const synced = true;
       expect(result.errors).toHaveLength(0);
     });
 
+    it('should treat missing snippets as errors by default', async () => {
+      const markdownContent = `# Test
+
+\`\`\`js snippet=missing.js
+old content
+\`\`\``;
+
+      await project.write({
+        'README.md': markdownContent,
+      });
+
+      const result = await checkMarkdownFiles(config);
+
+      expect(result.inSync).toBe(false);
+      expect(result.outOfSync).toHaveLength(1);
+      expect(result.fileIssues[0]?.issues[0]).toMatchObject({
+        type: 'file-missing',
+        severity: 'error',
+      });
+    });
+
+    it('should allow missing snippets as warnings', async () => {
+      const markdownContent = `# Test
+
+\`\`\`js snippet=missing.js
+old content
+\`\`\``;
+
+      await project.write({
+        'README.md': markdownContent,
+      });
+
+      const result = await checkMarkdownFiles({
+        ...config,
+        missingSnippetSeverity: 'warning',
+      });
+
+      expect(result.inSync).toBe(true);
+      expect(result.outOfSync).toHaveLength(0);
+      expect(result.fileIssues[0]?.issues[0]).toMatchObject({
+        type: 'file-missing',
+        severity: 'warning',
+      });
+    });
+
     it('should handle line range checks', async () => {
       const sourceContent = `line 1
 line 2

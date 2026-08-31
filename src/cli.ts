@@ -30,6 +30,12 @@ yargs(hideBin(process.argv))
     describe: 'Comma-separated list of file extensions to include',
     global: true,
   })
+  .option('missing-snippet-severity', {
+    type: 'string',
+    choices: ['error', 'warning'],
+    describe: 'Severity for missing snippet files (default: "error")',
+    global: true,
+  })
   .help()
   .alias('help', 'h')
   .version()
