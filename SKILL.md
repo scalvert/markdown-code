@@ -1,6 +1,6 @@
 ---
 name: markdown-code
-description: "Keep README and documentation code blocks automatically synchronized with real source files. Use when adding markdown-code to a project, updating existing snippet files, or setting up CI drift detection."
+description: 'Keep README and documentation code blocks automatically synchronized with real source files. Use when adding markdown-code to a project, updating existing snippet files, or setting up CI drift detection.'
 ---
 
 # markdown-code
@@ -55,7 +55,9 @@ npx markdown-code check
 
 ## Snippet Directive Syntax
 
-```markdown
+Use a fence info string with a `snippet=` metadata token:
+
+````markdown
 ```bash snippet=path/to/file.sh
 ```
 
@@ -67,9 +69,9 @@ npx markdown-code check
 
 ```ts snippet=src/utils/auth.ts#L5-
 ```
-```
+````
 
-Paths are relative to `snippetRoot` in `.markdown-coderc.json` (default: `./snippets`). For Workflow B referencing source files, use paths relative to the project root.
+Paths are relative to `snippetRoot` in `.markdown-coderc.json` (the runtime default is the project root; `init` writes `./snippets`). For Workflow B referencing source files, use paths relative to the project root. Use `markdownGlob: "**/*.{md,mdx}"` when both Markdown and MDX files should be discovered.
 
 ## Commands
 
@@ -78,7 +80,8 @@ Paths are relative to `snippetRoot` in `.markdown-coderc.json` (default: `./snip
 | `npx markdown-code init` | Create `.markdown-coderc.json` and `snippets/` directory |
 | `npx markdown-code extract` | Extract code blocks to snippet files and insert directives (Workflow A) |
 | `npx markdown-code sync` | Populate markdown code blocks from snippet files (Workflow B) |
-| `npx markdown-code check` | Verify markdown matches snippet files — exits non-zero if drift detected |
+| `npx markdown-code check` | Verify markdown matches snippet files — exits non-zero if drift or an error-severity missing snippet is detected |
+| `npx markdown-code eject` | Remove snippet directives, snippets, and config after confirmation |
 
 ## CI Integration
 
@@ -87,6 +90,9 @@ Add to your CI pipeline to catch drift before it merges:
 ```bash
 npx markdown-code check
 ```
+
+Missing local snippets are errors by default. To allow them without failing CI,
+opt in explicitly with `npx markdown-code check --missing-snippet-severity warning`.
 
 ## Configuration
 
@@ -102,7 +108,7 @@ npx markdown-code check
 }
 ```
 
-`includeExtensions` must include the file extension of your snippet files or `extract` will not process them. `missingSnippetSeverity` accepts `error` (the default, causing `check` to exit non-zero) or `warning` (an explicit opt-in that reports missing files without failing `check`).
+`includeExtensions` must include the file extension of your snippet files or `extract` will not process them. `missingSnippetSeverity` accepts `error` (the default, making `check` fail) or `warning` (an explicit warning-only policy). The CLI equivalent is `--missing-snippet-severity error|warning`.
 
 ## Updating Examples
 

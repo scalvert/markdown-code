@@ -22,7 +22,8 @@
     "markdown-code": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "markdown-code.png"
   ],
   "scripts": {
     "build": "tsup",
