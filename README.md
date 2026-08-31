@@ -169,7 +169,7 @@ them:
 MDX files are parsed with `remark-mdx` + `remark-frontmatter`, so fences nested
 inside JSX components are found, JSX indentation never produces phantom code
 blocks, and `{...}` inside YAML frontmatter parses cleanly. Snippet directives
-coexist with other fence meta (e.g. ```` ```ts title="app.ts" snippet=app.ts ````).
+coexist with other fence metadata, such as `title="app.ts"` and `snippet=app.ts`.
 
 Two guarantees worth knowing:
 
@@ -183,6 +183,22 @@ Note: framework-specific MDX extensions (like Docusaurus `{#heading-id}`
 anchors) are not part of the MDX grammar and will be reported as parse errors;
 those files are skipped safely.
 
+## Remote Snippets
+
+Snippet directives may reference HTTPS URLs. The URL can include the same line-range
+syntax as a local path:
+
+````markdown
+```ts snippet=https://raw.githubusercontent.com/example/project/main/app.ts#L10-L20
+```
+````
+
+HTTPS is allowed by default. Plain HTTP is rejected unless `allowInsecureHttp` is
+set to `true`. Remote requests time out after 30 seconds by default; configure
+`remoteTimeout` in milliseconds when needed. Remote failures remain errors even
+when `missingSnippetSeverity` is set to `warning`, because the source was
+configured but could not be loaded.
+
 ## Features
 
 - **Automatic Sync**: Replace fenced code blocks with contents from real files
@@ -195,25 +211,26 @@ those files are skipped safely.
 
 ## Commands
 
-| Command                                                       | Description                                    | Example                                                        |
-| ------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
-| `npx markdown-code` / `md-code`                               | Update markdown with snippet content (default) | `npx markdown-code` or `md-code`                               |
-| `npx markdown-code sync` / `md-code sync`                     | Same as above, explicit                        | `npx markdown-code sync` or `md-code sync`                     |
-| `npx markdown-code check` / `md-code check`                   | Verify files are in sync (CI-friendly)         | `npx markdown-code check` or `md-code check`                   |
-| `npx markdown-code init` / `md-code init`                     | Create config and snippets directory           | `npx markdown-code init` or `md-code init`                     |
-| `npx markdown-code extract` / `md-code extract`               | Extract code blocks to snippet files           | `npx markdown-code extract` or `md-code extract`               |
-| `npx markdown-code init --extract` / `md-code init --extract` | Setup + extract in one step                    | `npx markdown-code init --extract` or `md-code init --extract` |
+| Command                                                       | Description                                     | Example                                                        |
+| ------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------- |
+| `npx markdown-code` / `md-code`                               | Update markdown with snippet content (default)  | `npx markdown-code` or `md-code`                               |
+| `npx markdown-code sync` / `md-code sync`                     | Same as above, explicit                         | `npx markdown-code sync` or `md-code sync`                     |
+| `npx markdown-code check` / `md-code check`                   | Verify files are in sync (CI-friendly)          | `npx markdown-code check` or `md-code check`                   |
+| `npx markdown-code init` / `md-code init`                     | Create config and snippets directory            | `npx markdown-code init` or `md-code init`                     |
+| `npx markdown-code extract` / `md-code extract`               | Extract code blocks to snippet files            | `npx markdown-code extract` or `md-code extract`               |
+| `npx markdown-code init --extract` / `md-code init --extract` | Setup + extract in one step                     | `npx markdown-code init --extract` or `md-code init --extract` |
+| `npx markdown-code eject` / `md-code eject`                   | Remove snippet directives, snippets, and config | `npx markdown-code eject` or `md-code eject`                   |
 
 ### Global Options
 
-| Option                 | Description                    | Example                                                                                                            |
-| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `--config`             | Custom configuration file      | `npx markdown-code --config custom.json` or `md-code --config custom.json`                                         |
-| `--snippet-root`       | Override snippet directory     | `npx markdown-code --snippet-root ./src` or `md-code --snippet-root ./src`                                         |
-| `--markdown-glob`      | Override markdown file pattern | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`                     |
-| `--exclude-glob`       | Override exclusion patterns    | `npx markdown-code --exclude-glob "node_modules/**,dist/**"` or `md-code --exclude-glob "node_modules/**,dist/**"` |
-| `--include-extensions` | Override file extensions       | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py`                 |
-| `--missing-snippet-severity` | Missing snippet severity (`error` or `warning`) | `npx markdown-code --missing-snippet-severity warning` or `md-code --missing-snippet-severity warning` |
+| Option                       | Description                                     | Example                                                                                                            |
+| ---------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `--config`                   | Custom configuration file                       | `npx markdown-code --config custom.json` or `md-code --config custom.json`                                         |
+| `--snippet-root`             | Override snippet directory                      | `npx markdown-code --snippet-root ./src` or `md-code --snippet-root ./src`                                         |
+| `--markdown-glob`            | Override markdown file pattern                  | `npx markdown-code --markdown-glob "docs/**/*.md"` or `md-code --markdown-glob "docs/**/*.md"`                     |
+| `--exclude-glob`             | Override exclusion patterns                     | `npx markdown-code --exclude-glob "node_modules/**,dist/**"` or `md-code --exclude-glob "node_modules/**,dist/**"` |
+| `--include-extensions`       | Override file extensions                        | `npx markdown-code --include-extensions .ts,.js,.py` or `md-code --include-extensions .ts,.js,.py`                 |
+| `--missing-snippet-severity` | Missing snippet severity (`error` or `warning`) | `npx markdown-code check --missing-snippet-severity warning`                                                       |
 
 ## Configuration
 
@@ -255,13 +272,20 @@ Create a `.markdown-coderc.json` file in your project root:
 
 ### Configuration Options
 
-| Option                | Description                                             | Default                                                                                                                                                                                                                                  |
-| --------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **snippetRoot**       | Base directory for resolving snippet paths              | `"."`                                                                                                                                                                                                                                    |
-| **markdownGlob**      | Glob pattern to find Markdown files                     | `"**/*.md"`                                                                                                                                                                                                                              |
-| **excludeGlob**       | Array of glob patterns to exclude from processing       | Common build/dependency directories                                                                                                                                                                                                      |
-| **includeExtensions** | File extensions to consider for snippets and extraction | `[".ts", ".js", ".tsx", ".jsx", ".py", ".rb", ".go", ".rs", ".java", ".cpp", ".c", ".cs", ".php", ".sh", ".bash", ".zsh", ".fish", ".json", ".yaml", ".yml", ".toml", ".xml", ".html", ".css", ".scss", ".less", ".sql", ".md", ".txt"]` |
-| **missingSnippetSeverity** | Severity for missing snippet files; controls whether `check` exits non-zero | `"error"` (allowed values: `"error"`, `"warning"`) |
+| Option                     | Description                                                     | Default                                                                                                                                                                                                                                  |
+| -------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **snippetRoot**            | Base directory for resolving snippet paths                      | `"."`                                                                                                                                                                                                                                    |
+| **markdownGlob**           | Glob pattern to find Markdown files                             | `"**/*.md"`                                                                                                                                                                                                                              |
+| **excludeGlob**            | Array of glob patterns to exclude from processing               | Common build/dependency directories                                                                                                                                                                                                      |
+| **includeExtensions**      | File extensions to consider for snippets and extraction         | `[".ts", ".js", ".tsx", ".jsx", ".py", ".rb", ".go", ".rs", ".java", ".cpp", ".c", ".cs", ".php", ".sh", ".bash", ".zsh", ".fish", ".json", ".yaml", ".yml", ".toml", ".xml", ".html", ".css", ".scss", ".less", ".sql", ".md", ".txt"]` |
+| **missingSnippetSeverity** | Severity for missing local snippet files (`error` or `warning`) | `"error"`                                                                                                                                                                                                                                |
+
+## Eject Safety
+
+`eject` is destructive: it removes snippet directives, deletes the configured
+snippet directory, and removes the configuration file. It asks for confirmation
+before proceeding and refuses to delete the working directory itself. Ensure the
+snippet root is a dedicated child directory before confirming.
 
 ## Contributing
 
