@@ -15,16 +15,96 @@ import type {
 import { fileExists, isInWorkingDir } from './utils.js';
 import { isRemoteUrl, fetchRemoteContent } from './remote.js';
 
-export function parseSnippetDirective(
-  info: string,
-): SnippetDirective | undefined {
-  const snippetMatch = info.match(/snippet=([^\s]+)/);
+function findSnippetValue(info: string): string | undefined {
+  let index = 0;
 
-  if (!snippetMatch?.[1]) {
+  while (index < info.length) {
+    while (index < info.length && /\s/.test(info[index]!)) {
+      index++;
+    }
+
+    if (index >= info.length) {
+      return undefined;
+    }
+
+    if (info.startsWith('snippet=', index)) {
+      const valueStart = index + 'snippet='.length;
+      if (valueStart >= info.length || /\s/.test(info[valueStart]!)) {
+        return undefined;
+      }
+
+      const quote = info[valueStart];
+      if (quote === '"' || quote === "'") {
+        let valueEnd = valueStart + 1;
+        while (valueEnd < info.length) {
+          if (
+            info[valueEnd] === quote &&
+            info[valueEnd - 1] !== '\\'
+          ) {
+            break;
+          }
+          valueEnd++;
+        }
+
+        if (
+          valueEnd >= info.length ||
+          (valueEnd + 1 < info.length &&
+            !/\s/.test(info[valueEnd + 1]!))
+        ) {
+          return undefined;
+        }
+
+        return info.substring(valueStart + 1, valueEnd);
+      }
+
+      let valueEnd = valueStart;
+      while (valueEnd < info.length && !/\s/.test(info[valueEnd]!)) {
+        valueEnd++;
+      }
+      return info.substring(valueStart, valueEnd);
+    }
+
+    let quote: string | undefined;
+    while (index < info.length) {
+      const character = info[index]!;
+      if (quote) {
+        if (character === quote && info[index - 1] !== '\\') {
+          quote = undefined;
+        }
+      } else if (character === '"' || character === "'") {
+        quote = character;
+      } else if (/\s/.test(character)) {
+        break;
+      }
+      index++;
+    }
+  }
+
+  return undefined;
+}
+
+function parsePositiveLineNumber(value: string): number | undefined {
+  if (!/^\d+$/.test(value)) {
     return undefined;
   }
 
-  const snippetPath = snippetMatch[1];
+  const line = Number(value);
+  if (!Number.isSafeInteger(line) || line < 1) {
+    return undefined;
+  }
+
+  return line;
+}
+
+export function parseSnippetDirective(
+  info: string,
+): SnippetDirective | undefined {
+  const snippetPath = findSnippetValue(info);
+
+  if (!snippetPath) {
+    return undefined;
+  }
+
   const isRemote = isRemoteUrl(snippetPath);
   const lastHashIndex = snippetPath.lastIndexOf('#');
 
@@ -40,8 +120,8 @@ export function parseSnippetDirective(
     const rangeParts = lineRange.split('-');
 
     if (rangeParts.length === 1) {
-      const line = parseInt(rangeParts[0]!, 10);
-      if (isNaN(line) || line < 0 || rangeParts[0] === '') {
+      const line = parsePositiveLineNumber(rangeParts[0]!);
+      if (line === undefined) {
         return { filePath: snippetPath, isRemote };
       }
       return {
@@ -53,13 +133,9 @@ export function parseSnippetDirective(
     }
 
     if (rangeParts.length === 2) {
-      if (rangeParts[0] === '') {
-        return { filePath: snippetPath, isRemote };
-      }
+      const startLine = parsePositiveLineNumber(rangeParts[0]!);
 
-      const startLine = parseInt(rangeParts[0]!, 10);
-
-      if (isNaN(startLine) || startLine < 0) {
+      if (startLine === undefined) {
         return { filePath: snippetPath, isRemote };
       }
 
@@ -71,14 +147,12 @@ export function parseSnippetDirective(
         };
       }
 
-      const endLine = parseInt(rangeParts[1]!.replace(/^L/, ''), 10);
+      const endLine = parsePositiveLineNumber(
+        rangeParts[1]!.replace(/^L/, ''),
+      );
 
-      if (isNaN(endLine) || endLine < 0) {
-        return {
-          filePath,
-          startLine,
-          isRemote,
-        };
+      if (endLine === undefined || endLine < startLine) {
+        return { filePath: snippetPath, isRemote };
       }
 
       return {
@@ -89,19 +163,17 @@ export function parseSnippetDirective(
       };
     }
 
-    if (rangeParts.length > 2) {
-      return { filePath: snippetPath, isRemote };
-    }
-  } else {
-    const lineNumber = parseInt(lineSpec, 10);
-    if (!isNaN(lineNumber)) {
-      return {
-        filePath,
-        startLine: lineNumber,
-        endLine: lineNumber,
-        isRemote,
-      };
-    }
+    return { filePath: snippetPath, isRemote };
+  }
+
+  const lineNumber = parsePositiveLineNumber(lineSpec);
+  if (lineNumber !== undefined) {
+    return {
+      filePath,
+      startLine: lineNumber,
+      endLine: lineNumber,
+      isRemote,
+    };
   }
 
   return { filePath: snippetPath, isRemote };
