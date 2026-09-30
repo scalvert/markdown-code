@@ -1,4 +1,4 @@
-import { writeFile, mkdir, realpath } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve, basename, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
@@ -11,150 +11,14 @@ import type {
   Issue,
   DiscoveryResult,
 } from './types.js';
-import {
-  loadSnippetContent,
-  readMarkdownDocument,
-  resolveSnippetPath,
-  extractLines,
-} from './parser.js';
+import { readMarkdownDocument } from './parser.js';
 import { normalizeLineEndings } from './line-endings.js';
-import type { DocumentCodeBlock } from './markdown-document.js';
 import { formatSnippetDirective } from './snippet-directive.js';
+import { isManagedCodeBlock, resolveSnippet } from './snippet-source.js';
 import { createIssue, isError } from './issues.js';
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
-
-// Resolves a single code block's snippet content, pushing any issue into fileIssues.
-// Returns the extracted content string, or null if the block should be skipped.
-async function resolveCodeBlockContent(
-  codeBlock: DocumentCodeBlock,
-  config: RuntimeConfig,
-  markdownFilePath: string,
-  fileIssues: Array<Issue>,
-): Promise<string | null> {
-  const directive = codeBlock.directive!;
-  const { lineEnding } = codeBlock;
-
-  if (directive.isRemote) {
-    try {
-      const snippetContent = await loadSnippetContent(
-        directive.filePath,
-        config,
-        markdownFilePath,
-      );
-      const extractedContent = extractLines(
-        snippetContent,
-        directive.startLine,
-        directive.endLine,
-      );
-      if (
-        extractedContent === '' &&
-        (directive.startLine ?? directive.endLine)
-      ) {
-        return null;
-      }
-      return normalizeLineEndings(extractedContent, lineEnding);
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : error;
-      fileIssues.push(
-        createIssue(
-          'remote-fetch-error',
-          codeBlock,
-          `Error fetching remote snippet: ${errMsg}`,
-        ),
-      );
-      return null;
-    }
-  }
-
-  let snippetPath: string;
-  try {
-    snippetPath = await resolveSnippetPath(
-      directive.filePath,
-      config,
-      markdownFilePath,
-    );
-  } catch (error) {
-    fileIssues.push(
-      createIssue(
-        'path-validation',
-        codeBlock,
-        `Error resolving path ${directive.filePath}: ${error}`,
-      ),
-    );
-    return null;
-  }
-
-  // Resolve symlinks to get the real path, and detect missing files in one step
-  let realSnippetPath: string;
-  try {
-    realSnippetPath = await realpath(snippetPath);
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException;
-    if (err.code === 'ENOENT') {
-      fileIssues.push(
-        createIssue(
-          'snippet-not-found',
-          codeBlock,
-          `Snippet file not found: ${directive.filePath}`,
-          { severity: config.missingSnippetSeverity },
-        ),
-      );
-    } else {
-      fileIssues.push(
-        createIssue(
-          'snippet-load-error',
-          codeBlock,
-          `Error accessing snippet ${directive.filePath}: ${err.message}`,
-        ),
-      );
-    }
-    return null;
-  }
-
-  const workingDir = resolve(config.workingDir);
-  const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
-  const allowedRoots =
-    snippetRoot !== workingDir ? [workingDir, snippetRoot] : [workingDir];
-
-  if (!isInWorkingDir(realSnippetPath, allowedRoots)) {
-    fileIssues.push(
-      createIssue(
-        'path-traversal',
-        codeBlock,
-        `Path traversal attempt detected: ${directive.filePath}`,
-      ),
-    );
-    return null;
-  }
-
-  try {
-    const snippetContent = await loadSnippetContent(
-      directive.filePath,
-      config,
-      markdownFilePath,
-    );
-    const extractedContent = extractLines(
-      snippetContent,
-      directive.startLine,
-      directive.endLine,
-    );
-    if (extractedContent === '' && (directive.startLine ?? directive.endLine)) {
-      return null;
-    }
-    return normalizeLineEndings(extractedContent, lineEnding);
-  } catch (error) {
-    fileIssues.push(
-      createIssue(
-        'snippet-load-error',
-        codeBlock,
-        `Error loading snippet ${snippetPath}: ${error}`,
-      ),
-    );
-    return null;
-  }
-}
 
 export async function syncMarkdownFiles(
   config: RuntimeConfig,
@@ -179,23 +43,21 @@ export async function syncMarkdownFiles(
       try {
         const { content, document } = await readMarkdownDocument(filePath);
 
-        for (const codeBlock of document.codeBlocks) {
-          if (!codeBlock.directive) {
-            continue;
-          }
-
-          const extractedContent = await resolveCodeBlockContent(
-            codeBlock,
+        for (const codeBlock of document.codeBlocks.filter(
+          isManagedCodeBlock,
+        )) {
+          const snippet = await resolveSnippet(codeBlock, {
             config,
-            filePath,
-            fileIssues,
-          );
+            markdownFilePath: filePath,
+          });
 
-          if (
-            extractedContent !== null &&
-            extractedContent !== codeBlock.content
+          if (snippet.status === 'failed') {
+            fileIssues.push(snippet.issue);
+          } else if (
+            snippet.status === 'resolved' &&
+            snippet.content !== codeBlock.content
           ) {
-            document.setBody(codeBlock, extractedContent);
+            document.setBody(codeBlock, snippet.content);
           }
         }
 
@@ -244,21 +106,19 @@ export async function checkMarkdownFiles(
         const { document } = await readMarkdownDocument(filePath);
         let isFileInSync = true;
 
-        for (const codeBlock of document.codeBlocks) {
-          if (!codeBlock.directive) {
-            continue;
-          }
-
-          const extractedContent = await resolveCodeBlockContent(
-            codeBlock,
+        for (const codeBlock of document.codeBlocks.filter(
+          isManagedCodeBlock,
+        )) {
+          const snippet = await resolveSnippet(codeBlock, {
             config,
-            filePath,
-            fileIssues,
-          );
+            markdownFilePath: filePath,
+          });
 
-          if (
-            extractedContent !== null &&
-            extractedContent !== codeBlock.content
+          if (snippet.status === 'failed') {
+            fileIssues.push(snippet.issue);
+          } else if (
+            snippet.status === 'resolved' &&
+            snippet.content !== codeBlock.content
           ) {
             fileIssues.push(
               createIssue(
