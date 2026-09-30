@@ -19,3 +19,15 @@ _Avoid_: Annotation, snippet reference, snippet tag
 **Snippet**:
 The source file (local path or remote URL) that a snippet directive points at, and whose lines the code block mirrors.
 _Avoid_: Source, snippet file (when a remote URL is meant)
+
+**Issue**:
+A problem found while syncing or checking a code block, reported at its line and column with a kind, a rule, and a severity.
+_Avoid_: Error (for issues that may be warnings), diagnostic, finding
+
+**Rule**:
+The specific cause of an issue (for example `snippet-not-found` or `path-traversal`), shown after each reported issue. Every rule belongs to one issue kind.
+_Avoid_: Rule ID (for the concept), check
+
+**Severity**:
+Whether an issue fails the run (`error`) or is only reported (`warning`). Only missing snippets can be downgraded to a warning.
+_Avoid_: Level, priority

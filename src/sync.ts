@@ -20,6 +20,7 @@ import {
 import { normalizeLineEndings } from './line-endings.js';
 import type { DocumentCodeBlock } from './markdown-document.js';
 import { formatSnippetDirective } from './snippet-directive.js';
+import { createIssue, isError } from './issues.js';
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
@@ -56,13 +57,13 @@ async function resolveCodeBlockContent(
       return normalizeLineEndings(extractedContent, lineEnding);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : error;
-      fileIssues.push({
-        type: 'remote-error',
-        message: `Error fetching remote snippet: ${errMsg}`,
-        line: codeBlock.line,
-        column: codeBlock.column,
-        ruleId: 'remote-fetch-error',
-      });
+      fileIssues.push(
+        createIssue(
+          'remote-fetch-error',
+          codeBlock,
+          `Error fetching remote snippet: ${errMsg}`,
+        ),
+      );
       return null;
     }
   }
@@ -75,13 +76,13 @@ async function resolveCodeBlockContent(
       markdownFilePath,
     );
   } catch (error) {
-    fileIssues.push({
-      type: 'load-failed',
-      message: `Error resolving path ${directive.filePath}: ${error}`,
-      line: codeBlock.line,
-      column: codeBlock.column,
-      ruleId: 'path-validation',
-    });
+    fileIssues.push(
+      createIssue(
+        'path-validation',
+        codeBlock,
+        `Error resolving path ${directive.filePath}: ${error}`,
+      ),
+    );
     return null;
   }
 
@@ -92,22 +93,22 @@ async function resolveCodeBlockContent(
   } catch (error) {
     const err = error as NodeJS.ErrnoException;
     if (err.code === 'ENOENT') {
-      fileIssues.push({
-        type: 'file-missing',
-        severity: config.missingSnippetSeverity ?? 'error',
-        message: `Snippet file not found: ${directive.filePath}`,
-        line: codeBlock.line,
-        column: codeBlock.column,
-        ruleId: 'snippet-not-found',
-      });
+      fileIssues.push(
+        createIssue(
+          'snippet-not-found',
+          codeBlock,
+          `Snippet file not found: ${directive.filePath}`,
+          { severity: config.missingSnippetSeverity },
+        ),
+      );
     } else {
-      fileIssues.push({
-        type: 'load-failed',
-        message: `Error accessing snippet ${directive.filePath}: ${err.message}`,
-        line: codeBlock.line,
-        column: codeBlock.column,
-        ruleId: 'snippet-load-error',
-      });
+      fileIssues.push(
+        createIssue(
+          'snippet-load-error',
+          codeBlock,
+          `Error accessing snippet ${directive.filePath}: ${err.message}`,
+        ),
+      );
     }
     return null;
   }
@@ -118,13 +119,13 @@ async function resolveCodeBlockContent(
     snippetRoot !== workingDir ? [workingDir, snippetRoot] : [workingDir];
 
   if (!isInWorkingDir(realSnippetPath, allowedRoots)) {
-    fileIssues.push({
-      type: 'invalid-path',
-      message: `Path traversal attempt detected: ${directive.filePath}`,
-      line: codeBlock.line,
-      column: codeBlock.column,
-      ruleId: 'path-traversal',
-    });
+    fileIssues.push(
+      createIssue(
+        'path-traversal',
+        codeBlock,
+        `Path traversal attempt detected: ${directive.filePath}`,
+      ),
+    );
     return null;
   }
 
@@ -144,13 +145,13 @@ async function resolveCodeBlockContent(
     }
     return normalizeLineEndings(extractedContent, lineEnding);
   } catch (error) {
-    fileIssues.push({
-      type: 'load-failed',
-      message: `Error loading snippet ${snippetPath}: ${error}`,
-      line: codeBlock.line,
-      column: codeBlock.column,
-      ruleId: 'snippet-load-error',
-    });
+    fileIssues.push(
+      createIssue(
+        'snippet-load-error',
+        codeBlock,
+        `Error loading snippet ${snippetPath}: ${error}`,
+      ),
+    );
     return null;
   }
 }
@@ -259,13 +260,13 @@ export async function checkMarkdownFiles(
             extractedContent !== null &&
             extractedContent !== codeBlock.content
           ) {
-            fileIssues.push({
-              type: 'sync-needed',
-              message: `Code block out of sync with ${formatSnippetDirective(codeBlock.directive)}`,
-              line: codeBlock.line,
-              column: codeBlock.column,
-              ruleId: 'content-mismatch',
-            });
+            fileIssues.push(
+              createIssue(
+                'content-mismatch',
+                codeBlock,
+                `Code block out of sync with ${formatSnippetDirective(codeBlock.directive)}`,
+              ),
+            );
             isFileInSync = false;
           }
         }
@@ -274,12 +275,7 @@ export async function checkMarkdownFiles(
           result.fileIssues.push({ filePath, issues: fileIssues });
         }
 
-        if (
-          fileIssues.some(
-            (issue) =>
-              issue.type !== 'file-missing' || issue.severity !== 'warning',
-          )
-        ) {
+        if (fileIssues.some(isError)) {
           isFileInSync = false;
         }
 

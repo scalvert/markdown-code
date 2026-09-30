@@ -32,6 +32,8 @@ src/
 │   ├── init.ts        # Initialize project
 │   └── extract.ts     # Extract code blocks to files
 ├── config.ts          # Configuration handling
+├── formatter.ts       # Issue and discovery output
+├── issues.ts          # Issue catalogue: rules, kinds, severity
 ├── line-endings.ts    # LF/CRLF detection and normalization
 ├── markdown-document.ts # Parsed Markdown document: code blocks and edits
 ├── parser.ts          # Snippet loading and line extraction

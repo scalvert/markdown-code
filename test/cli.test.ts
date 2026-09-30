@@ -283,6 +283,28 @@ old content
   });
 
   describe('check mode', () => {
+    it('lists unmanaged code blocks in discovery mode without reporting problems', async () => {
+      await project.write({
+        'README.md': '# T\n\n```ts\nconst a = 1;\n```\n\n```js\nb\n```\n',
+        docs: { 'guide.md': '```py\nprint(1)\n```\n' },
+      });
+
+      const result = await runBin('check');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(normalizeOutput(result.stdout, project.baseDir))
+        .toMatchInlineSnapshot(`
+        "Checking markdown files...
+        Found 3 code blocks in 2 files not yet managed by markdown-code:
+          README.md  2 code blocks (ts, js)
+          docs/guide.md  1 code block (py)
+
+        To start managing these code blocks, run:
+          npx markdown-code init --extract"
+      `);
+    });
+
     it('passes when files are in sync', async () => {
       const sourceContent = 'const value = "same";';
 

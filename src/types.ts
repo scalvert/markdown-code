@@ -52,7 +52,6 @@ export interface Issue {
     | 'file-missing'
     | 'invalid-path'
     | 'load-failed'
-    | 'out-of-sync'
     | 'remote-error';
   message: string;
   line: number;
