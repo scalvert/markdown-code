@@ -14,7 +14,7 @@ import type {
 import { readMarkdownDocument } from './parser.js';
 import { normalizeLineEndings } from './line-endings.js';
 import { formatSnippetDirective } from './snippet-directive.js';
-import { isManagedCodeBlock, resolveSnippet } from './snippet-source.js';
+import { isManagedCodeBlock, resolveSnippet } from './snippet-resolution.js';
 import { createIssue, isError } from './issues.js';
 
 const require = createRequire(import.meta.url);

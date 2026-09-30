@@ -9,7 +9,7 @@ import {
   resolveSnippet,
   type ManagedCodeBlock,
   type SnippetResolution,
-} from '../src/snippet-source.js';
+} from '../src/snippet-resolution.js';
 import type { RuntimeConfig } from '../src/types.js';
 
 function managedBlock(directive: string, lineEnding = '\n'): ManagedCodeBlock {
@@ -130,6 +130,17 @@ describe('resolveSnippet', () => {
       expect(await resolveFor('snippet=app.js#L99-L100')).toEqual({
         status: 'no-lines',
       });
+    });
+
+    it('reports a remote range past the end as no-lines', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response('one\n')),
+      );
+
+      expect(
+        await resolveFor('snippet=https://example.com/app.js#L5-L6'),
+      ).toEqual({ status: 'no-lines' });
     });
   });
 
@@ -288,10 +299,28 @@ describe('loadSnippetContent', () => {
   afterEach(() => {
     project.dispose();
     outside.dispose();
+    vi.unstubAllGlobals();
   });
 
   it('returns the raw file content', async () => {
     expect(await loadSnippetContent('app.js', config)).toBe('app');
+  });
+
+  it('returns raw remote content', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('\nremote\n')),
+    );
+
+    expect(await loadSnippetContent('https://example.com/app.js', config)).toBe(
+      '\nremote\n',
+    );
+  });
+
+  it('throws when a relative path has no Markdown file', async () => {
+    await expect(loadSnippetContent('./app.js', config)).rejects.toThrow(
+      'Markdown file path required for relative snippet paths',
+    );
   });
 
   it('throws the filesystem error for missing files', async () => {

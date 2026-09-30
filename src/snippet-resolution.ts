@@ -23,7 +23,7 @@ export type SnippetResolution =
 
 type LocalRead =
   | { ok: true; content: string }
-  | { ok: false; step: 'resolve'; error: unknown }
+  | { ok: false; step: 'path'; error: unknown }
   | { ok: false; step: 'access'; error: NodeJS.ErrnoException }
   | { ok: false; step: 'contain' }
   | { ok: false; step: 'read'; error: unknown; resolvedPath: string };
@@ -34,7 +34,7 @@ export function isManagedCodeBlock(
   return codeBlock.directive !== undefined;
 }
 
-export function allowedSnippetRoots(config: RuntimeConfig): Array<string> {
+function allowedSnippetRoots(config: RuntimeConfig): Array<string> {
   const workingDir = resolve(config.workingDir);
   const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
   return snippetRoot !== workingDir ? [workingDir, snippetRoot] : [workingDir];
@@ -130,7 +130,7 @@ async function readLocalSnippet(
       markdownFilePath,
     );
   } catch (error) {
-    return { ok: false, step: 'resolve', error };
+    return { ok: false, step: 'path', error };
   }
 
   let realPath: string;
@@ -188,7 +188,7 @@ function localReadIssue(
 ): Issue {
   const { filePath } = codeBlock.directive;
 
-  if (read.step === 'resolve') {
+  if (read.step === 'path') {
     return createIssue(
       'path-validation',
       codeBlock,

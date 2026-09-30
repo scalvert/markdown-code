@@ -12,6 +12,10 @@ _Avoid_: Markdown file (for the parsed form), page
 A fenced block with a language inside a Markdown document.
 _Avoid_: Fence, code sample, snippet (for the block itself)
 
+**Managed code block**:
+A code block whose opening fence carries a snippet directive, so markdown-code keeps its content in step with the snippet. Code blocks without one are unmanaged.
+_Avoid_: Synced block, linked block
+
 **Snippet directive**:
 The `snippet=<path>[#L<start>[-L<end>]]` token in a code block's opening fence that names its snippet and optional line range.
 _Avoid_: Annotation, snippet reference, snippet tag

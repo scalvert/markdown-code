@@ -21,7 +21,7 @@ export {
   loadSnippetContent,
   resolveSnippetPath,
   trimBlankLines,
-} from './snippet-source.js';
+} from './snippet-resolution.js';
 export {
   formatSnippetDirective,
   parseSnippetDirective,
