@@ -12,14 +12,16 @@ export {
   type ParseOptions,
 } from './markdown-document.js';
 export {
-  extractLines,
-  loadSnippetContent,
   parseMarkdownFile,
   parseMarkdownForExtraction,
   replaceCodeBlock,
+} from './parser.js';
+export {
+  extractLines,
+  loadSnippetContent,
   resolveSnippetPath,
   trimBlankLines,
-} from './parser.js';
+} from './snippet-resolution.js';
 export {
   formatSnippetDirective,
   parseSnippetDirective,
