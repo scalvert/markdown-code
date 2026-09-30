@@ -21,7 +21,7 @@ The source file (local path or remote URL) that a snippet directive points at, a
 _Avoid_: Source, snippet file (when a remote URL is meant)
 
 **Issue**:
-A problem found while syncing or checking a code block, reported at its line and column with a kind, a rule, and a severity.
+A problem found while syncing or checking a code block, reported at its line and column with a kind (`type`), a rule (`ruleId`), and a severity.
 _Avoid_: Error (for issues that may be warnings), diagnostic, finding
 
 **Rule**:

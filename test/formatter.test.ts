@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { format, hasErrors, hasIssues } from '../src/formatter.js';
+import {
+  format,
+  formatDiscovery,
+  hasErrors,
+  hasIssues,
+} from '../src/formatter.js';
 import type { FileIssues } from '../src/types.js';
 
 function makeFileIssues(
@@ -159,5 +164,25 @@ describe('format', () => {
     ];
     const result = format(fileIssues);
     expect(result).toContain('content-mismatch');
+  });
+});
+
+describe('formatDiscovery', () => {
+  it('uses singular forms for one file with one code block', () => {
+    const result = formatDiscovery(
+      {
+        markdownFiles: ['/project/README.md'],
+        totalCodeBlocks: 1,
+        fileDetails: [
+          { filePath: '/project/README.md', codeBlocks: 1, languages: ['ts'] },
+        ],
+      },
+      '/project',
+    );
+
+    expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toMatchInlineSnapshot(`
+      "Found 1 code block in 1 file not yet managed by markdown-code:
+        README.md  1 code block (ts)"
+    `);
   });
 });

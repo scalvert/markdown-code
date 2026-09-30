@@ -1,11 +1,6 @@
 import { relative, resolve } from 'node:path';
 import pc from 'picocolors';
-import type {
-  DiscoveryResult,
-  FileIssues,
-  Issue,
-  IssueSeverity,
-} from './types.js';
+import type { DiscoveryResult, FileIssues, Issue } from './types.js';
 import {
   isError,
   issueColor,
@@ -14,17 +9,10 @@ import {
   severityOf,
 } from './issues.js';
 
-function colorize(
-  type: string,
-  severity: IssueSeverity,
-): (text: string) => string {
-  return pc[issueColor(type, severity)];
-}
-
 function formatIssue(issue: Issue): string {
   const { line, column, type, message, ruleId } = issue;
   const position = pc.dim(`${line}:${column}`.padEnd(6));
-  const colorFn = colorize(type, severityOf(issue));
+  const colorFn = pc[issueColor(type, severityOf(issue))];
   const severity = colorFn(issueLabel(issue).padEnd(12));
   const rule = ruleId ? pc.dim(`  ${ruleId}`) : '';
 
@@ -72,7 +60,7 @@ function formatSummary(allFileIssues: Array<FileIssues>): string {
     const hasError = allFileIssues.some((file) =>
       file.issues.some((issue) => issue.type === type && isError(issue)),
     );
-    const colorFn = colorize(type, hasError ? 'error' : 'warning');
+    const colorFn = pc[issueColor(type, hasError ? 'error' : 'warning')];
     parts.push(colorFn(`${count} ${kindCountLabel(type, count)}`));
   });
 
