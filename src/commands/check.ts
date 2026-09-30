@@ -1,8 +1,8 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { configExists } from '../config.js';
 import { checkMarkdownFiles, discoverCodeBlocks } from '../sync.js';
-import { format, hasErrors, hasIssues } from '../formatter.js';
-import type { FileIssues, RuntimeConfig } from '../types.js';
+import { format, formatDiscovery, hasErrors, hasIssues } from '../formatter.js';
+import type { RuntimeConfig } from '../types.js';
 import {
   getValidatedConfig,
   handleError,
@@ -34,31 +34,11 @@ async function handleDiscoveryMode(
     return false;
   }
 
-  const discoveryIssues: Array<FileIssues> = discovery.fileDetails.map(
-    (file) => ({
-      filePath: file.filePath,
-      issues: [
-        {
-          line: 1,
-          column: 1,
-          type: 'file-missing',
-          message: `${file.codeBlocks} code blocks available (${file.languages.join(', ')})`,
-          ruleId: 'markdown-code/discovery',
-        },
-      ],
-    }),
-  );
-
-  const output = format(discoveryIssues);
-  if (output) {
-    console.log(output);
-    console.log('');
-    console.log('To start managing these code blocks, run:');
-    console.log('  npx markdown-code init --extract');
-    return true;
-  }
-
-  return false;
+  console.log(formatDiscovery(discovery, config.workingDir));
+  console.log('');
+  console.log('To start managing these code blocks, run:');
+  console.log('  npx markdown-code init --extract');
+  return true;
 }
 
 export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {

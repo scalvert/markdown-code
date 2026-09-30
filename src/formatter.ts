@@ -1,49 +1,19 @@
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import pc from 'picocolors';
-import type { FileIssues, Issue, IssueSeverity } from './types.js';
-
-function getIssueColor(
-  type: string,
-  severity: IssueSeverity = 'error',
-): (text: string) => string {
-  if (type === 'file-missing' && severity === 'warning') {
-    return pc.yellow;
-  }
-
-  switch (type) {
-    case 'sync-needed':
-      return pc.yellow;
-    case 'file-missing':
-      return pc.cyan;
-    case 'invalid-path':
-    case 'load-failed':
-      return pc.red;
-    case 'remote-error':
-      return pc.magenta;
-    default:
-      return pc.white;
-  }
-}
-
-function getPluralForm(type: string): string {
-  const pluralMap: Record<string, string> = {
-    'sync-needed': 'sync-needed',
-    'file-missing': 'file-missing',
-    'invalid-path': 'invalid-paths',
-    'load-failed': 'load-failed',
-    'remote-error': 'remote-errors',
-  };
-
-  return pluralMap[type] ?? `${type}s`;
-}
+import type { DiscoveryResult, FileIssues, Issue } from './types.js';
+import {
+  isError,
+  issueColor,
+  issueLabel,
+  kindCountLabel,
+  severityOf,
+} from './issues.js';
 
 function formatIssue(issue: Issue): string {
   const { line, column, type, message, ruleId } = issue;
   const position = pc.dim(`${line}:${column}`.padEnd(6));
-  const colorFn = getIssueColor(type, issue.severity);
-  const label =
-    type === 'file-missing' && issue.severity === 'warning' ? 'warning' : type;
-  const severity = colorFn(label.padEnd(12));
+  const colorFn = pc[issueColor(type, severityOf(issue))];
+  const severity = colorFn(issueLabel(issue).padEnd(12));
   const rule = ruleId ? pc.dim(`  ${ruleId}`) : '';
 
   return `  ${position} ${severity} ${message}${rule}`;
@@ -87,15 +57,11 @@ function formatSummary(allFileIssues: Array<FileIssues>): string {
 
   const parts: Array<string> = [];
   Object.entries(issueCountsByType).forEach(([type, count]) => {
-    const label = count === 1 ? type : getPluralForm(type);
-    const typeIssues = allFileIssues.flatMap((file) =>
-      file.issues.filter((issue) => issue.type === type),
+    const hasError = allFileIssues.some((file) =>
+      file.issues.some((issue) => issue.type === type && isError(issue)),
     );
-    const hasError = typeIssues.some(
-      (issue) => issue.type !== 'file-missing' || issue.severity !== 'warning',
-    );
-    const colorFn = getIssueColor(type, hasError ? 'error' : 'warning');
-    parts.push(colorFn(`${count} ${label}`));
+    const colorFn = pc[issueColor(type, hasError ? 'error' : 'warning')];
+    parts.push(colorFn(`${count} ${kindCountLabel(type, count)}`));
   });
 
   if (parts.length > 0) {
@@ -120,12 +86,29 @@ export function format(fileIssues: Array<FileIssues>): string {
   return `${formattedFiles.join('\n\n')}\n\n${summary}`;
 }
 
-export function hasErrors(fileIssues: Array<FileIssues>): boolean {
-  return fileIssues.some((file) =>
-    file.issues.some(
-      (issue) => issue.type !== 'file-missing' || issue.severity !== 'warning',
-    ),
+function pluralize(count: number, singular: string): string {
+  return `${count} ${singular}${count === 1 ? '' : 's'}`;
+}
+
+export function formatDiscovery(
+  discovery: DiscoveryResult,
+  workingDir: string,
+): string {
+  const blocks = pluralize(discovery.totalCodeBlocks, 'code block');
+  const files = pluralize(discovery.fileDetails.length, 'file');
+  const heading = `Found ${blocks} in ${files} not yet managed by markdown-code:`;
+  const lines = discovery.fileDetails.map(
+    ({ filePath, codeBlocks, languages }) => {
+      const detail = `${pluralize(codeBlocks, 'code block')} (${languages.join(', ')})`;
+      return `  ${relative(workingDir, filePath)}  ${pc.dim(detail)}`;
+    },
   );
+
+  return [heading, ...lines].join('\n');
+}
+
+export function hasErrors(fileIssues: Array<FileIssues>): boolean {
+  return fileIssues.some((file) => file.issues.some(isError));
 }
 
 export function hasIssues(fileIssues: Array<FileIssues>): boolean {
