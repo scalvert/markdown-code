@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, realpath } from 'node:fs/promises';
+import { writeFile, mkdir, realpath } from 'node:fs/promises';
 import { join, resolve, basename, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
@@ -13,29 +13,16 @@ import type {
 } from './types.js';
 import {
   loadSnippetContent,
+  readMarkdownDocument,
   resolveSnippetPath,
   extractLines,
 } from './parser.js';
 import { normalizeLineEndings } from './line-endings.js';
-import {
-  MarkdownDocument,
-  isMdxPath,
-  type DocumentCodeBlock,
-} from './markdown-document.js';
+import type { DocumentCodeBlock } from './markdown-document.js';
 import { formatSnippetDirective } from './snippet-directive.js';
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
-
-export async function readMarkdownDocument(
-  filePath: string,
-): Promise<{ content: string; document: MarkdownDocument }> {
-  const content = await readFile(filePath, 'utf-8');
-  const document = MarkdownDocument.parse(content, {
-    mdx: isMdxPath(filePath),
-  });
-  return { content, document };
-}
 
 // Resolves a single code block's snippet content, pushing any issue into fileIssues.
 // Returns the extracted content string, or null if the block should be skipped.
@@ -45,22 +32,25 @@ async function resolveCodeBlockContent(
   markdownFilePath: string,
   fileIssues: Array<Issue>,
 ): Promise<string | null> {
-  const snippet = codeBlock.directive!;
+  const directive = codeBlock.directive!;
   const { lineEnding } = codeBlock;
 
-  if (snippet.isRemote) {
+  if (directive.isRemote) {
     try {
       const snippetContent = await loadSnippetContent(
-        snippet.filePath,
+        directive.filePath,
         config,
         markdownFilePath,
       );
       const extractedContent = extractLines(
         snippetContent,
-        snippet.startLine,
-        snippet.endLine,
+        directive.startLine,
+        directive.endLine,
       );
-      if (extractedContent === '' && (snippet.startLine ?? snippet.endLine)) {
+      if (
+        extractedContent === '' &&
+        (directive.startLine ?? directive.endLine)
+      ) {
         return null;
       }
       return normalizeLineEndings(extractedContent, lineEnding);
@@ -80,14 +70,14 @@ async function resolveCodeBlockContent(
   let snippetPath: string;
   try {
     snippetPath = await resolveSnippetPath(
-      snippet.filePath,
+      directive.filePath,
       config,
       markdownFilePath,
     );
   } catch (error) {
     fileIssues.push({
       type: 'load-failed',
-      message: `Error resolving path ${snippet.filePath}: ${error}`,
+      message: `Error resolving path ${directive.filePath}: ${error}`,
       line: codeBlock.line,
       column: codeBlock.column,
       ruleId: 'path-validation',
@@ -105,7 +95,7 @@ async function resolveCodeBlockContent(
       fileIssues.push({
         type: 'file-missing',
         severity: config.missingSnippetSeverity ?? 'error',
-        message: `Snippet file not found: ${snippet.filePath}`,
+        message: `Snippet file not found: ${directive.filePath}`,
         line: codeBlock.line,
         column: codeBlock.column,
         ruleId: 'snippet-not-found',
@@ -113,7 +103,7 @@ async function resolveCodeBlockContent(
     } else {
       fileIssues.push({
         type: 'load-failed',
-        message: `Error accessing snippet ${snippet.filePath}: ${err.message}`,
+        message: `Error accessing snippet ${directive.filePath}: ${err.message}`,
         line: codeBlock.line,
         column: codeBlock.column,
         ruleId: 'snippet-load-error',
@@ -130,7 +120,7 @@ async function resolveCodeBlockContent(
   if (!isInWorkingDir(realSnippetPath, allowedRoots)) {
     fileIssues.push({
       type: 'invalid-path',
-      message: `Path traversal attempt detected: ${snippet.filePath}`,
+      message: `Path traversal attempt detected: ${directive.filePath}`,
       line: codeBlock.line,
       column: codeBlock.column,
       ruleId: 'path-traversal',
@@ -140,16 +130,16 @@ async function resolveCodeBlockContent(
 
   try {
     const snippetContent = await loadSnippetContent(
-      snippet.filePath,
+      directive.filePath,
       config,
       markdownFilePath,
     );
     const extractedContent = extractLines(
       snippetContent,
-      snippet.startLine,
-      snippet.endLine,
+      directive.startLine,
+      directive.endLine,
     );
-    if (extractedContent === '' && (snippet.startLine ?? snippet.endLine)) {
+    if (extractedContent === '' && (directive.startLine ?? directive.endLine)) {
       return null;
     }
     return normalizeLineEndings(extractedContent, lineEnding);

@@ -18,13 +18,20 @@ export {
   type LineEnding,
 } from './line-endings.js';
 
-async function readLegacyCodeBlocks(
+export async function readMarkdownDocument(
   filePath: string,
-): Promise<{ content: string; codeBlocks: Array<CodeBlock> }> {
+): Promise<{ content: string; document: MarkdownDocument }> {
   const content = await readFile(filePath, 'utf-8');
   const document = MarkdownDocument.parse(content, {
     mdx: isMdxPath(filePath),
   });
+  return { content, document };
+}
+
+async function readLegacyCodeBlocks(
+  filePath: string,
+): Promise<{ content: string; codeBlocks: Array<CodeBlock> }> {
+  const { content, document } = await readMarkdownDocument(filePath);
   return { content, codeBlocks: toLegacyCodeBlocks(document) };
 }
 

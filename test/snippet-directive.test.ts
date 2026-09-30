@@ -329,6 +329,20 @@ describe('snippet directive formatting', () => {
     expect(formatSnippetDirective(directive)).toBe(`snippet=${reference}`);
   });
 
+  it.each(['my docs/a.ts', "it's here.ts", 'say "hi".ts'])(
+    'quotes %s so it parses back',
+    (filePath) => {
+      const formatted = formatSnippetDirective({ filePath });
+      expect(parseSnippetDirective(formatted)?.filePath).toBe(filePath);
+    },
+  );
+
+  it('rejects references containing both quote characters', () => {
+    expect(() => formatSnippetDirective({ filePath: `a"b'c.ts` })).toThrow(
+      'both quote characters',
+    );
+  });
+
   it('normalizes non-canonical ranges', () => {
     const directive = parseSnippetDirective('snippet=a.ts#10')!;
     expect(formatSnippetDirective(directive)).toBe('snippet=a.ts#L10');

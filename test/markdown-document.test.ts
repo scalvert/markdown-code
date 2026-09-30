@@ -252,6 +252,14 @@ old
       },
     );
 
+    it('only keeps a closing fence that matches the opening fence', () => {
+      const document = parse('~~~~ts snippet=a.ts\nold\n```');
+
+      document.setBody(document.codeBlocks[0]!, 'new');
+
+      expect(document.toString()).toBe('~~~~ts snippet=a.ts\nnew');
+    });
+
     it('does not invent a closing fence for an unclosed block', () => {
       const document = parse('```ts snippet=a.ts\nold');
 
@@ -351,6 +359,21 @@ const b = 2;
       expect(document.toString()).toBe(
         '```ts title="snippet=fake.ts" data-x=1\ncode\n```',
       );
+    });
+
+    it('leaves the fence untouched when the directive is unchanged', () => {
+      const source = '```ts snippet=a.ts#10 title="x"\ncode\n```';
+      const document = parse(source);
+      const [block] = document.codeBlocks;
+
+      document.setDirective(block!, { filePath: 'b.ts' });
+      document.setDirective(block!, {
+        filePath: 'a.ts',
+        startLine: 10,
+        endLine: 10,
+      });
+
+      expect(document.toString()).toBe(source);
     });
 
     it('quotes a directive whose path contains whitespace', () => {

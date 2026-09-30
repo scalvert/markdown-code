@@ -220,8 +220,22 @@ function formatLineRange(directive: SnippetDirective): string {
   return `#L${startLine}-L${endLine}`;
 }
 
+function quoteIfNeeded(reference: string): string {
+  if (!/[\s"']/.test(reference)) {
+    return reference;
+  }
+
+  const quote = reference.includes('"') ? "'" : '"';
+  if (reference.includes(quote)) {
+    throw new Error(
+      `Snippet reference cannot contain both quote characters: ${reference}`,
+    );
+  }
+
+  return `${quote}${reference}${quote}`;
+}
+
 export function formatSnippetDirective(directive: SnippetDirective): string {
   const reference = `${directive.filePath}${formatLineRange(directive)}`;
-  const value = /\s/.test(reference) ? `"${reference}"` : reference;
-  return `${DIRECTIVE_PREFIX}${value}`;
+  return `${DIRECTIVE_PREFIX}${quoteIfNeeded(reference)}`;
 }

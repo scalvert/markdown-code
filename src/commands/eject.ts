@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
 import fg from 'fast-glob';
 import { configExists } from '../config.js';
-import { readMarkdownDocument } from '../sync.js';
+import { readMarkdownDocument } from '../parser.js';
 import type { RuntimeConfig } from '../types.js';
 import { fileExists, isInWorkingDir } from '../utils.js';
 import {

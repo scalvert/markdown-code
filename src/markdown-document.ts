@@ -30,8 +30,8 @@ export interface DocumentCodeBlock {
 }
 
 export interface BlockEdit {
-  content?: string;
-  directive?: SnippetDirective | null;
+  content?: string | undefined;
+  directive?: SnippetDirective | null | undefined;
 }
 
 interface BlockRecord {
@@ -41,7 +41,19 @@ interface BlockRecord {
 }
 
 const OPENING_FENCE_PREFIX = /^[ \t]*(?:`{3,}|~{3,})[ \t]*\S*/;
-const CLOSING_FENCE = /^[ \t>]*(?:`{3,}|~{3,})[ \t]*$/;
+const FENCE_MARKER = /^[ \t]*(`{3,}|~{3,})/;
+const CLOSING_FENCE = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
+
+function closesFence(openingLine: string, candidate: string): boolean {
+  const opening = openingLine.match(FENCE_MARKER)?.[1];
+  const closing = candidate.match(CLOSING_FENCE)?.[1];
+  return (
+    opening !== undefined &&
+    closing !== undefined &&
+    closing[0] === opening[0] &&
+    closing.length >= opening.length
+  );
+}
 
 const legacyOffsets = new WeakMap<
   DocumentCodeBlock,
@@ -137,7 +149,7 @@ export function renderBlock(
 
   const lineEnding = getLineEnding(blockText);
   const lastLine = blockText.slice(blockText.lastIndexOf('\n') + 1);
-  const closing = CLOSING_FENCE.test(lastLine)
+  const closing = closesFence(openingLine, lastLine)
     ? `${lineEnding}${lastLine}`
     : '';
   const body = indentBody(edit.content, column, lineEnding);
@@ -195,7 +207,11 @@ export class MarkdownDocument {
     block: DocumentCodeBlock,
     directive: SnippetDirective | undefined,
   ): void {
-    this.#edit(block, { directive: directive ?? null });
+    const current = block.directive && formatSnippetDirective(block.directive);
+    const next = directive && formatSnippetDirective(directive);
+    this.#edit(block, {
+      directive: current === next ? undefined : (directive ?? null),
+    });
   }
 
   toString(): string {
@@ -219,7 +235,12 @@ export class MarkdownDocument {
     if (!this.codeBlocks.includes(block)) {
       throw new Error('Code block does not belong to this document');
     }
-    this.#edits.set(block, { ...this.#edits.get(block), ...edit });
+    const merged = { ...this.#edits.get(block), ...edit };
+    if (merged.content === undefined && merged.directive === undefined) {
+      this.#edits.delete(block);
+      return;
+    }
+    this.#edits.set(block, merged);
   }
 }
 
