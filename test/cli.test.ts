@@ -305,6 +305,26 @@ old content
       `);
     });
 
+    it('fails when a line range selects no lines', async () => {
+      await project.write({
+        'test.js': 'const value = 1;\n',
+        'README.md': '```js snippet=test.js#L5-L6\nstale\n```\n',
+      });
+
+      const result = await runBin('check');
+
+      expect(result.exitCode).toEqual(1);
+      expect(result.stderr).toBe('');
+      expect(normalizeOutput(result.stdout, project.baseDir))
+        .toMatchInlineSnapshot(`
+        "Checking markdown files...
+        <TMP_DIR>/README.md
+          1:1    empty-range  snippet=test.js#L5-L6 selects no lines (snippet has 1 line)  empty-line-range
+
+        ✖ 1 problem (1 empty-range)"
+      `);
+    });
+
     it('passes when files are in sync', async () => {
       const sourceContent = 'const value = "same";';
 
@@ -781,8 +801,9 @@ old content
         .toMatchInlineSnapshot(`
         "<TMP_DIR>/README.md
           61:1   file-missing Snippet file not found: nonexistent.js  snippet-not-found
+          67:1   empty-range  snippet=utils.js#L999-L1000 selects no lines (snippet has 19 lines)  empty-line-range
 
-        ✖ 1 problem (1 file-missing)"
+        ✖ 2 problems (1 file-missing, 1 empty-range)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
         "Syncing markdown files..."
