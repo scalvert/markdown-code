@@ -5,6 +5,10 @@ export interface SnippetDirective {
   isRemote?: boolean;
 }
 
+/**
+ * @deprecated Use `DocumentCodeBlock` from `MarkdownDocument`. Will be
+ * removed in 2.0.
+ */
 export interface CodeBlock {
   language: string;
   content: string;
@@ -17,6 +21,9 @@ export interface CodeBlock {
   columnNumber?: number;
 }
 
+/**
+ * @deprecated Use `MarkdownDocument`. Will be removed in 2.0.
+ */
 export interface MarkdownFile {
   filePath: string;
   content: string;

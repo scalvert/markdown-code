@@ -4,8 +4,8 @@ import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
 import fg from 'fast-glob';
 import { configExists } from '../config.js';
-import { parseMarkdownFile } from '../parser.js';
-import type { CodeBlock, RuntimeConfig } from '../types.js';
+import { readMarkdownDocument } from '../sync.js';
+import type { RuntimeConfig } from '../types.js';
 import { fileExists, isInWorkingDir } from '../utils.js';
 import {
   getValidatedConfig,
@@ -50,42 +50,6 @@ async function confirmEjection(): Promise<boolean> {
   }
 }
 
-function removeSnippetDirectiveFromFence(
-  content: string,
-  codeBlock: CodeBlock,
-): string {
-  const fenceStart = codeBlock.position.start;
-  const fenceLineEnd = content.indexOf('\n', fenceStart);
-
-  if (fenceLineEnd === -1) {
-    throw new Error('Could not find the end of the snippet fence opening line');
-  }
-
-  const openingFence = content.slice(fenceStart, fenceLineEnd);
-  const directiveMatch = openingFence.match(/snippet=[^\s]+/);
-
-  if (directiveMatch?.index === undefined) {
-    throw new Error(
-      'Could not find the snippet directive in the fence opening line',
-    );
-  }
-
-  const directiveStart = directiveMatch.index;
-  const separatorStart =
-    directiveStart > 0 && /[ \t]/.test(openingFence[directiveStart - 1]!)
-      ? directiveStart - 1
-      : directiveStart;
-  const updatedOpeningFence =
-    openingFence.slice(0, separatorStart) +
-    openingFence.slice(directiveStart + directiveMatch[0].length);
-
-  return (
-    content.slice(0, fenceStart) +
-    updatedOpeningFence +
-    content.slice(fenceLineEnd)
-  );
-}
-
 export async function removeSnippetDirectives(config: RuntimeConfig) {
   const result = {
     processed: [] as string[],
@@ -102,31 +66,21 @@ export async function removeSnippetDirectives(config: RuntimeConfig) {
 
     for (const filePath of markdownFiles) {
       try {
-        const markdownFile = await parseMarkdownFile(filePath);
-        const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
-          (cb) => cb.snippet,
+        const { document } = await readMarkdownDocument(filePath);
+        const codeBlocksWithSnippets = document.codeBlocks.filter(
+          (cb) => cb.directive,
         );
 
         if (codeBlocksWithSnippets.length === 0) {
           continue;
         }
 
-        let updatedContent = markdownFile.content;
-        let hasChanges = false;
-
-        // Process in reverse order so earlier position offsets remain valid.
-        for (const codeBlock of [...codeBlocksWithSnippets].reverse()) {
-          updatedContent = removeSnippetDirectiveFromFence(
-            updatedContent,
-            codeBlock,
-          );
-          hasChanges = true;
+        for (const codeBlock of codeBlocksWithSnippets) {
+          document.setDirective(codeBlock, undefined);
         }
 
-        if (hasChanges) {
-          await writeFile(filePath, updatedContent, 'utf-8');
-          result.processed.push(filePath);
-        }
+        await writeFile(filePath, document.toString(), 'utf-8');
+        result.processed.push(filePath);
       } catch (error) {
         result.errors.push(`Error processing ${filePath}: ${error}`);
       }

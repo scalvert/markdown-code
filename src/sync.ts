@@ -1,10 +1,9 @@
-import { writeFile, mkdir, realpath } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, realpath } from 'node:fs/promises';
 import { join, resolve, basename, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import fg from 'fast-glob';
 import { fileExists, isInWorkingDir } from './utils.js';
 import type {
-  CodeBlock,
   RuntimeConfig,
   SyncResult,
   CheckResult,
@@ -13,32 +12,41 @@ import type {
   DiscoveryResult,
 } from './types.js';
 import {
-  parseMarkdownFile,
-  parseMarkdownForExtraction,
   loadSnippetContent,
   resolveSnippetPath,
   extractLines,
-  replaceCodeBlock,
-  getLineEnding,
-  normalizeLineEndings,
 } from './parser.js';
+import { normalizeLineEndings } from './line-endings.js';
+import {
+  MarkdownDocument,
+  isMdxPath,
+  type DocumentCodeBlock,
+} from './markdown-document.js';
+import { formatSnippetDirective } from './snippet-directive.js';
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
 
+export async function readMarkdownDocument(
+  filePath: string,
+): Promise<{ content: string; document: MarkdownDocument }> {
+  const content = await readFile(filePath, 'utf-8');
+  const document = MarkdownDocument.parse(content, {
+    mdx: isMdxPath(filePath),
+  });
+  return { content, document };
+}
+
 // Resolves a single code block's snippet content, pushing any issue into fileIssues.
 // Returns the extracted content string, or null if the block should be skipped.
 async function resolveCodeBlockContent(
-  codeBlock: CodeBlock,
+  codeBlock: DocumentCodeBlock,
   config: RuntimeConfig,
   markdownFilePath: string,
-  markdownContent: string,
   fileIssues: Array<Issue>,
 ): Promise<string | null> {
-  const snippet = codeBlock.snippet!;
-  const lineEnding = getLineEnding(
-    markdownContent.slice(codeBlock.position.start, codeBlock.position.end),
-  );
+  const snippet = codeBlock.directive!;
+  const { lineEnding } = codeBlock;
 
   if (snippet.isRemote) {
     try {
@@ -61,8 +69,8 @@ async function resolveCodeBlockContent(
       fileIssues.push({
         type: 'remote-error',
         message: `Error fetching remote snippet: ${errMsg}`,
-        line: codeBlock.lineNumber ?? 1,
-        column: codeBlock.columnNumber ?? 1,
+        line: codeBlock.line,
+        column: codeBlock.column,
         ruleId: 'remote-fetch-error',
       });
       return null;
@@ -80,8 +88,8 @@ async function resolveCodeBlockContent(
     fileIssues.push({
       type: 'load-failed',
       message: `Error resolving path ${snippet.filePath}: ${error}`,
-      line: codeBlock.lineNumber ?? 1,
-      column: codeBlock.columnNumber ?? 1,
+      line: codeBlock.line,
+      column: codeBlock.column,
       ruleId: 'path-validation',
     });
     return null;
@@ -98,16 +106,16 @@ async function resolveCodeBlockContent(
         type: 'file-missing',
         severity: config.missingSnippetSeverity ?? 'error',
         message: `Snippet file not found: ${snippet.filePath}`,
-        line: codeBlock.lineNumber ?? 1,
-        column: codeBlock.columnNumber ?? 1,
+        line: codeBlock.line,
+        column: codeBlock.column,
         ruleId: 'snippet-not-found',
       });
     } else {
       fileIssues.push({
         type: 'load-failed',
         message: `Error accessing snippet ${snippet.filePath}: ${err.message}`,
-        line: codeBlock.lineNumber ?? 1,
-        column: codeBlock.columnNumber ?? 1,
+        line: codeBlock.line,
+        column: codeBlock.column,
         ruleId: 'snippet-load-error',
       });
     }
@@ -123,8 +131,8 @@ async function resolveCodeBlockContent(
     fileIssues.push({
       type: 'invalid-path',
       message: `Path traversal attempt detected: ${snippet.filePath}`,
-      line: codeBlock.lineNumber ?? 1,
-      column: codeBlock.columnNumber ?? 1,
+      line: codeBlock.line,
+      column: codeBlock.column,
       ruleId: 'path-traversal',
     });
     return null;
@@ -149,8 +157,8 @@ async function resolveCodeBlockContent(
     fileIssues.push({
       type: 'load-failed',
       message: `Error loading snippet ${snippetPath}: ${error}`,
-      line: codeBlock.lineNumber ?? 1,
-      column: codeBlock.columnNumber ?? 1,
+      line: codeBlock.line,
+      column: codeBlock.column,
       ruleId: 'snippet-load-error',
     });
     return null;
@@ -178,12 +186,10 @@ export async function syncMarkdownFiles(
       const fileIssues: Array<Issue> = [];
 
       try {
-        const markdownFile = await parseMarkdownFile(filePath);
-        let hasChanges = false;
-        let updatedContent = markdownFile.content;
+        const { content, document } = await readMarkdownDocument(filePath);
 
-        for (const codeBlock of [...markdownFile.codeBlocks].reverse()) {
-          if (!codeBlock.snippet) {
+        for (const codeBlock of document.codeBlocks) {
+          if (!codeBlock.directive) {
             continue;
           }
 
@@ -191,7 +197,6 @@ export async function syncMarkdownFiles(
             codeBlock,
             config,
             filePath,
-            markdownFile.content,
             fileIssues,
           );
 
@@ -199,12 +204,7 @@ export async function syncMarkdownFiles(
             extractedContent !== null &&
             extractedContent !== codeBlock.content
           ) {
-            updatedContent = replaceCodeBlock(
-              updatedContent,
-              codeBlock,
-              extractedContent,
-            );
-            hasChanges = true;
+            document.setBody(codeBlock, extractedContent);
           }
         }
 
@@ -212,7 +212,8 @@ export async function syncMarkdownFiles(
           result.fileIssues.push({ filePath, issues: fileIssues });
         }
 
-        if (hasChanges) {
+        const updatedContent = document.toString();
+        if (updatedContent !== content) {
           await writeFile(filePath, updatedContent, 'utf-8');
           result.updated.push(filePath);
         }
@@ -249,11 +250,11 @@ export async function checkMarkdownFiles(
       const fileIssues: Array<Issue> = [];
 
       try {
-        const markdownFile = await parseMarkdownFile(filePath);
+        const { document } = await readMarkdownDocument(filePath);
         let isFileInSync = true;
 
-        for (const codeBlock of markdownFile.codeBlocks) {
-          if (!codeBlock.snippet) {
+        for (const codeBlock of document.codeBlocks) {
+          if (!codeBlock.directive) {
             continue;
           }
 
@@ -261,7 +262,6 @@ export async function checkMarkdownFiles(
             codeBlock,
             config,
             filePath,
-            markdownFile.content,
             fileIssues,
           );
 
@@ -269,19 +269,11 @@ export async function checkMarkdownFiles(
             extractedContent !== null &&
             extractedContent !== codeBlock.content
           ) {
-            const endLineText = codeBlock.snippet.endLine
-              ? `-L${codeBlock.snippet.endLine}`
-              : '';
-            const rangeText = codeBlock.snippet.startLine
-              ? `#L${codeBlock.snippet.startLine}${endLineText}`
-              : '';
-            const snippetRef = `snippet://${codeBlock.snippet.filePath}${rangeText}`;
-
             fileIssues.push({
               type: 'sync-needed',
-              message: `Code block out of sync with ${snippetRef}`,
-              line: codeBlock.lineNumber ?? 1,
-              column: codeBlock.columnNumber ?? 1,
+              message: `Code block out of sync with ${formatSnippetDirective(codeBlock.directive)}`,
+              line: codeBlock.line,
+              column: codeBlock.column,
               ruleId: 'content-mismatch',
             });
             isFileInSync = false;
@@ -374,7 +366,7 @@ export async function extractSnippets(
   const workingDir = config.workingDir ? resolve(config.workingDir) : undefined;
   const snippetRoot = resolve(
     workingDir ?? process.cwd(),
-    config.snippetRoot || ".",
+    config.snippetRoot || '.',
   );
 
   if (workingDir && !isInWorkingDir(snippetRoot, workingDir)) {
@@ -393,9 +385,12 @@ export async function extractSnippets(
 
     for (const filePath of markdownFiles) {
       try {
-        const markdownFile = await parseMarkdownForExtraction(filePath);
+        const { document } = await readMarkdownDocument(filePath);
+        const plainBlocks = document.codeBlocks.filter(
+          (codeBlock) => !codeBlock.directive,
+        );
 
-        if (markdownFile.codeBlocks.length === 0) {
+        if (plainBlocks.length === 0) {
           continue;
         }
 
@@ -406,9 +401,8 @@ export async function extractSnippets(
         await mkdir(outputDir, { recursive: true });
 
         let hasChanges = false;
-        let updatedContent = markdownFile.content;
         let snippetIndex = 1;
-        const eligibleBlocks = markdownFile.codeBlocks.filter((cb) => {
+        const eligibleBlocks = plainBlocks.filter((cb) => {
           const ext = getExtensionForLanguage(
             cb.language,
             config.includeExtensions,
@@ -416,13 +410,6 @@ export async function extractSnippets(
           return ext && config.includeExtensions.includes(ext);
         });
         const digits = Math.max(2, String(eligibleBlocks.length).length);
-
-        // Pass 1 (document order): write snippet files and record which
-        // annotation belongs to which block.
-        const annotations: Array<{
-          codeBlock: (typeof eligibleBlocks)[number];
-          snippetReference: string;
-        }> = [];
 
         for (const codeBlock of eligibleBlocks) {
           const lang = codeBlock.language;
@@ -448,56 +435,23 @@ export async function extractSnippets(
             snippetFilePath = join(outputDir, snippetFileName);
           }
 
-          const blockText = markdownFile.content.slice(
-            codeBlock.position.start,
-            codeBlock.position.end,
-          );
-          const lineEnding = getLineEnding(blockText);
           const contentWithNewline = ensureTrailingNewline(
-            normalizeLineEndings(codeBlock.content, lineEnding),
-            lineEnding,
+            normalizeLineEndings(codeBlock.content, codeBlock.lineEnding),
+            codeBlock.lineEnding,
           );
           await writeFile(snippetFilePath, contentWithNewline, 'utf-8');
           result.snippetsCreated++;
 
-          annotations.push({
-            codeBlock,
-            snippetReference: `${dirName}/${snippetFileName}`,
+          document.setDirective(codeBlock, {
+            filePath: `${dirName}/${snippetFileName}`,
           });
 
           hasChanges = true;
           snippetIndex++;
         }
 
-        // Pass 2 (descending offset order): splice ` snippet=<ref>` into each
-        // block's opening fence line. Pure insertion at a position derived
-        // from the parser's own offsets — the only bytes that change in the
-        // markdown are the annotations themselves, and processing bottom-up
-        // keeps every remaining offset valid. This replaces the previous
-        // first-match regex, which could annotate the wrong same-language
-        // fence and missed fences with meta or indentation.
-        annotations.sort(
-          (a, b) => b.codeBlock.position.start - a.codeBlock.position.start,
-        );
-
-        for (const { codeBlock, snippetReference } of annotations) {
-          const { start, end } = codeBlock.position;
-          const blockText = markdownFile.content.slice(start, end);
-          const lineEnding = getLineEnding(blockText);
-          const firstNewlineIndex = blockText.indexOf('\n');
-          if (firstNewlineIndex === -1) {
-            continue;
-          }
-          const insertPos = start + firstNewlineIndex - (lineEnding.length - 1);
-          updatedContent =
-            updatedContent.slice(0, insertPos) +
-            ' snippet=' +
-            snippetReference +
-            updatedContent.slice(insertPos);
-        }
-
         if (hasChanges) {
-          await writeFile(filePath, updatedContent, 'utf-8');
+          await writeFile(filePath, document.toString(), 'utf-8');
           result.extracted.push(filePath);
         }
       } catch (error) {
@@ -531,18 +485,19 @@ export async function discoverCodeBlocks(
 
     for (const filePath of markdownFiles) {
       try {
-        const markdownFile = await parseMarkdownForExtraction(filePath);
+        const { document } = await readMarkdownDocument(filePath);
+        const plainBlocks = document.codeBlocks.filter(
+          (codeBlock) => !codeBlock.directive,
+        );
 
-        if (markdownFile.codeBlocks.length > 0) {
-          const languages = [
-            ...new Set(markdownFile.codeBlocks.map((cb) => cb.language)),
-          ];
+        if (plainBlocks.length > 0) {
+          const languages = [...new Set(plainBlocks.map((cb) => cb.language))];
 
           result.markdownFiles.push(filePath);
-          result.totalCodeBlocks += markdownFile.codeBlocks.length;
+          result.totalCodeBlocks += plainBlocks.length;
           result.fileDetails.push({
             filePath,
-            codeBlocks: markdownFile.codeBlocks.length,
+            codeBlocks: plainBlocks.length,
             languages,
           });
         }

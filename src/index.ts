@@ -6,15 +6,24 @@ export {
 } from './config.js';
 export { format, hasErrors, hasIssues } from './formatter.js';
 export {
+  MarkdownDocument,
+  isMdxPath,
+  type DocumentCodeBlock,
+  type ParseOptions,
+} from './markdown-document.js';
+export {
   extractLines,
   loadSnippetContent,
   parseMarkdownFile,
   parseMarkdownForExtraction,
-  parseSnippetDirective,
   replaceCodeBlock,
   resolveSnippetPath,
   trimBlankLines,
 } from './parser.js';
+export {
+  formatSnippetDirective,
+  parseSnippetDirective,
+} from './snippet-directive.js';
 export {
   fetchRemoteContent,
   isRemoteUrl,

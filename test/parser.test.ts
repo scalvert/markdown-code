@@ -5,6 +5,7 @@ import { Project } from 'fixturify-project';
 import {
   extractLines,
   parseMarkdownFile,
+  parseMarkdownForExtraction,
   loadSnippetContent,
   replaceCodeBlock,
   trimBlankLines,
@@ -78,174 +79,83 @@ line 5`;
     });
   });
 
-  describe('parseMarkdownFile', () => {
-    it('should parse markdown file with snippet directive', async () => {
-      const markdownContent = `# Test
-
-Here's some code:
+  describe('deprecated wrappers', () => {
+    const markdownContent = `# Test
 
 \`\`\`ts snippet=test.ts
 old content
 \`\`\`
 
-More text here.`;
+\`\`\`js
+plain
+\`\`\`
+`;
 
+    it('parseMarkdownFile returns directive blocks with offsets', async () => {
       const filePath = join(testDir, 'test.md');
       await project.write({ 'test.md': markdownContent });
 
       const result = await parseMarkdownFile(filePath);
 
-      expect(result.filePath).toBe(filePath);
-      expect(result.content).toBe(markdownContent);
-      expect(result.codeBlocks).toHaveLength(1);
-      expect(result.codeBlocks[0]).toMatchInlineSnapshot(`
-        {
-          "columnNumber": 1,
-          "content": "old content",
-          "language": "ts",
-          "lineNumber": 5,
-          "position": {
-            "end": 64,
-            "start": 27,
+      expect(result.codeBlocks).toMatchInlineSnapshot(`
+        [
+          {
+            "columnNumber": 1,
+            "content": "old content",
+            "language": "ts",
+            "lineNumber": 3,
+            "position": {
+              "end": 45,
+              "start": 8,
+            },
+            "snippet": {
+              "filePath": "test.ts",
+              "isRemote": false,
+            },
           },
-          "snippet": {
-            "filePath": "test.ts",
-            "isRemote": false,
+        ]
+      `);
+    });
+
+    it('parseMarkdownForExtraction returns plain blocks', async () => {
+      const filePath = join(testDir, 'test.md');
+      await project.write({ 'test.md': markdownContent });
+
+      const result = await parseMarkdownForExtraction(filePath);
+
+      expect(result.codeBlocks).toMatchInlineSnapshot(`
+        [
+          {
+            "content": "plain",
+            "language": "js",
+            "position": {
+              "end": 62,
+              "start": 47,
+            },
           },
-        }
+        ]
       `);
     });
 
-    it('should parse snippet directive with line range', async () => {
-      const markdownContent = `\`\`\`js snippet=utils.js#L5-L10
-old content
-\`\`\``;
-
+    it('replaceCodeBlock splices new content using the block offsets', async () => {
       const filePath = join(testDir, 'test.md');
       await project.write({ 'test.md': markdownContent });
+      const { codeBlocks } = await parseMarkdownFile(filePath);
 
-      const result = await parseMarkdownFile(filePath);
+      const result = replaceCodeBlock(markdownContent, codeBlocks[0]!, 'new');
 
-      expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
-        {
-          "endLine": 10,
-          "filePath": "utils.js",
-          "isRemote": false,
-          "startLine": 5,
-        }
+      expect(result).toMatchInlineSnapshot(`
+        "# Test
+
+        \`\`\`ts snippet=test.ts
+        new
+        \`\`\`
+
+        \`\`\`js
+        plain
+        \`\`\`
+        "
       `);
-    });
-
-    it('should parse snippet directive with single line', async () => {
-      const markdownContent = `\`\`\`py snippet=main.py#L15
-old content
-\`\`\``;
-
-      const filePath = join(testDir, 'test.md');
-      await project.write({ 'test.md': markdownContent });
-
-      const result = await parseMarkdownFile(filePath);
-
-      expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
-        {
-          "endLine": 15,
-          "filePath": "main.py",
-          "isRemote": false,
-          "startLine": 15,
-        }
-      `);
-    });
-
-    it('should parse snippet directive with start line only', async () => {
-      const markdownContent = `\`\`\`cpp snippet=main.cpp#L20-
-old content
-\`\`\``;
-
-      const filePath = join(testDir, 'test.md');
-      await project.write({ 'test.md': markdownContent });
-
-      const result = await parseMarkdownFile(filePath);
-
-      expect(result.codeBlocks[0].snippet).toMatchInlineSnapshot(`
-        {
-          "filePath": "main.cpp",
-          "isRemote": false,
-          "startLine": 20,
-        }
-      `);
-    });
-
-    it('should ignore code blocks without snippet directive', async () => {
-      const markdownContent = `\`\`\`ts
-regular code block
-\`\`\`
-
-\`\`\`js snippet=test.js
-snippet block
-\`\`\``;
-
-      const filePath = join(testDir, 'test.md');
-      await project.write({ 'test.md': markdownContent });
-
-      const result = await parseMarkdownFile(filePath);
-
-      expect(result.codeBlocks).toHaveLength(1);
-      expect(result.codeBlocks[0].snippet?.filePath).toBe('test.js');
-    });
-
-    it('should ignore code blocks without language', async () => {
-      const markdownContent = `\`\`\` snippet=test.js
-no language
-\`\`\``;
-
-      const filePath = join(testDir, 'test.md');
-      await project.write({ 'test.md': markdownContent });
-
-      const result = await parseMarkdownFile(filePath);
-
-      expect(result.codeBlocks).toHaveLength(0);
-    });
-
-    it('should handle multiple snippet blocks', async () => {
-      const markdownContent = `\`\`\`ts snippet=file1.ts
-content 1
-\`\`\`
-
-\`\`\`js snippet=file2.js#L1-L5
-content 2
-\`\`\`
-
-\`\`\`py snippet=file3.py#L10
-content 3
-\`\`\``;
-
-      const filePath = join(testDir, 'test.md');
-      await project.write({ 'test.md': markdownContent });
-
-      const result = await parseMarkdownFile(filePath);
-
-      expect(result.codeBlocks).toHaveLength(3);
-      expect(result.codeBlocks[0].snippet?.filePath).toBe('file1.ts');
-      expect(result.codeBlocks[1].snippet?.filePath).toBe('file2.js');
-      expect(result.codeBlocks[2].snippet?.filePath).toBe('file3.py');
-    });
-
-    it('should handle complex file paths', async () => {
-      const markdownContent = `\`\`\`ts snippet=src/components/Button.tsx#L15-L25
-button content
-\`\`\``;
-
-      const filePath = join(testDir, 'test.md');
-      await project.write({ 'test.md': markdownContent });
-
-      const result = await parseMarkdownFile(filePath);
-
-      expect(result.codeBlocks[0].snippet).toEqual({
-        filePath: 'src/components/Button.tsx',
-        startLine: 15,
-        endLine: 25,
-        isRemote: false,
-      });
     });
   });
 
@@ -405,136 +315,6 @@ button content
         await unlink(join(siblingSnippets, 'only-outside.js')).catch(() => {});
         await rmdir(siblingSnippets).catch(() => {});
       }
-    });
-  });
-
-  describe('replaceCodeBlock', () => {
-    it('should replace code block content', () => {
-      const markdownContent = `# Title
-
-\`\`\`ts snippet=test.ts
-old content
-\`\`\`
-
-End text.`;
-
-      // start: index of first backtick of opening fence (after "# Title\n\n")
-      // end: index after last backtick of closing fence
-      const start = markdownContent.indexOf('```ts snippet=test.ts');
-      const end = markdownContent.indexOf('\n\nEnd text.');
-      const codeBlock = {
-        language: 'ts',
-        content: 'old content',
-        snippet: { filePath: 'test.ts' },
-        position: { start, end },
-      };
-
-      const newContent = 'new content line 1\nnew content line 2';
-
-      const result = replaceCodeBlock(markdownContent, codeBlock, newContent);
-
-      expect(result).toContain('```ts snippet=test.ts');
-      expect(result).toContain('new content line 1');
-      expect(result).toContain('new content line 2');
-      expect(result).not.toContain('old content');
-    });
-
-    it('should handle multiline replacements', () => {
-      const markdownContent = `\`\`\`js snippet=utils.js
-function old() {
-  return "old";
-}
-\`\`\``;
-
-      // Block starts at 0, ends after the closing ```
-      const start = 0;
-      const end = markdownContent.length;
-      const codeBlock = {
-        language: 'js',
-        content: 'function old() {\n  return "old";\n}',
-        snippet: { filePath: 'utils.js' },
-        position: { start, end },
-      };
-
-      const newContent = `function updated() {
-  const value = "new";
-  return value;
-}`;
-
-      const result = replaceCodeBlock(markdownContent, codeBlock, newContent);
-
-      expect(result).toContain('function updated()');
-      expect(result).toContain('const value = "new"');
-      expect(result).not.toContain('function old()');
-    });
-
-    it.each([
-      { name: 'LF', lineEnding: '\n' },
-      { name: 'CRLF', lineEnding: '\r\n' },
-    ])('should preserve $name line endings', ({ lineEnding }) => {
-      const markdownContent = [
-        '```ts snippet=test.ts',
-        'old content',
-        '```',
-        'After',
-      ].join(lineEnding);
-      const codeBlock = {
-        language: 'ts',
-        content: 'old content',
-        snippet: { filePath: 'test.ts' },
-        position: {
-          start: 0,
-          end: markdownContent.indexOf(`${lineEnding}After`),
-        },
-      };
-
-      const result = replaceCodeBlock(
-        markdownContent,
-        codeBlock,
-        'new line 1\r\nnew line 2',
-      );
-
-      expect(result).toBe(
-        [
-          '```ts snippet=test.ts',
-          'new line 1',
-          'new line 2',
-          '```',
-          'After',
-        ].join(lineEnding),
-      );
-    });
-
-    it('should preserve surrounding content', () => {
-      const markdownContent = `# Before
-
-Some text before.
-
-\`\`\`ts snippet=test.ts
-old
-\`\`\`
-
-Some text after.
-
-## After`;
-
-      const start = markdownContent.indexOf('```ts snippet=test.ts');
-      const end = markdownContent.indexOf('\n\nSome text after.');
-      const codeBlock = {
-        language: 'ts',
-        content: 'old',
-        snippet: { filePath: 'test.ts' },
-        position: { start, end },
-      };
-
-      const result = replaceCodeBlock(markdownContent, codeBlock, 'new');
-
-      expect(result).toContain('# Before');
-      expect(result).toContain('Some text before.');
-      expect(result).toContain('Some text after.');
-      expect(result).toContain('## After');
-      expect(result).toContain('new');
-      expect(result).not.toContain('old');
     });
   });
 
