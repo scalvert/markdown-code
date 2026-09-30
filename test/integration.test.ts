@@ -333,6 +333,29 @@ const old = true;
       expect(result.errors).toHaveLength(0);
     });
 
+    it('names the snippet directive in the out-of-sync message', async () => {
+      await project.write({
+        'test.js': 'line 1\nline 2\nline 3\n',
+        'README.md': `\`\`\`js snippet=test.js#L2-L3
+stale
+\`\`\`
+
+\`\`\`js snippet=test.js#L2-
+stale
+\`\`\``,
+      });
+
+      const result = await checkMarkdownFiles(config);
+
+      expect(result.fileIssues[0]?.issues.map((issue) => issue.message))
+        .toMatchInlineSnapshot(`
+        [
+          "Code block out of sync with snippet=test.js#L2-L3",
+          "Code block out of sync with snippet=test.js#L2-",
+        ]
+      `);
+    });
+
     it('should pass for in-sync content', async () => {
       const sourceContent = 'const synced = true;';
       const markdownContent = `# Test

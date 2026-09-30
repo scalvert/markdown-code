@@ -2,8 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Project } from 'fixturify-project';
-import { extractSnippets, syncMarkdownFiles, checkMarkdownFiles } from '../src/sync.js';
-import { parseMarkdownFile, parseMarkdownForExtraction } from '../src/parser.js';
+import {
+  extractSnippets,
+  syncMarkdownFiles,
+  checkMarkdownFiles,
+} from '../src/sync.js';
+import { MarkdownDocument } from '../src/markdown-document.js';
 import type { Config } from '../src/types.js';
 
 /**
@@ -80,29 +84,26 @@ describe('MDX support', () => {
   });
 
   describe('parsing', () => {
-    it('finds fences nested inside JSX and ignores JSX-indented prose', async () => {
-      await project.write({ 'doc.mdx': MDX_DOC });
-      const parsed = await parseMarkdownForExtraction(join(testDir, 'doc.mdx'));
+    it('finds fences nested inside JSX and ignores JSX-indented prose', () => {
+      const document = MarkdownDocument.parse(MDX_DOC, { mdx: true });
 
-      expect(parsed.codeBlocks).toHaveLength(2);
-      expect(parsed.codeBlocks[0]!.content).toBe('const topLevel = 1;');
-      expect(parsed.codeBlocks[1]!.content).toBe('const nested = 2;');
+      expect(document.codeBlocks.map((block) => block.content)).toEqual([
+        'const topLevel = 1;',
+        'const nested = 2;',
+      ]);
     });
 
-    it('parses frontmatter containing braces without an acorn error', async () => {
-      await project.write({ 'doc.mdx': MDX_DOC });
-      await expect(
-        parseMarkdownForExtraction(join(testDir, 'doc.mdx')),
-      ).resolves.toBeDefined();
+    it('parses frontmatter containing braces without an acorn error', () => {
+      expect(() =>
+        MarkdownDocument.parse(MDX_DOC, { mdx: true }),
+      ).not.toThrow();
     });
 
-    it('keeps .md parsing on the historical plain-remark path', async () => {
-      const md = '# Title\n\n    indented code block\n';
-      await project.write({ 'doc.md': md });
-      const parsed = await parseMarkdownForExtraction(join(testDir, 'doc.md'));
-      // Plain remark still treats 4-space indentation as (lang-less) indented
-      // code, which the lang filter drops — historical behavior preserved.
-      expect(parsed.codeBlocks).toHaveLength(0);
+    it('keeps .md parsing on the historical plain-remark path', () => {
+      const document = MarkdownDocument.parse(
+        '# Title\n\n    indented code block\n',
+      );
+      expect(document.codeBlocks).toHaveLength(0);
     });
   });
 
@@ -178,10 +179,12 @@ describe('MDX support', () => {
       expect(syncResult.updated).toHaveLength(1);
 
       const synced = readFileSync(filePath, 'utf-8');
-      expect(synced).toContain("    const nested = 2;\n    const added = 'line';");
+      expect(synced).toContain(
+        "    const nested = 2;\n    const added = 'line';",
+      );
 
       // And the file must re-parse with the fence still intact.
-      const reparsed = await parseMarkdownFile(filePath);
+      const reparsed = MarkdownDocument.parse(synced, { mdx: true });
       const nested = reparsed.codeBlocks.find((cb) =>
         cb.content.includes('added'),
       );

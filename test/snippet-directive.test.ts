@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseSnippetDirective } from '../src/parser.js';
+import {
+  formatSnippetDirective,
+  parseSnippetDirective,
+} from '../src/snippet-directive.js';
 
 describe('snippet directive parsing', () => {
   it('should parse basic snippet path', () => {
@@ -298,5 +301,50 @@ describe('snippet directive parsing', () => {
         isRemote: true,
       });
     });
+  });
+});
+
+describe('snippet directive formatting', () => {
+  it.each([
+    ['snippet=src/a.ts', { filePath: 'src/a.ts' }],
+    ['snippet=a.ts#L10', { filePath: 'a.ts', startLine: 10, endLine: 10 }],
+    ['snippet=a.ts#L10-', { filePath: 'a.ts', startLine: 10 }],
+    ['snippet=a.ts#L10-L20', { filePath: 'a.ts', startLine: 10, endLine: 20 }],
+    [
+      'snippet=https://example.com/f.ts#L1-L2',
+      { filePath: 'https://example.com/f.ts', startLine: 1, endLine: 2 },
+    ],
+  ])('formats %s', (expected, directive) => {
+    expect(formatSnippetDirective(directive)).toBe(expected);
+  });
+
+  it.each([
+    'a.ts',
+    'a.ts#L3',
+    'a.ts#L3-',
+    'a.ts#L3-L9',
+    'https://x.dev/a.ts#L1',
+  ])('round-trips snippet=%s through parse', (reference) => {
+    const directive = parseSnippetDirective(`snippet=${reference}`)!;
+    expect(formatSnippetDirective(directive)).toBe(`snippet=${reference}`);
+  });
+
+  it.each(['my docs/a.ts', "it's here.ts", 'say "hi".ts'])(
+    'quotes %s so it parses back',
+    (filePath) => {
+      const formatted = formatSnippetDirective({ filePath });
+      expect(parseSnippetDirective(formatted)?.filePath).toBe(filePath);
+    },
+  );
+
+  it('rejects references containing both quote characters', () => {
+    expect(() => formatSnippetDirective({ filePath: `a"b'c.ts` })).toThrow(
+      'both quote characters',
+    );
+  });
+
+  it('normalizes non-canonical ranges', () => {
+    const directive = parseSnippetDirective('snippet=a.ts#10')!;
+    expect(formatSnippetDirective(directive)).toBe('snippet=a.ts#L10');
   });
 });

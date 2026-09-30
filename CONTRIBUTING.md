@@ -32,7 +32,10 @@ src/
 │   ├── init.ts        # Initialize project
 │   └── extract.ts     # Extract code blocks to files
 ├── config.ts          # Configuration handling
-├── parser.ts          # Markdown parsing logic
+├── line-endings.ts    # LF/CRLF detection and normalization
+├── markdown-document.ts # Parsed Markdown document: code blocks and edits
+├── parser.ts          # Snippet loading and line extraction
+├── snippet-directive.ts # Snippet directive grammar (parse and format)
 ├── sync.ts            # Core sync functionality
 └── types.ts           # TypeScript type definitions
 

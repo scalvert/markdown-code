@@ -324,9 +324,9 @@ const updated = "old";
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
-        `""`,
-      );
+      expect(
+        normalizeOutput(result.stderr, project.baseDir),
+      ).toMatchInlineSnapshot(`""`);
     });
 
     it('uses check command', async () => {
@@ -370,9 +370,9 @@ const test = true;
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
-        `""`,
-      );
+      expect(
+        normalizeOutput(result.stderr, project.baseDir),
+      ).toMatchInlineSnapshot(`""`);
     });
 
     it('fails on missing files in check mode by default', async () => {
@@ -389,9 +389,9 @@ old content
       const result = await runBin('check');
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizeOutput(result.stderr, project.baseDir)).toMatchInlineSnapshot(
-        `""`,
-      );
+      expect(
+        normalizeOutput(result.stderr, project.baseDir),
+      ).toMatchInlineSnapshot(`""`);
       expect(normalizeOutput(result.stdout, project.baseDir))
         .toMatchInlineSnapshot(`
         "Checking markdown files...
@@ -1117,6 +1117,97 @@ old content
       expect(result.stdout).toMatchInlineSnapshot(`
         "No configuration file found. Nothing to eject."
       `);
+    });
+
+    it('removes directives, snippets, and config after confirmation', async () => {
+      await project.write({
+        '.markdown-coderc.json': JSON.stringify({
+          snippetRoot: './snippets',
+          markdownGlob: '**/*.md',
+          excludeGlob: ['node_modules/**'],
+          includeExtensions: ['.ts', '.js'],
+        }),
+        snippets: { 'a.ts': 'const a = 1;\n', 'b.js': 'const b = 2;\n' },
+        'README.md': `# Test
+
+~~~ts snippet=a.ts title="a.ts"
+const a = 1;
+~~~
+
+\`\`\`js title="b" snippet=b.js#L1-L1
+const b = 2;
+\`\`\`
+
+- item
+
+  \`\`\`ts snippet=a.ts
+  const a = 1;
+  \`\`\`
+
+\`\`\`ts
+const untouched = true;
+\`\`\`
+`,
+      });
+
+      const result = await runBin('eject', { input: 'y\n' });
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8'))
+        .toBe(`# Test
+
+~~~ts title="a.ts"
+const a = 1;
+~~~
+
+\`\`\`js title="b"
+const b = 2;
+\`\`\`
+
+- item
+
+  \`\`\`ts
+  const a = 1;
+  \`\`\`
+
+\`\`\`ts
+const untouched = true;
+\`\`\`
+`);
+      expect(existsSync(path.join(project.baseDir, 'snippets'))).toBe(false);
+      expect(
+        existsSync(path.join(project.baseDir, '.markdown-coderc.json')),
+      ).toBe(false);
+    });
+
+    it('reverses init --extract byte-for-byte', async () => {
+      const readme = `# Guide
+
+\`\`\`ts title="x"
+const x = 1;
+\`\`\`
+
+- step
+
+  \`\`\`js
+  const y = 2;
+  \`\`\`
+`;
+      await project.write({ 'README.md': readme });
+
+      const init = await runBin('init', '--extract');
+      expect(init.exitCode).toEqual(0);
+      expect(
+        readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8'),
+      ).not.toBe(readme);
+
+      const result = await runBin('eject', { input: 'y\n' });
+
+      expect(result.exitCode).toEqual(0);
+      expect(
+        readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8'),
+      ).toBe(readme);
     });
   });
 });

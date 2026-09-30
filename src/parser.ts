@@ -1,270 +1,94 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { resolve, dirname, isAbsolute } from 'node:path';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkFrontmatter from 'remark-frontmatter';
-import remarkMdx from 'remark-mdx';
-import { visit } from 'unist-util-visit';
-import type { Code } from 'mdast';
-import type {
-  MarkdownFile,
-  CodeBlock,
-  SnippetDirective,
-  RuntimeConfig,
-} from './types.js';
+import type { MarkdownFile, CodeBlock, RuntimeConfig } from './types.js';
 import { fileExists, isInWorkingDir } from './utils.js';
 import { isRemoteUrl, fetchRemoteContent } from './remote.js';
+import {
+  MarkdownDocument,
+  isMdxPath,
+  renderBlock,
+  toLegacyCodeBlocks,
+} from './markdown-document.js';
+import { getLineEnding } from './line-endings.js';
 
-function findSnippetValue(info: string): string | undefined {
-  let index = 0;
+export { parseSnippetDirective } from './snippet-directive.js';
+export {
+  getLineEnding,
+  normalizeLineEndings,
+  type LineEnding,
+} from './line-endings.js';
 
-  while (index < info.length) {
-    while (index < info.length && /\s/.test(info[index]!)) {
-      index++;
-    }
-
-    if (index >= info.length) {
-      return undefined;
-    }
-
-    if (info.startsWith('snippet=', index)) {
-      const valueStart = index + 'snippet='.length;
-      if (valueStart >= info.length || /\s/.test(info[valueStart]!)) {
-        return undefined;
-      }
-
-      const quote = info[valueStart];
-      if (quote === '"' || quote === "'") {
-        let valueEnd = valueStart + 1;
-        while (valueEnd < info.length) {
-          if (
-            info[valueEnd] === quote &&
-            info[valueEnd - 1] !== '\\'
-          ) {
-            break;
-          }
-          valueEnd++;
-        }
-
-        if (
-          valueEnd >= info.length ||
-          (valueEnd + 1 < info.length &&
-            !/\s/.test(info[valueEnd + 1]!))
-        ) {
-          return undefined;
-        }
-
-        return info.substring(valueStart + 1, valueEnd);
-      }
-
-      let valueEnd = valueStart;
-      while (valueEnd < info.length && !/\s/.test(info[valueEnd]!)) {
-        valueEnd++;
-      }
-      return info.substring(valueStart, valueEnd);
-    }
-
-    let quote: string | undefined;
-    while (index < info.length) {
-      const character = info[index]!;
-      if (quote) {
-        if (character === quote && info[index - 1] !== '\\') {
-          quote = undefined;
-        }
-      } else if (character === '"' || character === "'") {
-        quote = character;
-      } else if (/\s/.test(character)) {
-        break;
-      }
-      index++;
-    }
-  }
-
-  return undefined;
+export async function readMarkdownDocument(
+  filePath: string,
+): Promise<{ content: string; document: MarkdownDocument }> {
+  const content = await readFile(filePath, 'utf-8');
+  const document = MarkdownDocument.parse(content, {
+    mdx: isMdxPath(filePath),
+  });
+  return { content, document };
 }
 
-function parsePositiveLineNumber(value: string): number | undefined {
-  if (!/^\d+$/.test(value)) {
-    return undefined;
-  }
-
-  const line = Number(value);
-  if (!Number.isSafeInteger(line) || line < 1) {
-    return undefined;
-  }
-
-  return line;
+async function readLegacyCodeBlocks(
+  filePath: string,
+): Promise<{ content: string; codeBlocks: Array<CodeBlock> }> {
+  const { content, document } = await readMarkdownDocument(filePath);
+  return { content, codeBlocks: toLegacyCodeBlocks(document) };
 }
-
-export function parseSnippetDirective(
-  info: string,
-): SnippetDirective | undefined {
-  const snippetPath = findSnippetValue(info);
-
-  if (!snippetPath) {
-    return undefined;
-  }
-
-  const isRemote = isRemoteUrl(snippetPath);
-  const lastHashIndex = snippetPath.lastIndexOf('#');
-
-  if (lastHashIndex === -1) {
-    return { filePath: snippetPath, isRemote };
-  }
-
-  const filePath = snippetPath.substring(0, lastHashIndex);
-  const lineSpec = snippetPath.substring(lastHashIndex + 1);
-
-  if (lineSpec.startsWith('L')) {
-    const lineRange = lineSpec.substring(1);
-    const rangeParts = lineRange.split('-');
-
-    if (rangeParts.length === 1) {
-      const line = parsePositiveLineNumber(rangeParts[0]!);
-      if (line === undefined) {
-        return { filePath: snippetPath, isRemote };
-      }
-      return {
-        filePath,
-        startLine: line,
-        endLine: line,
-        isRemote,
-      };
-    }
-
-    if (rangeParts.length === 2) {
-      const startLine = parsePositiveLineNumber(rangeParts[0]!);
-
-      if (startLine === undefined) {
-        return { filePath: snippetPath, isRemote };
-      }
-
-      if (rangeParts[1] === '') {
-        return {
-          filePath,
-          startLine,
-          isRemote,
-        };
-      }
-
-      const endLine = parsePositiveLineNumber(
-        rangeParts[1]!.replace(/^L/, ''),
-      );
-
-      if (endLine === undefined || endLine < startLine) {
-        return { filePath: snippetPath, isRemote };
-      }
-
-      return {
-        filePath,
-        startLine,
-        endLine,
-        isRemote,
-      };
-    }
-
-    return { filePath: snippetPath, isRemote };
-  }
-
-  const lineNumber = parsePositiveLineNumber(lineSpec);
-  if (lineNumber !== undefined) {
-    return {
-      filePath,
-      startLine: lineNumber,
-      endLine: lineNumber,
-      isRemote,
-    };
-  }
-
-  return { filePath: snippetPath, isRemote };
-}
-
 
 /**
- * Builds the unified processor for a given file. `.mdx` files are parsed with
- * remark-mdx (JSX, import/export, expressions) plus remark-frontmatter —
- * frontmatter must be registered so `{...}` inside YAML is never handed to the
- * MDX expression parser. `.md` files keep the exact historical parser so
- * existing behavior (and byte offsets) are unchanged.
+ * @deprecated Use `MarkdownDocument.parse` and filter `codeBlocks` by
+ * `directive`. Will be removed in 2.0.
  */
-export function createMarkdownProcessor(filePath: string) {
-  if (filePath.toLowerCase().endsWith('.mdx')) {
-    return unified().use(remarkParse).use(remarkFrontmatter).use(remarkMdx);
-  }
-  return unified().use(remarkParse);
-}
-
 export async function parseMarkdownFile(
   filePath: string,
 ): Promise<MarkdownFile> {
-  const content = await readFile(filePath, 'utf-8');
-  const tree = createMarkdownProcessor(filePath).parse(content);
-  const codeBlocks: Array<CodeBlock> = [];
-
-  visit(tree, 'code', (node: Code) => {
-    if (!node.lang || !node.meta) {
-      return;
-    }
-
-    const snippet = parseSnippetDirective(node.meta);
-
-    if (!snippet) {
-      return;
-    }
-
-    codeBlocks.push({
-      language: node.lang,
-      content: node.value,
-      snippet,
-      position: {
-        start: node.position?.start.offset ?? 0,
-        end: node.position?.end.offset ?? 0,
-      },
-      lineNumber: node.position?.start.line ?? 1,
-      columnNumber: node.position?.start.column ?? 1,
-    });
-  });
-
+  const { content, codeBlocks } = await readLegacyCodeBlocks(filePath);
   return {
     filePath,
     content,
-    codeBlocks,
+    codeBlocks: codeBlocks.filter((block) => block.snippet),
   };
 }
 
+/**
+ * @deprecated Use `MarkdownDocument.parse` and filter `codeBlocks` by
+ * `!directive`. Will be removed in 2.0.
+ */
 export async function parseMarkdownForExtraction(
   filePath: string,
 ): Promise<MarkdownFile> {
-  const content = await readFile(filePath, 'utf-8');
-  const tree = createMarkdownProcessor(filePath).parse(content);
-  const codeBlocks: Array<CodeBlock> = [];
-
-  visit(tree, 'code', (node: Code) => {
-    if (!node.lang) {
-      return;
-    }
-
-    const hasSnippetDirective = node.meta && parseSnippetDirective(node.meta);
-
-    if (hasSnippetDirective) {
-      return;
-    }
-
-    codeBlocks.push({
-      language: node.lang,
-      content: node.value,
-      position: {
-        start: node.position?.start.offset ?? 0,
-        end: node.position?.end.offset ?? 0,
-      },
-    });
-  });
-
+  const { content, codeBlocks } = await readLegacyCodeBlocks(filePath);
   return {
     filePath,
     content,
-    codeBlocks,
+    codeBlocks: codeBlocks
+      .filter((block) => !block.snippet)
+      .map(({ language, content: body, position }) => ({
+        language,
+        content: body,
+        position,
+      })),
   };
+}
+
+/**
+ * @deprecated Use `MarkdownDocument#setBody` followed by `toString()`.
+ * Will be removed in 2.0.
+ */
+export function replaceCodeBlock(
+  markdownContent: string,
+  codeBlock: CodeBlock,
+  newContent: string,
+): string {
+  const { start, end } = codeBlock.position;
+  const rendered = renderBlock(
+    markdownContent.slice(start, end),
+    codeBlock.columnNumber ?? 1,
+    { content: newContent },
+  );
+  return (
+    markdownContent.slice(0, start) + rendered + markdownContent.slice(end)
+  );
 }
 
 export async function resolveSnippetPath(
@@ -343,19 +167,6 @@ export async function loadSnippetContent(
   return await readFile(realResolvedPath, 'utf-8');
 }
 
-export type LineEnding = '\n' | '\r\n';
-
-export function getLineEnding(content: string): LineEnding {
-  return content.match(/\r\n|\n/)?.[0] === '\r\n' ? '\r\n' : '\n';
-}
-
-export function normalizeLineEndings(
-  content: string,
-  lineEnding: LineEnding,
-): string {
-  return content.replace(/\r\n|\r|\n/g, lineEnding);
-}
-
 export function trimBlankLines(content: string): string {
   const lineEnding = getLineEnding(content);
   const lines = content.split(/\r\n|\n|\r/);
@@ -402,46 +213,4 @@ export function extractLines(
   }
 
   return trimBlankLines(extractedLines.join(lineEnding));
-}
-
-export function replaceCodeBlock(
-  markdownContent: string,
-  codeBlock: CodeBlock,
-  newContent: string,
-): string {
-  const { start, end } = codeBlock.position;
-  const blockText = markdownContent.slice(start, end);
-
-  const lineEnding = getLineEnding(blockText);
-  const firstNewlineIndex = blockText.indexOf('\n');
-  if (firstNewlineIndex === -1) {
-    return markdownContent;
-  }
-
-  const lastNewlineIndex = blockText.lastIndexOf('\n');
-  const openingFence = blockText.slice(
-    0,
-    firstNewlineIndex - (lineEnding.length - 1),
-  );
-  const closingFence = blockText.slice(lastNewlineIndex + 1);
-
-  // Fences indented inside lists or (in MDX) JSX elements store DEDENTED
-  // content in the mdast node; the parser strips up to the opening fence's
-  // indentation from every line. Re-apply that indentation when splicing so
-  // the fence body stays aligned with its fence markers. Fences at column 1
-  // get an empty prefix, keeping historical output byte-identical.
-  const indent = ' '.repeat(Math.max(0, (codeBlock.columnNumber ?? 1) - 1));
-  const normalizedContent = normalizeLineEndings(newContent, lineEnding);
-  const indentedContent =
-    indent === ''
-      ? normalizedContent
-      : normalizedContent
-          .split(lineEnding)
-          .map((line) => (line === '' ? line : indent + line))
-          .join(lineEnding);
-
-  const newBlock = `${openingFence}${lineEnding}${indentedContent}${lineEnding}${closingFence}`;
-  return (
-    markdownContent.slice(0, start) + newBlock + markdownContent.slice(end)
-  );
 }
