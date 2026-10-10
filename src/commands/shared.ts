@@ -1,6 +1,6 @@
 import type { ArgumentsCamelCase } from 'yargs';
 import { loadConfig, validateConfig, type ConfigOverrides } from '../config.js';
-import type { IssueSeverity } from '../types.js';
+import type { ExtractResult, IssueSeverity } from '../types.js';
 
 export interface BaseArgs {
   config?: string;
@@ -39,22 +39,10 @@ export function handleError(error: unknown): never {
   process.exit(1);
 }
 
-export function logExtractionResults(result: {
-  extracted: Array<string>;
-  snippetsCreated: number;
-}): void {
-  if (result.extracted.length > 0) {
-    console.log(`Extracted ${result.snippetsCreated} snippets from:`);
-    result.extracted.forEach((file) => console.log(`  ${file}`));
-  } else {
-    console.log('No code blocks found to extract.');
-  }
-}
-
 export function logWarningsAndErrors(
   warnings: Array<string>,
   errors: Array<string>,
-): boolean {
+): void {
   if (warnings.length > 0) {
     console.log('Warnings:');
     warnings.forEach((warning) => console.log(`  ${warning}`));
@@ -63,8 +51,25 @@ export function logWarningsAndErrors(
   if (errors.length > 0) {
     console.error('Errors:');
     errors.forEach((error) => console.error(`  ${error}`));
-    process.exit(1);
+  }
+}
+
+export function markFailed(): void {
+  process.exitCode = 1;
+}
+
+export function reportExtraction(result: ExtractResult): void {
+  logWarningsAndErrors(result.warnings, result.errors);
+  const failed = result.errors.length > 0;
+
+  if (result.extracted.length > 0) {
+    console.log(`Extracted ${result.snippetsCreated} snippets from:`);
+    result.extracted.forEach((file) => console.log(`  ${file}`));
+  } else if (!failed) {
+    console.log('No code blocks found to extract.');
   }
 
-  return warnings.length > 0 || errors.length > 0;
+  if (failed) {
+    markFailed();
+  }
 }

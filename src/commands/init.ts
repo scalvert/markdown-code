@@ -11,8 +11,7 @@ import { fileExists } from '../utils.js';
 import {
   getValidatedConfig,
   handleError,
-  logExtractionResults,
-  logWarningsAndErrors,
+  reportExtraction,
   type BaseArgs,
 } from './shared.js';
 
@@ -72,8 +71,7 @@ async function handleExtraction(argv: ArgumentsCamelCase<InitArgs>) {
   const config = await getValidatedConfig(argv);
   const result = await extractSnippets(config);
 
-  logWarningsAndErrors(result.warnings, result.errors);
-  logExtractionResults(result);
+  reportExtraction(result);
 }
 
 export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {

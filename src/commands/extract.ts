@@ -3,8 +3,7 @@ import { extractSnippets } from '../sync.js';
 import {
   getValidatedConfig,
   handleError,
-  logExtractionResults,
-  logWarningsAndErrors,
+  reportExtraction,
   type BaseArgs,
 } from './shared.js';
 
@@ -20,8 +19,7 @@ export const handler = async (argv: ArgumentsCamelCase<ExtractArgs>) => {
     console.log('Extracting snippets from code blocks...');
     const result = await extractSnippets(config);
 
-    logWarningsAndErrors(result.warnings, result.errors);
-    logExtractionResults(result);
+    reportExtraction(result);
   } catch (error) {
     handleError(error);
   }

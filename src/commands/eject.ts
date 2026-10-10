@@ -15,6 +15,7 @@ import {
   getValidatedConfig,
   handleError,
   logWarningsAndErrors,
+  markFailed,
   type BaseArgs,
 } from './shared.js';
 
@@ -196,6 +197,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
 
     if (directiveResult.errors.length > 0) {
       logWarningsAndErrors(directiveResult.warnings, directiveResult.errors);
+      markFailed();
       return;
     }
 
@@ -219,6 +221,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
         [...directiveResult.warnings, ...snippetResult.warnings],
         snippetResult.errors,
       );
+      markFailed();
       return;
     }
 
@@ -238,6 +241,10 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     ];
 
     logWarningsAndErrors(allWarnings, allErrors);
+    if (allErrors.length > 0) {
+      markFailed();
+      return;
+    }
 
     console.log('✅ Ejection completed successfully!');
   } catch (error) {

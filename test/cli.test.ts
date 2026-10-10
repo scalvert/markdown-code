@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, chmodSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createBintastic, BintasticProject } from 'bintastic';
@@ -9,6 +9,7 @@ import { VERSION } from '../src/version.js';
 function normalizeOutput(output: string, baseDir: string): string {
   return output
     .replace(/\x1b\[[0-9;]*m/g, '')
+    .replaceAll(realpathSync(baseDir), '<TMP_DIR>')
     .replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
 }
 
@@ -730,6 +731,78 @@ old content
   });
 
   describe('error handling', () => {
+    describe.skipIf(process.getuid?.() === 0)(
+      'unreadable Markdown files',
+      () => {
+        async function writeProjectWithUnreadableFile() {
+          await project.write({
+            'a.js': 'const a = 1;',
+            'good.md': '```js snippet=a.js\nold\n```\n',
+            'missing.md': '```js snippet=nope.js\nold\n```\n',
+            'locked.md': '```js snippet=a.js\nold\n```\n',
+          });
+          chmodSync(path.join(project.baseDir, 'locked.md'), 0o000);
+        }
+
+        afterEach(() => {
+          const locked = path.join(project.baseDir, 'locked.md');
+          if (existsSync(locked)) {
+            chmodSync(locked, 0o644);
+          }
+        });
+
+        it('extract still lists extracted files, then exits 1', async () => {
+          await project.write({
+            'plain.md': '```js\nconst plain = 1;\n```\n',
+            'locked.md': '```js\nconst locked = 1;\n```\n',
+          });
+          chmodSync(path.join(project.baseDir, 'locked.md'), 0o000);
+
+          const result = await runBin('extract');
+
+          expect(result.exitCode).toEqual(1);
+          expect(result.stderr).toMatch(/^Errors:\n {2}Error processing /);
+          expect(normalizeOutput(result.stdout, project.baseDir))
+            .toMatchInlineSnapshot(`
+            "Extracting snippets from code blocks...
+            Extracted 1 snippets from:
+              <TMP_DIR>/plain.md"
+          `);
+        });
+
+        it('sync still reports issues and updated files, then exits 1', async () => {
+          await writeProjectWithUnreadableFile();
+
+          const result = await runBin('sync');
+
+          expect(result.exitCode).toEqual(1);
+          expect(normalizeOutput(result.stderr, project.baseDir)).toMatch(
+            /^Errors:\n  Error processing <TMP_DIR>\/locked\.md: Error: EACCES/,
+          );
+          expect(result.stderr).toContain('Snippet file not found: nope.js');
+          expect(result.stdout).toMatchInlineSnapshot(`
+            "Syncing markdown files...
+            Updated files:
+              good.md"
+          `);
+        });
+
+        it('check still reports issues, then exits 1', async () => {
+          await writeProjectWithUnreadableFile();
+
+          const result = await runBin('check');
+
+          expect(result.exitCode).toEqual(1);
+          expect(result.stderr).toMatch(/^Errors:\n {2}Error processing /);
+          expect(result.stdout).toContain('Snippet file not found: nope.js');
+          expect(result.stdout).toContain('Code block out of sync');
+          expect(result.stdout).not.toContain(
+            'All markdown files are in sync.',
+          );
+        });
+      },
+    );
+
     it('handles file system errors gracefully', async () => {
       const markdownContent = `# Test
 
@@ -801,7 +874,10 @@ ${scenario.sources['file2.js']}
         ✖ 2 problems (2 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files..."
+        "Syncing markdown files...
+        Updated files:
+          doc1.md
+          doc3.md"
       `);
       expect(result.stdout).not.toContain('doc2.md');
     });
@@ -859,7 +935,9 @@ old content
         ✖ 2 problems (1 file-missing, 1 empty-range)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files..."
+        "Syncing markdown files...
+        Updated files:
+          README.md"
       `);
 
       const updatedMarkdown = readFileSync(
@@ -1168,7 +1246,9 @@ old content
         ✖ 1 problem (1 file-missing)"
       `);
       expect(result.stdout).toMatchInlineSnapshot(`
-        "Syncing markdown files..."
+        "Syncing markdown files...
+        Updated files:
+          README.md"
       `);
 
       const updatedMarkdown = readFileSync(
