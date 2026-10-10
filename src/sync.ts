@@ -8,7 +8,6 @@ import type {
   SyncResult,
   CheckResult,
   ExtractResult,
-  Issue,
   DiscoveryResult,
 } from './types.js';
 import { readMarkdownDocument } from './parser.js';
