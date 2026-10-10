@@ -28,9 +28,10 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "format": "prettier --write \"**/*.ts\" \"**/*.md\"",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"**/*.{ts,mjs,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,mjs,md}\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",

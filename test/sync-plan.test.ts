@@ -145,7 +145,7 @@ describe('planSync', () => {
     );
   });
 
-  it.skipIf(process.getuid?.() === 0)(
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
     'reports files that cannot be read',
     async () => {
       const readme = join(project.baseDir, 'README.md');

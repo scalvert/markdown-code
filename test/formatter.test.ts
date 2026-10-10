@@ -1,3 +1,4 @@
+import { stripVTControlCharacters } from 'node:util';
 import { describe, it, expect } from 'vitest';
 import {
   format,
@@ -180,7 +181,7 @@ describe('formatDiscovery', () => {
       '/project',
     );
 
-    expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toMatchInlineSnapshot(`
+    expect(stripVTControlCharacters(result)).toMatchInlineSnapshot(`
       "Found 1 code block in 1 file not yet managed by markdown-code:
         README.md  1 code block (ts)"
     `);

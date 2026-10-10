@@ -195,6 +195,7 @@ syntax as a local path:
 
 ````markdown
 ```ts snippet=https://raw.githubusercontent.com/example/project/main/app.ts#L10-L20
+
 ```
 ````
 

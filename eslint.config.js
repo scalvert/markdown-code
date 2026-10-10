@@ -4,13 +4,16 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 
 export default [
+  {
+    ignores: ["dist/**", "coverage/**", "test/fixtures/**"],
+  },
   js.configs.recommended,
   {
-    files: ["src/**/*.ts"],
+    files: ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.mjs", "*.config.ts"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
-        project: "./tsconfig.json",
+        project: "./tsconfig.eslint.json",
       },
       globals: {
         ...globals.node,
@@ -42,7 +45,7 @@ export default [
       "max-len": ["error", { code: 100, ignoreUrls: true }],
 
       // TypeScript-specific rules (Airbnb-inspired)
-      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
       "@typescript-eslint/no-use-before-define": "error",
       "@typescript-eslint/no-shadow": "error",
       "@typescript-eslint/prefer-optional-chain": "error",
@@ -50,6 +53,12 @@ export default [
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/explicit-module-boundary-types": "off",
+    },
+  },
+  {
+    files: ["test/**/*.ts"],
+    rules: {
+      "max-len": "off",
     },
   },
 ]; 

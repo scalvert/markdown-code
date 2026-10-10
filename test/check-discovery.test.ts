@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { join } from 'node:path';
 import { Project } from 'fixturify-project';
 import { discoverCodeBlocks } from '../src/sync.js';
-import { handler } from '../src/commands/check.js';
 
 describe('discovery functionality', () => {
   let project: Project;
