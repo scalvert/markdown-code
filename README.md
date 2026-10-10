@@ -173,13 +173,16 @@ inside JSX components are found, JSX indentation never produces phantom code
 blocks, and `{...}` inside YAML frontmatter parses cleanly. Snippet directives
 coexist with other fence metadata, such as `title="app.ts"` and `snippet=app.ts`.
 
-Two guarantees worth knowing:
+Three guarantees worth knowing:
 
 - **Non-destructive extraction**: `extract` only inserts ` snippet=<ref>` into
   opening fence lines (offset-addressed, never regex-matched) — stripping the
   annotations reproduces your original file byte-for-byte.
 - **Fail-safe parsing**: a file that isn't valid MDX (e.g. HTML `<!-- -->`
   comments, which MDX forbids) is reported and left untouched.
+- **Snippets stay inside their block**: if a snippet contains a fence line
+  such as ` ``` `, `sync` lengthens that block's fence (to ` ```` ` and so on)
+  so the snippet can't close the block early. Fences are never shortened.
 
 Note: framework-specific MDX extensions (like Docusaurus `{#heading-id}`
 anchors) are not part of the MDX grammar and will be reported as parse errors;

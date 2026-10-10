@@ -323,6 +323,24 @@ old
         );
       });
 
+      it('keeps a closing fence that is already long enough', () => {
+        const document = parse('```md snippet=a.md\nold\n``````');
+
+        document.setBody(document.codeBlocks[0]!, '```');
+
+        expect(document.toString()).toBe('````md snippet=a.md\n```\n``````');
+      });
+
+      it('detects fence lines separated by a lone carriage return', () => {
+        const document = parse('```md snippet=a.md\nold\n```\nafter\n');
+
+        document.setBody(document.codeBlocks[0]!, 'a\r```\rb');
+        const output = document.toString();
+
+        expect(output).toBe('````md snippet=a.md\na\n```\nb\n````\nafter\n');
+        expect(parse(output).codeBlocks).toHaveLength(1);
+      });
+
       it('keeps a longer existing fence and its closing length', () => {
         const document = parse('`````md snippet=a.md\nold\n``````');
 
