@@ -35,3 +35,11 @@ _Avoid_: Rule ID (for the concept), check
 **Severity**:
 Whether an issue fails the run (`error`) or is only reported (`warning`). Only missing snippets can be downgraded to a warning.
 _Avoid_: Level, priority
+
+**In sync**:
+A managed code block is in sync when its content equals what its snippet directive selects, and out of sync otherwise.
+_Avoid_: Stale, dirty, up to date
+
+**Sync plan**:
+For each Markdown document, the outcome for every managed code block (in sync, out of sync, or an issue) and the content syncing would write. `sync` applies the plan; `check` reports it.
+_Avoid_: Diff, dry run
