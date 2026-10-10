@@ -39,7 +39,8 @@ src/
 ├── parser.ts          # Reads Markdown files; deprecated parsing helpers
 ├── snippet-directive.ts # Snippet directive grammar (parse and format)
 ├── snippet-resolution.ts # Resolves a directive to snippet content or an issue
-├── sync.ts            # Core sync functionality
+├── sync-plan.ts       # Plans what sync would change, without writing
+├── sync.ts            # Applies or reports the sync plan; extract, discovery
 └── types.ts           # TypeScript type definitions
 
 test/

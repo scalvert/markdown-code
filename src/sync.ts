@@ -8,14 +8,12 @@ import type {
   SyncResult,
   CheckResult,
   ExtractResult,
-  Issue,
   DiscoveryResult,
 } from './types.js';
 import { readMarkdownDocument } from './parser.js';
 import { normalizeLineEndings } from './line-endings.js';
-import { formatSnippetDirective } from './snippet-directive.js';
-import { isManagedCodeBlock, resolveSnippet } from './snippet-resolution.js';
-import { createIssue, isError } from './issues.js';
+import { checkIssues, failedIssues, planSync } from './sync-plan.js';
+import { isError } from './issues.js';
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
@@ -30,49 +28,31 @@ export async function syncMarkdownFiles(
     errors: [],
   };
 
-  try {
-    const markdownFiles = await fg(config.markdownGlob, {
-      ignore: config.excludeGlob,
-      cwd: config.workingDir,
-      absolute: true,
-    });
+  const plan = await planSync(config);
+  if (plan.status === 'error') {
+    result.errors.push(plan.error);
+    return result;
+  }
 
-    for (const filePath of markdownFiles) {
-      const fileIssues: Array<Issue> = [];
+  for await (const file of plan.files) {
+    if (file.status === 'error') {
+      result.errors.push(file.error);
+      continue;
+    }
 
+    const issues = failedIssues(file.blocks);
+    if (issues.length > 0) {
+      result.fileIssues.push({ filePath: file.filePath, issues });
+    }
+
+    if (file.updatedContent !== file.content) {
       try {
-        const { content, document } = await readMarkdownDocument(filePath);
-
-        for (const codeBlock of document.codeBlocks.filter(
-          isManagedCodeBlock,
-        )) {
-          const snippet = await resolveSnippet(codeBlock, {
-            config,
-            markdownFilePath: filePath,
-          });
-
-          if (snippet.status === 'failed') {
-            fileIssues.push(snippet.issue);
-          } else if (snippet.content !== codeBlock.content) {
-            document.setBody(codeBlock, snippet.content);
-          }
-        }
-
-        if (fileIssues.length > 0) {
-          result.fileIssues.push({ filePath, issues: fileIssues });
-        }
-
-        const updatedContent = document.toString();
-        if (updatedContent !== content) {
-          await writeFile(filePath, updatedContent, 'utf-8');
-          result.updated.push(filePath);
-        }
+        await writeFile(file.filePath, file.updatedContent, 'utf-8');
+        result.updated.push(file.filePath);
       } catch (error) {
-        result.errors.push(`Error processing ${filePath}: ${error}`);
+        result.errors.push(`Error processing ${file.filePath}: ${error}`);
       }
     }
-  } catch (error) {
-    result.errors.push(`Error finding markdown files: ${error}`);
   }
 
   return result;
@@ -89,60 +69,30 @@ export async function checkMarkdownFiles(
     errors: [],
   };
 
-  try {
-    const markdownFiles = await fg(config.markdownGlob, {
-      ignore: config.excludeGlob,
-      cwd: config.workingDir,
-      absolute: true,
-    });
+  const plan = await planSync(config);
+  if (plan.status === 'error') {
+    result.errors.push(plan.error);
+    return result;
+  }
 
-    for (const filePath of markdownFiles) {
-      const fileIssues: Array<Issue> = [];
-
-      try {
-        const { document } = await readMarkdownDocument(filePath);
-        let isFileInSync = true;
-
-        for (const codeBlock of document.codeBlocks.filter(
-          isManagedCodeBlock,
-        )) {
-          const snippet = await resolveSnippet(codeBlock, {
-            config,
-            markdownFilePath: filePath,
-          });
-
-          if (snippet.status === 'failed') {
-            fileIssues.push(snippet.issue);
-          } else if (snippet.content !== codeBlock.content) {
-            fileIssues.push(
-              createIssue(
-                'content-mismatch',
-                codeBlock,
-                `Code block out of sync with ${formatSnippetDirective(codeBlock.directive)}`,
-              ),
-            );
-            isFileInSync = false;
-          }
-        }
-
-        if (fileIssues.length > 0) {
-          result.fileIssues.push({ filePath, issues: fileIssues });
-        }
-
-        if (fileIssues.some(isError)) {
-          isFileInSync = false;
-        }
-
-        if (!isFileInSync) {
-          result.outOfSync.push(filePath);
-          result.inSync = false;
-        }
-      } catch (error) {
-        result.errors.push(`Error processing ${filePath}: ${error}`);
-      }
+  for await (const file of plan.files) {
+    if (file.status === 'error') {
+      result.errors.push(file.error);
+      continue;
     }
-  } catch (error) {
-    result.errors.push(`Error finding markdown files: ${error}`);
+
+    const issues = checkIssues(file.blocks);
+    if (issues.length > 0) {
+      result.fileIssues.push({ filePath: file.filePath, issues });
+    }
+
+    const hasOutOfSyncBlock = file.blocks.some(
+      (block) => block.status === 'out-of-sync',
+    );
+    if (hasOutOfSyncBlock || issues.some(isError)) {
+      result.outOfSync.push(file.filePath);
+      result.inSync = false;
+    }
   }
 
   return result;
