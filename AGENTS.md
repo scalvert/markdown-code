@@ -46,6 +46,8 @@ Follow these guidelines when modifying the repository.
 
 - `npm run dev` – build in watch mode.
 - `npm run typecheck` – run TypeScript type checking with `tsc --noEmit`.
+- `npm run test:package` – after `npm run build`, pack the package, install it
+  in a temp project, and check the CLI and library work as published.
 
 ## License
 

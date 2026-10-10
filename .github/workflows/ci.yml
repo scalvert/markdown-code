@@ -40,3 +40,6 @@ jobs:
 
       - name: Run tests
         run: npm run test
+
+      - name: Smoke test the packed package
+        run: npm run test:package
