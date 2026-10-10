@@ -167,11 +167,10 @@ export async function extractSnippets(
   }
 
   try {
-    const markdownFiles = await findMarkdownFiles(
-      config.markdownGlob,
-      config.excludeGlob,
-      workingDir ?? process.cwd(),
-    );
+    const markdownFiles = await findMarkdownFiles({
+      ...config,
+      workingDir: workingDir ?? process.cwd(),
+    });
 
     for (const filePath of markdownFiles) {
       try {
@@ -267,11 +266,11 @@ export async function discoverCodeBlocks(
   };
 
   try {
-    const markdownFiles = await findMarkdownFiles(
+    const markdownFiles = await findMarkdownFiles({
       markdownGlob,
       excludeGlob,
       workingDir,
-    );
+    });
 
     for (const filePath of markdownFiles) {
       try {

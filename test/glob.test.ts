@@ -36,11 +36,11 @@ describe('findMarkdownFiles', () => {
   });
 
   it('returns absolute, platform-native paths', async () => {
-    const files = await findMarkdownFiles(
-      '**/*.md',
-      ['docs/draft.md'],
-      project.baseDir,
-    );
+    const files = await findMarkdownFiles({
+      markdownGlob: '**/*.md',
+      excludeGlob: ['docs/draft.md'],
+      workingDir: project.baseDir,
+    });
 
     expect(files.sort()).toEqual(
       [
@@ -51,11 +51,11 @@ describe('findMarkdownFiles', () => {
   });
 
   it('accepts an absolute pattern built with platform paths', async () => {
-    const files = await findMarkdownFiles(
-      join(project.baseDir, 'docs', '*.md'),
-      [],
-      project.baseDir,
-    );
+    const files = await findMarkdownFiles({
+      markdownGlob: join(project.baseDir, 'docs', '*.md'),
+      excludeGlob: [],
+      workingDir: project.baseDir,
+    });
 
     expect(files.sort()).toEqual(
       [

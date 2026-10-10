@@ -103,6 +103,54 @@ describe('resolveSnippet', () => {
       ).toEqual({ status: 'resolved', content: 'from snippet root' });
     });
 
+    describe('with a symlinked working directory and a snippet root outside it', () => {
+      let base: Project;
+      let link: string;
+
+      beforeEach(async () => {
+        base = new Project();
+        await base.write({
+          shared: { 's.js': 'configured root' },
+          real: { a: { b: {}, shared: { 's.js': 'unconfigured' } } },
+        });
+        link = join(base.baseDir, 'link');
+        symlinkSync(join(base.baseDir, 'real', 'a', 'b'), link, 'junction');
+      });
+
+      afterEach(() => {
+        base.dispose();
+      });
+
+      it('allows the configured root', async () => {
+        expect(
+          await resolveFor('snippet=s.js', {
+            workingDir: link,
+            snippetRoot: '../shared',
+          }),
+        ).toEqual({ status: 'resolved', content: 'configured root' });
+        expect(
+          await resolveFor('snippet=s.js', {
+            workingDir: link,
+            snippetRoot: join(base.baseDir, 'shared'),
+          }),
+        ).toEqual({ status: 'resolved', content: 'configured root' });
+      });
+
+      it('does not allow the same relative path under the link target', async () => {
+        const unconfigured = join(base.baseDir, 'real', 'a', 'shared', 's.js');
+
+        expect(
+          await resolveFor(`snippet=${unconfigured}`, {
+            workingDir: link,
+            snippetRoot: '../shared',
+          }),
+        ).toMatchObject({
+          status: 'failed',
+          issue: { ruleId: 'path-traversal' },
+        });
+      });
+    });
+
     it('selects a line range', async () => {
       expect(await resolveFor('snippet=app.js#L3-L4')).toEqual({
         status: 'resolved',

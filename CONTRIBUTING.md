@@ -19,6 +19,9 @@ npm run build
 
 # Lint code
 npm run lint
+
+# Check formatting (npm run format to fix)
+npm run format:check
 ```
 
 ## Project Structure

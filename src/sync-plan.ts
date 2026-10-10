@@ -80,11 +80,7 @@ async function* planFiles(
 export async function planSync(config: RuntimeConfig): Promise<SyncPlan> {
   let markdownFiles: Array<string>;
   try {
-    markdownFiles = await findMarkdownFiles(
-      config.markdownGlob,
-      config.excludeGlob,
-      config.workingDir,
-    );
+    markdownFiles = await findMarkdownFiles(config);
   } catch (error) {
     return {
       status: 'error',

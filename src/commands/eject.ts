@@ -63,11 +63,7 @@ export async function removeSnippetDirectives(config: RuntimeConfig) {
   };
 
   try {
-    const markdownFiles = await findMarkdownFiles(
-      config.markdownGlob,
-      config.excludeGlob,
-      config.workingDir,
-    );
+    const markdownFiles = await findMarkdownFiles(config);
 
     for (const filePath of markdownFiles) {
       try {

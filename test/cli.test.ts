@@ -735,7 +735,7 @@ old content
 
   describe('error handling', () => {
     describe.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
-      'unreadable Markdown files',
+      'unreadable Markdown files (needs chmod; POSIX and non-root only)',
       () => {
         async function writeProjectWithUnreadableFile() {
           await project.write({

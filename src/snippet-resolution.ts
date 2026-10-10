@@ -34,16 +34,19 @@ export function isManagedCodeBlock(
   return codeBlock.directive !== undefined;
 }
 
+function realpathOrSelf(path: string): Promise<string> {
+  return realpath(path).catch(() => path);
+}
+
 async function allowedSnippetRoots(
   config: RuntimeConfig,
 ): Promise<Array<string>> {
   const workingDir = resolve(config.workingDir);
   const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
-  const realWorkingDir = await realpath(workingDir).catch(() => workingDir);
-  const realSnippetRoot = resolve(
-    realWorkingDir,
-    relative(workingDir, snippetRoot),
-  );
+  const realWorkingDir = await realpathOrSelf(workingDir);
+  const realSnippetRoot = isInWorkingDir(snippetRoot, workingDir)
+    ? resolve(realWorkingDir, relative(workingDir, snippetRoot))
+    : await realpathOrSelf(snippetRoot);
   return realSnippetRoot !== realWorkingDir
     ? [realWorkingDir, realSnippetRoot]
     : [realWorkingDir];
