@@ -43,6 +43,27 @@ interface BlockRecord {
 const OPENING_FENCE_PREFIX = /^[ \t]*(?:`{3,}|~{3,})[ \t]*\S*/;
 const FENCE_MARKER = /^[ \t]*(`{3,}|~{3,})/;
 const CLOSING_FENCE = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
+const BARE_FENCE_LINE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
+const FENCE_RUN = /`{3,}|~{3,}/;
+
+function fenceLengthFor(
+  content: string,
+  fenceChar: string,
+  currentLength: number,
+): number {
+  let longest = 0;
+  for (const line of content.split(/\r?\n/)) {
+    const run = line.match(BARE_FENCE_LINE)?.[1];
+    if (run?.[0] === fenceChar) {
+      longest = Math.max(longest, run.length);
+    }
+  }
+  return longest >= currentLength ? longest + 1 : currentLength;
+}
+
+function withFenceLength(line: string, fenceChar: string, length: number) {
+  return line.replace(FENCE_RUN, fenceChar.repeat(length));
+}
 
 function closesFence(openingLine: string, candidate: string): boolean {
   const opening = openingLine.match(FENCE_MARKER)?.[1];
@@ -149,12 +170,20 @@ export function renderBlock(
 
   const lineEnding = getLineEnding(blockText);
   const lastLine = blockText.slice(blockText.lastIndexOf('\n') + 1);
-  const closing = closesFence(openingLine, lastLine)
-    ? `${lineEnding}${lastLine}`
-    : '';
+  const hasClosingFence = closesFence(openingLine, lastLine);
   const body = indentBody(edit.content, column, lineEnding);
 
-  return `${opening}\n${body}${closing}`;
+  const fence = openingLine.match(FENCE_MARKER)?.[1] ?? '```';
+  const fenceChar = fence[0]!;
+  const fenceLength = fenceLengthFor(edit.content, fenceChar, fence.length);
+
+  const fit = (line: string) =>
+    fenceLength > fence.length
+      ? withFenceLength(line, fenceChar, fenceLength)
+      : line;
+
+  const closing = hasClosingFence ? `${lineEnding}${fit(lastLine)}` : '';
+  return `${fit(opening)}\n${body}${closing}`;
 }
 
 export class MarkdownDocument {

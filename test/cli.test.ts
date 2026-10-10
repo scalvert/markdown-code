@@ -843,6 +843,45 @@ malicious content
   });
 
   describe('complex scenarios', () => {
+    it('keeps a snippet containing a code fence inside its block', async () => {
+      await project.write({
+        'a.md':
+          'Usage:\n\n```js\nrun();\n```\n\n<img src=x onerror=alert(1)>\n',
+        'README.md': '# Doc\n\n```md snippet=a.md\nold\n```\n\nafter\n',
+      });
+
+      const firstSync = await runBin('sync');
+      const synced = readFileSync(
+        path.join(project.baseDir, 'README.md'),
+        'utf-8',
+      );
+      const secondSync = await runBin('sync');
+      const check = await runBin('check');
+
+      expect(firstSync.exitCode).toEqual(0);
+      expect(synced).toMatchInlineSnapshot(`
+        "# Doc
+
+        \`\`\`\`md snippet=a.md
+        Usage:
+
+        \`\`\`js
+        run();
+        \`\`\`
+
+        <img src=x onerror=alert(1)>
+        \`\`\`\`
+
+        after
+        "
+      `);
+      expect(secondSync.stdout).toContain('All files are already in sync.');
+      expect(
+        readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8'),
+      ).toBe(synced);
+      expect(check.exitCode).toEqual(0);
+    });
+
     it('handles multiple files with mixed results', async () => {
       const scenario = loadScenario('multi-file-mixed');
 
