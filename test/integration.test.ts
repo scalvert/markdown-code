@@ -637,8 +637,8 @@ old content
     });
 
     it('should prioritize project root files over snippetRoot files', async () => {
-      const projectFileContent = `console.log("From project root");`;
-      const snippetFileContent = `console.log("From snippet root");`;
+      const projectFileContent = 'console.log("From project root");';
+      const snippetFileContent = 'console.log("From snippet root");';
 
       const markdownContent = `# Priority Test
 
@@ -670,8 +670,8 @@ old content
     });
 
     it('should handle relative paths from markdown file location', async () => {
-      const helperContent = `export const helper = () => "Helper";`;
-      const utilContent = `export const util = () => "Util";`;
+      const helperContent = 'export const helper = () => "Helper";';
+      const utilContent = 'export const util = () => "Util";';
 
       const markdownContent = `# Relative Paths Test
 
@@ -715,7 +715,7 @@ old content
     });
 
     it('should fall back to snippetRoot when file not found at project root', async () => {
-      const snippetContent = `console.log("Only in snippets");`;
+      const snippetContent = 'console.log("Only in snippets");';
 
       const markdownContent = `# Fallback Test
 

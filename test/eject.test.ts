@@ -130,10 +130,13 @@ console.log("no snippet directive");
 
       // Manually import the internal function for testing
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
       // Test the core removal logic
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles({
+        ...baseConfig,
+        workingDir: testDir,
+      });
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
@@ -199,9 +202,12 @@ console.log("no directives");
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles({
+        ...baseConfig,
+        workingDir: testDir,
+      });
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
@@ -230,9 +236,12 @@ interface Config {}
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles({
+        ...baseConfig,
+        workingDir: testDir,
+      });
       expect(markdownFiles).toHaveLength(2);
 
       for (const filePath of markdownFiles) {
@@ -260,9 +269,12 @@ interface Test {}
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles({
+        ...baseConfig,
+        workingDir: testDir,
+      });
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
 
@@ -296,9 +308,12 @@ function test() {
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles({
+        ...baseConfig,
+        workingDir: testDir,
+      });
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
@@ -373,16 +388,12 @@ function createUser(name: string, age: number): User {
       // Step 1: Run extract to create snippets and directives
       const extractResult = await extractSnippets(runtimeConfig);
 
-      expect(extractResult).toMatchInlineSnapshot(`
-        {
-          "errors": [],
-          "extracted": [
-            "${testDir}/README.md",
-          ],
-          "snippetsCreated": 2,
-          "warnings": [],
-        }
-      `);
+      expect(extractResult).toEqual({
+        errors: [],
+        extracted: [join(testDir, 'README.md')],
+        snippetsCreated: 2,
+        warnings: [],
+      });
 
       const markdownAfterExtract = readFileSync(
         join(testDir, 'README.md'),
@@ -535,9 +546,12 @@ interface MyType {}
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles({
+        ...baseConfig,
+        workingDir: testDir,
+      });
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(

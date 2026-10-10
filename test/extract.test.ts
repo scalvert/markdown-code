@@ -28,7 +28,8 @@ describe('extractSnippets', () => {
   });
 
   it('extracts snippets and updates markdown', async () => {
-    const md = `# Example\n\n\`\`\`ts\nconsole.log('ts');\n\`\`\`\n\n\`\`\`js\nconsole.log('js');\n\`\`\``;
+    const md =
+      "# Example\n\n```ts\nconsole.log('ts');\n```\n\n```js\nconsole.log('js');\n```";
     const filePath = join(testDir, 'example.md');
     await project.write({ 'example.md': md });
 
@@ -86,7 +87,7 @@ describe('extractSnippets', () => {
   });
 
   it('skips languages not in includeExtensions', async () => {
-    const md = `\`\`\`ts\nconsole.log('ts');\n\`\`\`\n\n\`\`\`py\nprint('py')\n\`\`\``;
+    const md = "```ts\nconsole.log('ts');\n```\n\n```py\nprint('py')\n```";
     const filePath = join(testDir, 'skip.md');
     await project.write({ 'skip.md': md });
 
@@ -156,7 +157,6 @@ Content with newline:
 console.log('has newline');
 \`\`\``;
 
-    const filePath = join(testDir, 'newlines.md');
     await project.write({ 'newlines.md': md });
 
     await extractSnippets(baseConfig);

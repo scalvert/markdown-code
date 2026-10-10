@@ -1,7 +1,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve, basename, extname } from 'node:path';
 import { createRequire } from 'node:module';
-import fg from 'fast-glob';
+import { findMarkdownFiles } from './glob.js';
 import { fileExists, isInWorkingDir } from './utils.js';
 import type {
   RuntimeConfig,
@@ -167,10 +167,9 @@ export async function extractSnippets(
   }
 
   try {
-    const markdownFiles = await fg(config.markdownGlob, {
-      ignore: config.excludeGlob,
-      cwd: workingDir ?? process.cwd(),
-      absolute: true,
+    const markdownFiles = await findMarkdownFiles({
+      ...config,
+      workingDir: workingDir ?? process.cwd(),
     });
 
     for (const filePath of markdownFiles) {
@@ -267,10 +266,10 @@ export async function discoverCodeBlocks(
   };
 
   try {
-    const markdownFiles = await fg(markdownGlob, {
-      ignore: excludeGlob,
-      cwd: workingDir,
-      absolute: true,
+    const markdownFiles = await findMarkdownFiles({
+      markdownGlob,
+      excludeGlob,
+      workingDir,
     });
 
     for (const filePath of markdownFiles) {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join, dirname } from 'node:path';
 import { writeFile, unlink, rmdir } from 'node:fs/promises';
 import { Project } from 'fixturify-project';
@@ -162,7 +162,6 @@ plain
   describe('loadSnippetContent', () => {
     it('should load content from file', async () => {
       const content = 'export const test = "hello";';
-      const filePath = join(testDir, 'test.ts');
       await project.write({ 'test.ts': content });
 
       const config = {
@@ -179,8 +178,6 @@ plain
 
     it('should handle nested paths', async () => {
       const content = 'nested file content';
-      const nestedDir = join(testDir, 'nested');
-      const filePath = join(nestedDir, 'file.js');
       await project.write({ nested: { 'file.js': content } });
 
       const config = {
@@ -250,12 +247,7 @@ plain
     it.skipIf(process.platform === 'win32')(
       'should reject symlink escape outside workingDir',
       async () => {
-        const {
-          symlink,
-          unlink: fsUnlink,
-          mkdir,
-        } = await import('node:fs/promises');
-        const { basename } = await import('node:path');
+        const { symlink, unlink: fsUnlink } = await import('node:fs/promises');
 
         const config = {
           snippetRoot: '.',

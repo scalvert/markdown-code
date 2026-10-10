@@ -2,7 +2,7 @@ import { writeFile, rm, unlink, realpath } from 'node:fs/promises';
 import { parse as parsePath, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
-import fg from 'fast-glob';
+import { findMarkdownFiles } from '../glob.js';
 import {
   configExists,
   configPathOrDefault,
@@ -63,11 +63,7 @@ export async function removeSnippetDirectives(config: RuntimeConfig) {
   };
 
   try {
-    const markdownFiles = await fg(config.markdownGlob, {
-      ignore: config.excludeGlob,
-      cwd: config.workingDir,
-      absolute: true,
-    });
+    const markdownFiles = await findMarkdownFiles(config);
 
     for (const filePath of markdownFiles) {
       try {

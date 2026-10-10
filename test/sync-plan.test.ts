@@ -145,8 +145,8 @@ describe('planSync', () => {
     );
   });
 
-  it.skipIf(process.getuid?.() === 0)(
-    'reports files that cannot be read',
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'reports files that cannot be read (needs chmod; POSIX and non-root only)',
     async () => {
       const readme = join(project.baseDir, 'README.md');
       chmodSync(readme, 0o000);

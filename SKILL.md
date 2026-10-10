@@ -59,15 +59,19 @@ Use a fence info string with a `snippet=` metadata token:
 
 ````markdown
 ```bash snippet=path/to/file.sh
+
 ```
 
 ```ts snippet=src/utils/auth.ts#L10-L20
+
 ```
 
 ```ts snippet=src/utils/auth.ts#L5
+
 ```
 
 ```ts snippet=src/utils/auth.ts#L5-
+
 ```
 ````
 
@@ -75,13 +79,13 @@ Paths are relative to `snippetRoot` in `.markdown-coderc.json` (the runtime defa
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `npx markdown-code init` | Create `.markdown-coderc.json` and `snippets/` directory |
-| `npx markdown-code extract` | Extract code blocks to snippet files and insert directives (Workflow A) |
-| `npx markdown-code sync` | Populate markdown code blocks from snippet files (Workflow B) |
-| `npx markdown-code check` | Verify markdown matches snippet files — exits non-zero if drift or an error-severity missing snippet is detected |
-| `npx markdown-code eject` | Remove snippet directives, snippets, and config after confirmation |
+| Command                     | Description                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `npx markdown-code init`    | Create `.markdown-coderc.json` and `snippets/` directory                                                         |
+| `npx markdown-code extract` | Extract code blocks to snippet files and insert directives (Workflow A)                                          |
+| `npx markdown-code sync`    | Populate markdown code blocks from snippet files (Workflow B)                                                    |
+| `npx markdown-code check`   | Verify markdown matches snippet files — exits non-zero if drift or an error-severity missing snippet is detected |
+| `npx markdown-code eject`   | Remove snippet directives, snippets, and config after confirmation                                               |
 
 ## CI Integration
 

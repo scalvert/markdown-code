@@ -1,16 +1,19 @@
 import path from 'node:path';
 import { readFileSync, existsSync, chmodSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { stripVTControlCharacters } from 'node:util';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createBintastic, BintasticProject } from 'bintastic';
 import { loadScenario } from './fixtures/index.js';
 import { VERSION } from '../src/version.js';
 
 function normalizeOutput(output: string, baseDir: string): string {
-  return output
-    .replace(/\x1b\[[0-9;]*m/g, '')
+  const normalized = stripVTControlCharacters(output)
     .replaceAll(realpathSync(baseDir), '<TMP_DIR>')
-    .replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
+    .replaceAll(baseDir, '<TMP_DIR>');
+  return process.platform === 'win32'
+    ? normalized.replaceAll('\\', '/')
+    : normalized;
 }
 
 describe('CLI', () => {
@@ -91,7 +94,7 @@ describe('CLI', () => {
 
       expect(result.exitCode).toEqual(0);
       expect(result.stdout).toMatchInlineSnapshot(
-        `"Configuration file already exists at custom.json"`,
+        '"Configuration file already exists at custom.json"',
       );
       expect(
         readFileSync(path.join(project.baseDir, 'custom.json'), 'utf-8'),
@@ -209,7 +212,7 @@ describe('CLI', () => {
         path.join(project.baseDir, 'snippets', 'example.js'),
         'utf-8',
       );
-      expect(existingFile).toMatchInlineSnapshot(`"console.log("existing");"`);
+      expect(existingFile).toMatchInlineSnapshot('"console.log("existing");"');
     });
   });
 
@@ -422,7 +425,7 @@ const updated = "old";
       expect(result.exitCode).toEqual(1);
       expect(
         normalizeOutput(result.stderr, project.baseDir),
-      ).toMatchInlineSnapshot(`""`);
+      ).toMatchInlineSnapshot('""');
     });
 
     it('uses check command', async () => {
@@ -468,7 +471,7 @@ const test = true;
       expect(result.exitCode).toEqual(1);
       expect(
         normalizeOutput(result.stderr, project.baseDir),
-      ).toMatchInlineSnapshot(`""`);
+      ).toMatchInlineSnapshot('""');
     });
 
     it('fails on missing files in check mode by default', async () => {
@@ -487,7 +490,7 @@ old content
       expect(result.exitCode).toEqual(1);
       expect(
         normalizeOutput(result.stderr, project.baseDir),
-      ).toMatchInlineSnapshot(`""`);
+      ).toMatchInlineSnapshot('""');
       expect(normalizeOutput(result.stdout, project.baseDir))
         .toMatchInlineSnapshot(`
         "Checking markdown files...
@@ -566,7 +569,7 @@ old content
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(
-        `"Config file not found: nonexistent.json"`,
+        '"Config file not found: nonexistent.json"',
       );
     });
 
@@ -731,8 +734,8 @@ old content
   });
 
   describe('error handling', () => {
-    describe.skipIf(process.getuid?.() === 0)(
-      'unreadable Markdown files',
+    describe.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+      'unreadable Markdown files (needs chmod; POSIX and non-root only)',
       () => {
         async function writeProjectWithUnreadableFile() {
           await project.write({
@@ -777,7 +780,7 @@ old content
 
           expect(result.exitCode).toEqual(1);
           expect(normalizeOutput(result.stderr, project.baseDir)).toMatch(
-            /^Errors:\n  Error processing <TMP_DIR>\/locked\.md: Error: EACCES/,
+            /^Errors:\n {2}Error processing <TMP_DIR>\/locked\.md: Error: EACCES/,
           );
           expect(result.stderr).toContain('Snippet file not found: nope.js');
           expect(result.stdout).toMatchInlineSnapshot(`
@@ -803,10 +806,11 @@ old content
       },
     );
 
-    it('handles file system errors gracefully', async () => {
+    it('rejects an absolute snippet path outside the project', async () => {
+      const outsideFile = fileURLToPath(import.meta.url).replaceAll('\\', '/');
       const markdownContent = `# Test
 
-\`\`\`js snippet=/etc/passwd
+\`\`\`js snippet=${outsideFile}
 malicious content
 \`\`\``;
 
@@ -817,8 +821,8 @@ malicious content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizeOutput(result.stderr, project.baseDir)).toContain(
-        'invalid-path Path traversal attempt detected: /etc/passwd',
+      expect(stripVTControlCharacters(result.stderr)).toContain(
+        `invalid-path Path traversal attempt detected: ${outsideFile}`,
       );
     });
 
@@ -1359,7 +1363,7 @@ old content
 
       expect(result.exitCode).toEqual(1);
       expect(result.stderr).toMatchInlineSnapshot(
-        `"Config: snippetRoot must be a non-empty string"`,
+        '"Config: snippetRoot must be a non-empty string"',
       );
       expect(result.stdout).toBe('');
       expect(existsSync(path.join(project.baseDir, 'custom.json'))).toBe(true);

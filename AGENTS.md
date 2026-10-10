@@ -5,7 +5,7 @@ Follow these guidelines when modifying the repository.
 
 ## Setup
 
-- Use **Node.js 22.16** (or the version specified in `mise.toml`). Node 18+ is required.
+- Use **Node.js 22.16** (or the version specified in `mise.toml`). Node 22+ is required (`engines` in `package.json`).
 - Install dependencies with `npm install`.
 - Run the TypeScript build with `npm run build` (or `npm run dev` for watch mode).
 - Run the linter with `npm run lint` (use `npm run lint:fix` to autofix).
@@ -40,7 +40,7 @@ Follow these guidelines when modifying the repository.
 
 ## Continuous Integration
 
-- GitHub Actions (`.github/workflows/ci.yml`) install dependencies, run linting, typecheck, build the project, and execute tests on Node 22 and 24.
+- GitHub Actions (`.github/workflows/ci.yml`) run lint, `format:check` and typecheck once, then build, test and `test:package` on Ubuntu, macOS and Windows with Node 22 and 24. Keep paths, globs and test expectations portable (use `path.join`, not `/`).
 
 ## Useful Scripts
 

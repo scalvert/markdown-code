@@ -338,7 +338,7 @@ describe('snippet directive formatting', () => {
   );
 
   it('rejects references containing both quote characters', () => {
-    expect(() => formatSnippetDirective({ filePath: `a"b'c.ts` })).toThrow(
+    expect(() => formatSnippetDirective({ filePath: 'a"b\'c.ts' })).toThrow(
       'both quote characters',
     );
   });

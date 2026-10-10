@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { symlinkSync } from 'node:fs';
+import { realpathSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { Project } from 'fixturify-project';
 import { MarkdownDocument } from '../src/markdown-document.js';
@@ -66,10 +66,20 @@ describe('resolveSnippet', () => {
   }
 
   function withoutTmp(resolution: SnippetResolution): SnippetResolution {
-    return JSON.parse(
-      JSON.stringify(resolution)
+    const replacePaths = (text: string) => {
+      const replaced = text
+        .replaceAll(realpathSync(project.baseDir), '<TMP>')
         .replaceAll(project.baseDir, '<TMP>')
-        .replaceAll(outside.baseDir, '<OUTSIDE>'),
+        .replaceAll(realpathSync(outside.baseDir), '<OUTSIDE>')
+        .replaceAll(outside.baseDir, '<OUTSIDE>');
+      return process.platform === 'win32'
+        ? replaced.replaceAll('\\', '/')
+        : replaced;
+    };
+    return JSON.parse(
+      JSON.stringify(resolution, (_key, value: unknown) =>
+        typeof value === 'string' ? replacePaths(value) : value,
+      ),
     );
   }
 
@@ -78,6 +88,66 @@ describe('resolveSnippet', () => {
       expect(await resolveFor('snippet=app.js')).toEqual({
         status: 'resolved',
         content: 'const a = 1;\nconst b = 2;\nconst c = 3;',
+      });
+    });
+
+    it('resolves snippets when the working directory path goes through a symlink', async () => {
+      const link = join(outside.baseDir, 'project-link');
+      symlinkSync(project.baseDir, link, 'junction');
+
+      expect(
+        await resolveFor('snippet=folder/nested.js', { workingDir: link }),
+      ).toEqual({ status: 'resolved', content: 'nested' });
+      expect(
+        await resolveFor('snippet=only-in-root.js', { workingDir: link }),
+      ).toEqual({ status: 'resolved', content: 'from snippet root' });
+    });
+
+    describe('with a symlinked working directory and a snippet root outside it', () => {
+      let base: Project;
+      let link: string;
+
+      beforeEach(async () => {
+        base = new Project();
+        await base.write({
+          shared: { 's.js': 'configured root' },
+          real: { a: { b: {}, shared: { 's.js': 'unconfigured' } } },
+        });
+        link = join(base.baseDir, 'link');
+        symlinkSync(join(base.baseDir, 'real', 'a', 'b'), link, 'junction');
+      });
+
+      afterEach(() => {
+        base.dispose();
+      });
+
+      it('allows the configured root', async () => {
+        expect(
+          await resolveFor('snippet=s.js', {
+            workingDir: link,
+            snippetRoot: '../shared',
+          }),
+        ).toEqual({ status: 'resolved', content: 'configured root' });
+        expect(
+          await resolveFor('snippet=s.js', {
+            workingDir: link,
+            snippetRoot: join(base.baseDir, 'shared'),
+          }),
+        ).toEqual({ status: 'resolved', content: 'configured root' });
+      });
+
+      it('does not allow the same relative path under the link target', async () => {
+        const unconfigured = join(base.baseDir, 'real', 'a', 'shared', 's.js');
+
+        expect(
+          await resolveFor(`snippet=${unconfigured}`, {
+            workingDir: link,
+            snippetRoot: '../shared',
+          }),
+        ).toMatchObject({
+          status: 'failed',
+          issue: { ruleId: 'path-traversal' },
+        });
       });
     });
 
@@ -240,22 +310,25 @@ describe('resolveSnippet', () => {
       });
     });
 
-    it('reports a path that cannot be accessed', async () => {
-      const resolution = await resolveFor(
-        `snippet=${join(project.baseDir, 'app.js', 'child.js')}`,
-      );
+    it.skipIf(process.platform === 'win32')(
+      'reports a path that cannot be accessed (ENOTDIR is POSIX-only)',
+      async () => {
+        const resolution = await resolveFor(
+          `snippet=${join(project.baseDir, 'app.js', 'child.js')}`,
+        );
 
-      expect(withoutTmp(resolution)).toMatchObject({
-        status: 'failed',
-        issue: {
-          type: 'load-failed',
-          ruleId: 'snippet-load-error',
-          message: expect.stringMatching(
-            /^Error accessing snippet <TMP>\/app\.js\/child\.js: ENOTDIR/,
-          ),
-        },
-      });
-    });
+        expect(withoutTmp(resolution)).toMatchObject({
+          status: 'failed',
+          issue: {
+            type: 'load-failed',
+            ruleId: 'snippet-load-error',
+            message: expect.stringMatching(
+              /^Error accessing snippet <TMP>\/app\.js\/child\.js: ENOTDIR/,
+            ),
+          },
+        });
+      },
+    );
 
     it('reports a snippet that cannot be read', async () => {
       const resolution = await resolveFor('snippet=folder');

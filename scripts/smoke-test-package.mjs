@@ -105,11 +105,14 @@ try {
   mdCode('md-code', ['check'], project);
 
   const exported = run(
-    'node',
+    process.execPath,
     [
       '--input-type=module',
       '--eval',
-      "const m = await import('markdown-code'); console.log([typeof m.syncMarkdownFiles, m.VERSION].join(' '));",
+      [
+        "const m = await import('markdown-code');",
+        "console.log(typeof m.syncMarkdownFiles + ' ' + m.VERSION);",
+      ].join(' '),
     ],
     project,
   );

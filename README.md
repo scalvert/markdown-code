@@ -195,6 +195,7 @@ syntax as a local path:
 
 ````markdown
 ```ts snippet=https://raw.githubusercontent.com/example/project/main/app.ts#L10-L20
+
 ```
 ````
 
@@ -284,6 +285,11 @@ Create a `.markdown-coderc.json` file in your project root:
 | **excludeGlob**            | Array of glob patterns to exclude from processing               | Common build/dependency directories                                                                                                                                                                                                      |
 | **includeExtensions**      | File extensions to consider for snippets and extraction         | `[".ts", ".js", ".tsx", ".jsx", ".py", ".rb", ".go", ".rs", ".java", ".cpp", ".c", ".cs", ".php", ".sh", ".bash", ".zsh", ".fish", ".json", ".yaml", ".yml", ".toml", ".xml", ".html", ".css", ".scss", ".less", ".sql", ".md", ".txt"]` |
 | **missingSnippetSeverity** | Severity for missing local snippet files (`error` or `warning`) | `"error"`                                                                                                                                                                                                                                |
+
+On Windows, `\` in `markdownGlob` and `excludeGlob` is treated as a path
+separator, so `docs\**\*.md` works. To match a literal glob character such as
+`[` or `(` there, use a bracket expression (`docs/[[]draft].md`) instead of a
+backslash escape.
 
 ## Eject Safety
 
