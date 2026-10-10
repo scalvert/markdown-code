@@ -168,7 +168,7 @@ describe('planSync', () => {
 
     expect(plan).toMatchInlineSnapshot(`
       {
-        "error": "Error finding markdown files: TypeError: markdownGlob must be a non-empty pattern",
+        "error": "Error finding markdown files: TypeError: Patterns must be a string (non empty) or an array of strings",
         "status": "error",
       }
     `);

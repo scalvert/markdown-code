@@ -1,3 +1,4 @@
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Project } from 'fixturify-project';
@@ -48,6 +49,49 @@ describe('findMarkdownFiles', () => {
         join(project.baseDir, 'docs', 'guide.md'),
       ].sort(),
     );
+  });
+
+  it('includes the working directory itself in a ../ pattern', async () => {
+    const files = await findMarkdownFiles({
+      markdownGlob: '../**/*.md',
+      excludeGlob: [],
+      workingDir: join(project.baseDir, 'docs'),
+    });
+
+    expect(files).toEqual([
+      join(project.baseDir, 'README.md'),
+      join(project.baseDir, 'docs', 'draft.md'),
+      join(project.baseDir, 'docs', 'guide.md'),
+    ]);
+  });
+
+  it('follows symlinked directories under a symlinked absolute root', async () => {
+    const outside = new Project();
+    await outside.write({ 'linked.md': '' });
+    try {
+      mkdirSync(join(project.baseDir, 'tree'));
+      writeFileSync(join(project.baseDir, 'tree', 'own.md'), '');
+      symlinkSync(
+        outside.baseDir,
+        join(project.baseDir, 'tree', 'link'),
+        'junction',
+      );
+      const alias = join(project.baseDir, 'alias');
+      symlinkSync(join(project.baseDir, 'tree'), alias, 'junction');
+
+      const files = await findMarkdownFiles({
+        markdownGlob: join(alias, '**', '*.md'),
+        excludeGlob: [],
+        workingDir: alias,
+      });
+
+      expect(files).toEqual([
+        join(alias, 'link', 'linked.md'),
+        join(alias, 'own.md'),
+      ]);
+    } finally {
+      outside.dispose();
+    }
   });
 
   it('accepts an absolute pattern built with platform paths', async () => {
