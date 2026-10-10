@@ -21,7 +21,15 @@ const allowedFiles = new Set([
   'package.json',
   'markdown-code.png',
 ]);
-const isWindows = process.platform === 'win32';
+const npmCli = process.env.npm_execpath;
+
+if (!npmCli) {
+  throw new Error('Run this through npm: npm run test:package');
+}
+
+if (!existsSync(join(repoRoot, 'dist', 'index.js'))) {
+  throw new Error('dist/ is missing. Run npm run build first.');
+}
 
 function run(command, args, cwd) {
   return execFileSync(command, args, {
@@ -32,15 +40,7 @@ function run(command, args, cwd) {
 }
 
 function npm(args, cwd) {
-  if (isWindows) {
-    return execFileSync('npm.cmd', args, {
-      cwd,
-      encoding: 'utf-8',
-      shell: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
-  }
-  return run('npm', args, cwd);
+  return run(process.execPath, [npmCli, ...args], cwd);
 }
 
 function mdCode(bin, args, cwd) {
