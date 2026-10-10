@@ -262,22 +262,25 @@ describe('resolveSnippet', () => {
       });
     });
 
-    it('reports a path that cannot be accessed', async () => {
-      const resolution = await resolveFor(
-        `snippet=${join(project.baseDir, 'app.js', 'child.js')}`,
-      );
+    it.skipIf(process.platform === 'win32')(
+      'reports a path that cannot be accessed (ENOTDIR is POSIX-only)',
+      async () => {
+        const resolution = await resolveFor(
+          `snippet=${join(project.baseDir, 'app.js', 'child.js')}`,
+        );
 
-      expect(withoutTmp(resolution)).toMatchObject({
-        status: 'failed',
-        issue: {
-          type: 'load-failed',
-          ruleId: 'snippet-load-error',
-          message: expect.stringMatching(
-            /^Error accessing snippet <TMP>\/app\.js\/child\.js: ENOTDIR/,
-          ),
-        },
-      });
-    });
+        expect(withoutTmp(resolution)).toMatchObject({
+          status: 'failed',
+          issue: {
+            type: 'load-failed',
+            ruleId: 'snippet-load-error',
+            message: expect.stringMatching(
+              /^Error accessing snippet <TMP>\/app\.js\/child\.js: ENOTDIR/,
+            ),
+          },
+        });
+      },
+    );
 
     it('reports a snippet that cannot be read', async () => {
       const resolution = await resolveFor('snippet=folder');

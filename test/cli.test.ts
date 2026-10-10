@@ -806,10 +806,11 @@ old content
       },
     );
 
-    it('handles file system errors gracefully', async () => {
+    it('rejects an absolute snippet path outside the project', async () => {
+      const outsideFile = fileURLToPath(import.meta.url).replaceAll('\\', '/');
       const markdownContent = `# Test
 
-\`\`\`js snippet=/etc/passwd
+\`\`\`js snippet=${outsideFile}
 malicious content
 \`\`\``;
 
@@ -820,8 +821,8 @@ malicious content
       const result = await runBin();
 
       expect(result.exitCode).toEqual(1);
-      expect(normalizeOutput(result.stderr, project.baseDir)).toContain(
-        'invalid-path Path traversal attempt detected: /etc/passwd',
+      expect(stripVTControlCharacters(result.stderr)).toContain(
+        `invalid-path Path traversal attempt detected: ${outsideFile}`,
       );
     });
 

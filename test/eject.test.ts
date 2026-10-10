@@ -203,9 +203,13 @@ console.log("no directives");
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles(
+        baseConfig.markdownGlob,
+        [],
+        testDir,
+      );
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
@@ -234,9 +238,13 @@ interface Config {}
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles(
+        baseConfig.markdownGlob,
+        [],
+        testDir,
+      );
       expect(markdownFiles).toHaveLength(2);
 
       for (const filePath of markdownFiles) {
@@ -264,9 +272,13 @@ interface Test {}
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles(
+        baseConfig.markdownGlob,
+        [],
+        testDir,
+      );
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
 
@@ -300,9 +312,13 @@ function test() {
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles(
+        baseConfig.markdownGlob,
+        [],
+        testDir,
+      );
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
@@ -539,9 +555,13 @@ interface MyType {}
       });
 
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles(
+        baseConfig.markdownGlob,
+        [],
+        testDir,
+      );
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
