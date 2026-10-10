@@ -393,16 +393,12 @@ function createUser(name: string, age: number): User {
       // Step 1: Run extract to create snippets and directives
       const extractResult = await extractSnippets(runtimeConfig);
 
-      expect(extractResult).toMatchInlineSnapshot(`
-        {
-          "errors": [],
-          "extracted": [
-            "${testDir}/README.md",
-          ],
-          "snippetsCreated": 2,
-          "warnings": [],
-        }
-      `);
+      expect(extractResult).toEqual({
+        errors: [],
+        extracted: [join(testDir, 'README.md')],
+        snippetsCreated: 2,
+        warnings: [],
+      });
 
       const markdownAfterExtract = readFileSync(
         join(testDir, 'README.md'),
