@@ -8,9 +8,12 @@ import { loadScenario } from './fixtures/index.js';
 import { VERSION } from '../src/version.js';
 
 function normalizeOutput(output: string, baseDir: string): string {
-  return stripVTControlCharacters(output)
+  const normalized = stripVTControlCharacters(output)
     .replaceAll(realpathSync(baseDir), '<TMP_DIR>')
-    .replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
+    .replaceAll(baseDir, '<TMP_DIR>');
+  return process.platform === 'win32'
+    ? normalized.replaceAll('\\', '/')
+    : normalized;
 }
 
 describe('CLI', () => {

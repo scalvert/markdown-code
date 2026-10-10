@@ -1,5 +1,5 @@
 import { readFile, realpath } from 'node:fs/promises';
-import { resolve, dirname, isAbsolute } from 'node:path';
+import { resolve, dirname, isAbsolute, relative } from 'node:path';
 import type { Issue, RuntimeConfig, SnippetDirective } from './types.js';
 import type { DocumentCodeBlock } from './markdown-document.js';
 import { fileExists, isInWorkingDir } from './utils.js';
@@ -34,10 +34,19 @@ export function isManagedCodeBlock(
   return codeBlock.directive !== undefined;
 }
 
-function allowedSnippetRoots(config: RuntimeConfig): Array<string> {
+async function allowedSnippetRoots(
+  config: RuntimeConfig,
+): Promise<Array<string>> {
   const workingDir = resolve(config.workingDir);
   const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
-  return snippetRoot !== workingDir ? [workingDir, snippetRoot] : [workingDir];
+  const realWorkingDir = await realpath(workingDir).catch(() => workingDir);
+  const realSnippetRoot = resolve(
+    realWorkingDir,
+    relative(workingDir, snippetRoot),
+  );
+  return realSnippetRoot !== realWorkingDir
+    ? [realWorkingDir, realSnippetRoot]
+    : [realWorkingDir];
 }
 
 function countLines(content: string): number {
@@ -152,7 +161,7 @@ async function readLocalSnippet(
     };
   }
 
-  if (!isInWorkingDir(realPath, allowedSnippetRoots(config))) {
+  if (!isInWorkingDir(realPath, await allowedSnippetRoots(config))) {
     return { ok: false, step: 'contain' };
   }
 

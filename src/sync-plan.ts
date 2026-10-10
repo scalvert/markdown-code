@@ -1,4 +1,4 @@
-import fg from 'fast-glob';
+import { findMarkdownFiles } from './glob.js';
 import type { Issue, RuntimeConfig } from './types.js';
 import { readMarkdownDocument } from './parser.js';
 import { createIssue } from './issues.js';
@@ -80,11 +80,11 @@ async function* planFiles(
 export async function planSync(config: RuntimeConfig): Promise<SyncPlan> {
   let markdownFiles: Array<string>;
   try {
-    markdownFiles = await fg(config.markdownGlob, {
-      ignore: config.excludeGlob,
-      cwd: config.workingDir,
-      absolute: true,
-    });
+    markdownFiles = await findMarkdownFiles(
+      config.markdownGlob,
+      config.excludeGlob,
+      config.workingDir,
+    );
   } catch (error) {
     return {
       status: 'error',

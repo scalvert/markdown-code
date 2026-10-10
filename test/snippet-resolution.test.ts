@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { symlinkSync } from 'node:fs';
+import { realpathSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { Project } from 'fixturify-project';
 import { MarkdownDocument } from '../src/markdown-document.js';
@@ -66,10 +66,20 @@ describe('resolveSnippet', () => {
   }
 
   function withoutTmp(resolution: SnippetResolution): SnippetResolution {
-    return JSON.parse(
-      JSON.stringify(resolution)
+    const replacePaths = (text: string) => {
+      const replaced = text
+        .replaceAll(realpathSync(project.baseDir), '<TMP>')
         .replaceAll(project.baseDir, '<TMP>')
-        .replaceAll(outside.baseDir, '<OUTSIDE>'),
+        .replaceAll(realpathSync(outside.baseDir), '<OUTSIDE>')
+        .replaceAll(outside.baseDir, '<OUTSIDE>');
+      return process.platform === 'win32'
+        ? replaced.replaceAll('\\', '/')
+        : replaced;
+    };
+    return JSON.parse(
+      JSON.stringify(resolution, (_key, value: unknown) =>
+        typeof value === 'string' ? replacePaths(value) : value,
+      ),
     );
   }
 
@@ -79,6 +89,18 @@ describe('resolveSnippet', () => {
         status: 'resolved',
         content: 'const a = 1;\nconst b = 2;\nconst c = 3;',
       });
+    });
+
+    it('resolves snippets when the working directory path goes through a symlink', async () => {
+      const link = join(outside.baseDir, 'project-link');
+      symlinkSync(project.baseDir, link, 'junction');
+
+      expect(
+        await resolveFor('snippet=folder/nested.js', { workingDir: link }),
+      ).toEqual({ status: 'resolved', content: 'nested' });
+      expect(
+        await resolveFor('snippet=only-in-root.js', { workingDir: link }),
+      ).toEqual({ status: 'resolved', content: 'from snippet root' });
     });
 
     it('selects a line range', async () => {

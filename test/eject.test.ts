@@ -130,10 +130,14 @@ console.log("no snippet directive");
 
       // Manually import the internal function for testing
       const { parseMarkdownFile } = await import('../src/parser.js');
-      const fg = await import('fast-glob');
+      const { findMarkdownFiles } = await import('../src/glob.js');
 
       // Test the core removal logic
-      const markdownFiles = await fg.default(baseConfig.markdownGlob);
+      const markdownFiles = await findMarkdownFiles(
+        baseConfig.markdownGlob,
+        [],
+        testDir,
+      );
       const filePath = markdownFiles[0];
       const markdownFile = await parseMarkdownFile(filePath);
       const codeBlocksWithSnippets = markdownFile.codeBlocks.filter(
