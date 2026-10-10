@@ -126,8 +126,15 @@ function redirectTarget(
   location: string,
   options: FetchOptions,
 ): string {
+  if (!URL.canParse(location, from)) {
+    throw new Error(`Remote file sent an invalid redirect: ${url}`);
+  }
   const target = new URL(location, from);
   target.hash = '';
+
+  if (target.username || target.password) {
+    throw new Error(`Remote file redirected to a URL with credentials: ${url}`);
+  }
 
   if (target.protocol === 'http:' && !options.allowInsecureHttp) {
     throw new Error(
@@ -199,6 +206,7 @@ export async function fetchRemoteContent(
     );
 
     if (!response.ok) {
+      await response.body?.cancel();
       if (response.status === 404) {
         throw new Error(`Remote file not found: ${url}`);
       }

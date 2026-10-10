@@ -164,6 +164,21 @@ describe('remote', () => {
       ).rejects.toThrow('Remote file not found');
     });
 
+    it('cancels the body of an error response', async () => {
+      let cancelled = false;
+      const body = new ReadableStream({
+        cancel() {
+          cancelled = true;
+        },
+      });
+      vi.mocked(fetch).mockResolvedValue(new Response(body, { status: 500 }));
+
+      await expect(
+        fetchRemoteContent('https://example.com/file.ts'),
+      ).rejects.toThrow('HTTP 500');
+      expect(cancelled).toBe(true);
+    });
+
     it('should throw on other HTTP errors', async () => {
       vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 500 }));
 
@@ -268,6 +283,30 @@ describe('remote', () => {
           fetchRemoteContent('https://example.com/file.ts'),
         ).rejects.toThrow(
           'Remote file redirected to an unsupported URL: https://example.com/file.ts -> file:///etc/passwd',
+        );
+      });
+
+      it('rejects a redirect to a URL with credentials without echoing them', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce(
+          redirect('https://user:secret@example.com/file.ts'),
+        );
+
+        const error = await fetchRemoteContent(
+          'https://example.com/file.ts',
+        ).catch((caught: unknown) => caught as Error);
+
+        expect(error.message).toBe(
+          'Remote file redirected to a URL with credentials: https://example.com/file.ts',
+        );
+      });
+
+      it('names the URL when the redirect Location is invalid', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce(redirect('http://[::1'));
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts'),
+        ).rejects.toThrow(
+          'Remote file sent an invalid redirect: https://example.com/file.ts',
         );
       });
 
