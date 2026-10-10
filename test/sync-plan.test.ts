@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Project } from 'fixturify-project';
@@ -8,11 +8,19 @@ import {
   type FilePlan,
   type SyncPlan,
 } from '../src/sync-plan.js';
+import { syncMarkdownFiles } from '../src/sync.js';
 import type { RuntimeConfig } from '../src/types.js';
 
+vi.mock('fast-glob', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fast-glob')>();
+  const sortedGlob = async (...args: Parameters<typeof actual.default>) =>
+    (await actual.default(...args)).sort();
+  return { default: sortedGlob };
+});
+
 async function collect(plan: SyncPlan): Promise<Array<FilePlan>> {
-  if (plan.status !== 'listed') {
-    throw new Error(`Expected a listed plan, got ${plan.error}`);
+  if (plan.status !== 'planned') {
+    throw new Error(`Expected a plan, got ${plan.error}`);
   }
   const files: Array<FilePlan> = [];
   for await (const file of plan.files) {
@@ -100,7 +108,7 @@ describe('planSync', () => {
       'b.md': 'first\n',
     });
     const plan = await planSync({ ...config, markdownGlob: '{a,b}.md' });
-    if (plan.status !== 'listed') throw new Error(plan.error);
+    if (plan.status !== 'planned') throw new Error(plan.error);
 
     const iterator = plan.files[Symbol.asyncIterator]();
     const first = (await iterator.next()).value as FilePlan;
@@ -116,6 +124,27 @@ describe('planSync', () => {
     );
   });
 
+  it('lets sync write each file before planning the next', async () => {
+    await project.write({
+      'a.md': '```md snippet=a-source.md\nold\n```\n',
+      'a-source.md': 'new\n',
+      'z.md': '````md snippet=a.md\nstale\n````\n',
+    });
+
+    const result = await syncMarkdownFiles({
+      ...config,
+      markdownGlob: '{a,z}.md',
+    });
+
+    expect(result.updated.map((file) => file.slice(-4))).toEqual([
+      'a.md',
+      'z.md',
+    ]);
+    expect(readFileSync(join(project.baseDir, 'z.md'), 'utf-8')).toBe(
+      '````md snippet=a.md\n```md snippet=a-source.md\nnew\n```\n````\n',
+    );
+  });
+
   it.skipIf(process.getuid?.() === 0)(
     'reports files that cannot be read',
     async () => {
@@ -127,7 +156,7 @@ describe('planSync', () => {
 
         expect(file).toMatchObject({
           filePath: readme,
-          status: 'unreadable',
+          status: 'error',
           error: expect.stringMatching(
             new RegExp(`^Error processing ${readme}: Error: EACCES`),
           ),
@@ -147,7 +176,7 @@ describe('planSync', () => {
     expect(plan).toMatchInlineSnapshot(`
       {
         "error": "Error finding markdown files: TypeError: Patterns must be a string (non empty) or an array of strings",
-        "status": "unlisted",
+        "status": "error",
       }
     `);
   });

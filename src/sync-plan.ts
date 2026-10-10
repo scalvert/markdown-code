@@ -1,6 +1,8 @@
 import fg from 'fast-glob';
 import type { Issue, RuntimeConfig } from './types.js';
 import { readMarkdownDocument } from './parser.js';
+import { createIssue } from './issues.js';
+import { formatSnippetDirective } from './snippet-directive.js';
 import {
   isManagedCodeBlock,
   resolveSnippet,
@@ -20,11 +22,11 @@ export type FilePlan =
       updatedContent: string;
       blocks: Array<BlockPlan>;
     }
-  | { filePath: string; status: 'unreadable'; error: string };
+  | { filePath: string; status: 'error'; error: string };
 
 export type SyncPlan =
-  | { status: 'listed'; files: AsyncIterable<FilePlan> }
-  | { status: 'unlisted'; error: string };
+  | { status: 'planned'; files: AsyncIterable<FilePlan> }
+  | { status: 'error'; error: string };
 
 async function planFile(
   filePath: string,
@@ -60,7 +62,7 @@ async function planFile(
   } catch (error) {
     return {
       filePath,
-      status: 'unreadable',
+      status: 'error',
       error: `Error processing ${filePath}: ${error}`,
     };
   }
@@ -85,16 +87,34 @@ export async function planSync(config: RuntimeConfig): Promise<SyncPlan> {
     });
   } catch (error) {
     return {
-      status: 'unlisted',
+      status: 'error',
       error: `Error finding markdown files: ${error}`,
     };
   }
 
-  return { status: 'listed', files: planFiles(markdownFiles, config) };
+  return { status: 'planned', files: planFiles(markdownFiles, config) };
 }
 
 export function failedIssues(blocks: Array<BlockPlan>): Array<Issue> {
   return blocks.flatMap((block) =>
     block.status === 'failed' ? [block.issue] : [],
   );
+}
+
+export function checkIssues(blocks: Array<BlockPlan>): Array<Issue> {
+  return blocks.flatMap((block) => {
+    if (block.status === 'failed') {
+      return [block.issue];
+    }
+    if (block.status === 'out-of-sync') {
+      return [
+        createIssue(
+          'content-mismatch',
+          block.codeBlock,
+          `Code block out of sync with ${formatSnippetDirective(block.codeBlock.directive)}`,
+        ),
+      ];
+    }
+    return [];
+  });
 }

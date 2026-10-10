@@ -13,9 +13,8 @@ import type {
 } from './types.js';
 import { readMarkdownDocument } from './parser.js';
 import { normalizeLineEndings } from './line-endings.js';
-import { formatSnippetDirective } from './snippet-directive.js';
-import { failedIssues, planSync, type BlockPlan } from './sync-plan.js';
-import { createIssue, isError } from './issues.js';
+import { checkIssues, failedIssues, planSync } from './sync-plan.js';
+import { isError } from './issues.js';
 
 const require = createRequire(import.meta.url);
 const languageMap = require('language-map');
@@ -31,13 +30,13 @@ export async function syncMarkdownFiles(
   };
 
   const plan = await planSync(config);
-  if (plan.status === 'unlisted') {
+  if (plan.status === 'error') {
     result.errors.push(plan.error);
     return result;
   }
 
   for await (const file of plan.files) {
-    if (file.status === 'unreadable') {
+    if (file.status === 'error') {
       result.errors.push(file.error);
       continue;
     }
@@ -60,24 +59,6 @@ export async function syncMarkdownFiles(
   return result;
 }
 
-function checkIssues(blocks: Array<BlockPlan>): Array<Issue> {
-  return blocks.flatMap((block) => {
-    if (block.status === 'failed') {
-      return [block.issue];
-    }
-    if (block.status === 'out-of-sync') {
-      return [
-        createIssue(
-          'content-mismatch',
-          block.codeBlock,
-          `Code block out of sync with ${formatSnippetDirective(block.codeBlock.directive)}`,
-        ),
-      ];
-    }
-    return [];
-  });
-}
-
 export async function checkMarkdownFiles(
   config: RuntimeConfig,
 ): Promise<CheckResult> {
@@ -90,13 +71,13 @@ export async function checkMarkdownFiles(
   };
 
   const plan = await planSync(config);
-  if (plan.status === 'unlisted') {
+  if (plan.status === 'error') {
     result.errors.push(plan.error);
     return result;
   }
 
   for await (const file of plan.files) {
-    if (file.status === 'unreadable') {
+    if (file.status === 'error') {
       result.errors.push(file.error);
       continue;
     }
@@ -106,7 +87,10 @@ export async function checkMarkdownFiles(
       result.fileIssues.push({ filePath: file.filePath, issues });
     }
 
-    if (issues.some(isError)) {
+    const hasOutOfSyncBlock = file.blocks.some(
+      (block) => block.status === 'out-of-sync',
+    );
+    if (hasOutOfSyncBlock || issues.some(isError)) {
       result.outOfSync.push(file.filePath);
       result.inSync = false;
     }

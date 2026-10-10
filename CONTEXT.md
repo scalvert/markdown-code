@@ -37,9 +37,9 @@ Whether an issue fails the run (`error`) or is only reported (`warning`). Only m
 _Avoid_: Level, priority
 
 **In sync**:
-A managed code block is in sync when its content equals what its snippet directive selects, and out of sync otherwise.
+A managed code block is in sync when its content equals what its snippet directive selects, and out of sync when its snippet resolves to different content. A block whose snippet cannot be resolved is neither; it has an issue instead. A Markdown file is out of sync when any of its code blocks is out of sync or has an error.
 _Avoid_: Stale, dirty, up to date
 
 **Sync plan**:
-For each Markdown document, the outcome for every managed code block (in sync, out of sync, or an issue) and the content syncing would write. `sync` applies the plan; `check` reports it.
+For each Markdown document, the outcome for every managed code block (in sync, out of sync, or failed with an issue) and the content syncing would write, or the error that stopped the file from being planned. `sync` applies the plan; `check` reports it.
 _Avoid_: Diff, dry run
