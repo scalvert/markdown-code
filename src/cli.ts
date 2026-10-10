@@ -1,5 +1,6 @@
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import { VERSION } from './version.js';
 
 yargs(hideBin(process.argv))
   .scriptName('md-code')
@@ -38,7 +39,7 @@ yargs(hideBin(process.argv))
   })
   .help()
   .alias('help', 'h')
-  .version()
+  .version(VERSION)
   .alias('version', 'v')
   .demandCommand(1, 'You need at least one command before moving on')
   .parse();

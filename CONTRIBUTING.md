@@ -67,6 +67,9 @@ npm test
 
 # Run tests in watch mode
 npm run test:watch
+
+# Pack, install and run the built package (run `npm run build` first)
+npm run test:package
 ```
 
 ### Test Fixtures

@@ -34,7 +34,8 @@
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:all": "npm run lint && npm run typecheck && npm run build && npm run test",
+    "test:all": "npm run lint && npm run typecheck && npm run build && npm run test && npm run test:package",
+    "test:package": "node scripts/smoke-test-package.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
