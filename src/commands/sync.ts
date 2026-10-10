@@ -22,11 +22,8 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
     console.log('Syncing markdown files...');
     const result = await syncMarkdownFiles(config);
 
-    const hasProcessingErrors = logWarningsAndErrors(
-      result.warnings,
-      result.errors,
-    );
-    const failed = hasProcessingErrors || hasErrors(result.fileIssues);
+    logWarningsAndErrors(result.warnings, result.errors);
+    const failed = result.errors.length > 0 || hasErrors(result.fileIssues);
 
     if (hasIssues(result.fileIssues)) {
       console.error(format(result.fileIssues));

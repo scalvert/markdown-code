@@ -59,10 +59,8 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
       process.stdout.write('\x1b[2K\r');
     }
 
-    const hasProcessingErrors = logWarningsAndErrors(
-      result.warnings,
-      result.errors,
-    );
+    logWarningsAndErrors(result.warnings, result.errors);
+    const hasProcessingErrors = result.errors.length > 0;
 
     let hasDiscoveryIssues = false;
 

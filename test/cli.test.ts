@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readFileSync, existsSync, chmodSync } from 'node:fs';
+import { readFileSync, existsSync, chmodSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createBintastic, BintasticProject } from 'bintastic';
@@ -9,6 +9,7 @@ import { VERSION } from '../src/version.js';
 function normalizeOutput(output: string, baseDir: string): string {
   return output
     .replace(/\x1b\[[0-9;]*m/g, '')
+    .replaceAll(realpathSync(baseDir), '<TMP_DIR>')
     .replace(new RegExp(baseDir, 'g'), '<TMP_DIR>');
 }
 
@@ -744,7 +745,29 @@ old content
         }
 
         afterEach(() => {
-          chmodSync(path.join(project.baseDir, 'locked.md'), 0o644);
+          const locked = path.join(project.baseDir, 'locked.md');
+          if (existsSync(locked)) {
+            chmodSync(locked, 0o644);
+          }
+        });
+
+        it('extract still lists extracted files, then exits 1', async () => {
+          await project.write({
+            'plain.md': '```js\nconst plain = 1;\n```\n',
+            'locked.md': '```js\nconst locked = 1;\n```\n',
+          });
+          chmodSync(path.join(project.baseDir, 'locked.md'), 0o000);
+
+          const result = await runBin('extract');
+
+          expect(result.exitCode).toEqual(1);
+          expect(result.stderr).toMatch(/^Errors:\n {2}Error processing /);
+          expect(normalizeOutput(result.stdout, project.baseDir))
+            .toMatchInlineSnapshot(`
+            "Extracting snippets from code blocks...
+            Extracted 1 snippets from:
+              <TMP_DIR>/plain.md"
+          `);
         });
 
         it('sync still reports issues and updated files, then exits 1', async () => {

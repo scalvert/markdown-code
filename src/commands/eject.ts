@@ -195,9 +195,8 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     console.log('Removing snippet directives from markdown files...');
     const directiveResult = await removeSnippetDirectives(config);
 
-    if (
-      logWarningsAndErrors(directiveResult.warnings, directiveResult.errors)
-    ) {
+    if (directiveResult.errors.length > 0) {
+      logWarningsAndErrors(directiveResult.warnings, directiveResult.errors);
       markFailed();
       return;
     }
@@ -241,7 +240,8 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
       ...configResult.errors,
     ];
 
-    if (logWarningsAndErrors(allWarnings, allErrors)) {
+    logWarningsAndErrors(allWarnings, allErrors);
+    if (allErrors.length > 0) {
       markFailed();
       return;
     }
