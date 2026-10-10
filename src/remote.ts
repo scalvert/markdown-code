@@ -1,9 +1,49 @@
 export interface FetchOptions {
   timeout?: number | undefined;
   allowInsecureHttp?: boolean | undefined;
+  maxBytes?: number | undefined;
 }
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
+const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
+
+function tooLarge(url: string, maxBytes: number): Error {
+  return new Error(`Remote file is larger than ${maxBytes} bytes: ${url}`);
+}
+
+async function readBody(
+  response: Response,
+  url: string,
+  maxBytes: number,
+): Promise<string> {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (declaredLength > maxBytes) {
+    await response.body?.cancel();
+    throw tooLarge(url, maxBytes);
+  }
+
+  if (!response.body) {
+    return '';
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = '';
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      return text + decoder.decode();
+    }
+    received += value.byteLength;
+    if (received > maxBytes) {
+      await reader.cancel();
+      throw tooLarge(url, maxBytes);
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+}
 
 /**
  * Check if a path is a remote URL (HTTP or HTTPS)
@@ -102,6 +142,18 @@ export async function fetchRemoteContent(
       },
     });
 
+    if (
+      response.redirected &&
+      new URL(response.url).protocol === 'http:' &&
+      !options.allowInsecureHttp
+    ) {
+      await response.body?.cancel();
+      throw new Error(
+        `Remote file redirected to an insecure HTTP URL: ${url} -> ${response.url}. ` +
+          'Use HTTPS or set allowInsecureHttp: true in config.',
+      );
+    }
+
     if (!response.ok) {
       if (response.status === 404) {
         throw new Error(`Remote file not found: ${url}`);
@@ -111,7 +163,7 @@ export async function fetchRemoteContent(
       );
     }
 
-    return await response.text();
+    return await readBody(response, url, options.maxBytes ?? DEFAULT_MAX_BYTES);
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {

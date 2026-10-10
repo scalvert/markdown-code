@@ -15,12 +15,7 @@ const repoRoot = resolve(import.meta.dirname, '..');
 const { version } = JSON.parse(
   readFileSync(join(repoRoot, 'package.json'), 'utf-8'),
 );
-const allowedFiles = new Set([
-  'LICENSE',
-  'README.md',
-  'package.json',
-  'markdown-code.png',
-]);
+const allowedFiles = new Set(['LICENSE', 'README.md', 'package.json']);
 const npmCli = process.env.npm_execpath;
 
 if (!npmCli) {

@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import fg from 'fast-glob';
+import { glob } from 'tinyglobby';
 
 export function toGlobPattern(
   pattern: string,
@@ -19,10 +19,15 @@ export async function findMarkdownFiles({
   excludeGlob,
   workingDir,
 }: MarkdownFileQuery): Promise<Array<string>> {
-  const files = await fg(toGlobPattern(markdownGlob), {
+  if (markdownGlob.trim() === '') {
+    throw new TypeError('markdownGlob must be a non-empty pattern');
+  }
+
+  const files = await glob(toGlobPattern(markdownGlob), {
     ignore: excludeGlob.map((pattern) => toGlobPattern(pattern)),
     cwd: workingDir,
     absolute: true,
+    expandDirectories: false,
   });
-  return files.map((file) => resolve(file));
+  return files.map((file) => resolve(file)).sort();
 }

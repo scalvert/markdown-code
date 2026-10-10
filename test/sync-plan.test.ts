@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Project } from 'fixturify-project';
@@ -10,13 +10,6 @@ import {
 } from '../src/sync-plan.js';
 import { syncMarkdownFiles } from '../src/sync.js';
 import type { RuntimeConfig } from '../src/types.js';
-
-vi.mock('fast-glob', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fast-glob')>();
-  const sortedGlob = async (...args: Parameters<typeof actual.default>) =>
-    (await actual.default(...args)).sort();
-  return { default: sortedGlob };
-});
 
 async function collect(plan: SyncPlan): Promise<Array<FilePlan>> {
   if (plan.status !== 'planned') {
@@ -175,7 +168,7 @@ describe('planSync', () => {
 
     expect(plan).toMatchInlineSnapshot(`
       {
-        "error": "Error finding markdown files: TypeError: Patterns must be a string (non empty) or an array of strings",
+        "error": "Error finding markdown files: TypeError: markdownGlob must be a non-empty pattern",
         "status": "error",
       }
     `);

@@ -138,20 +138,14 @@ describe('remote', () => {
 
     it('should fetch content from valid URL', async () => {
       const mockContent = 'const x = 1;';
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve(mockContent),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(new Response(mockContent));
 
       const result = await fetchRemoteContent('https://example.com/file.ts');
       expect(result).toBe(mockContent);
     });
 
     it('should strip hash fragment when fetching', async () => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve('content'),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(new Response('content'));
 
       await fetchRemoteContent('https://example.com/file.ts#L10-L20');
 
@@ -163,10 +157,7 @@ describe('remote', () => {
     });
 
     it('should throw on 404', async () => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: false,
-        status: 404,
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 404 }));
 
       await expect(
         fetchRemoteContent('https://example.com/missing.ts'),
@@ -174,10 +165,7 @@ describe('remote', () => {
     });
 
     it('should throw on other HTTP errors', async () => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: false,
-        status: 500,
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 500 }));
 
       await expect(
         fetchRemoteContent('https://example.com/file.ts'),
@@ -185,10 +173,7 @@ describe('remote', () => {
     });
 
     it('should include User-Agent header', async () => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve('content'),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(new Response('content'));
 
       await fetchRemoteContent('https://example.com/file.ts');
 
@@ -208,11 +193,107 @@ describe('remote', () => {
       ).rejects.toThrow('Insecure HTTP URLs are not allowed');
     });
 
+    describe('redirects', () => {
+      function redirectedResponse(finalUrl: string, body = 'content') {
+        const response = new Response(body);
+        Object.defineProperty(response, 'redirected', { value: true });
+        Object.defineProperty(response, 'url', { value: finalUrl });
+        return response;
+      }
+
+      it('rejects an HTTPS URL that redirects to HTTP', async () => {
+        vi.mocked(fetch).mockResolvedValue(
+          redirectedResponse('http://example.com/file.ts'),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts'),
+        ).rejects.toThrow(
+          'Remote file redirected to an insecure HTTP URL: https://example.com/file.ts -> http://example.com/file.ts',
+        );
+      });
+
+      it('follows a redirect to HTTP when allowInsecureHttp is true', async () => {
+        vi.mocked(fetch).mockResolvedValue(
+          redirectedResponse('http://example.com/file.ts'),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts', {
+            allowInsecureHttp: true,
+          }),
+        ).resolves.toBe('content');
+      });
+
+      it('follows a redirect that stays on HTTPS', async () => {
+        vi.mocked(fetch).mockResolvedValue(
+          redirectedResponse('https://cdn.example.com/file.ts'),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts'),
+        ).resolves.toBe('content');
+      });
+    });
+
+    describe('size limit', () => {
+      function streamOf(chunks: Array<Uint8Array>): ReadableStream<Uint8Array> {
+        return new ReadableStream({
+          start(controller) {
+            chunks.forEach((chunk) => controller.enqueue(chunk));
+            controller.close();
+          },
+        });
+      }
+
+      it('rejects a declared Content-Length over the limit', async () => {
+        vi.mocked(fetch).mockResolvedValue(
+          new Response('x', { headers: { 'content-length': '11' } }),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/big.ts', { maxBytes: 10 }),
+        ).rejects.toThrow(
+          'Remote file is larger than 10 bytes: https://example.com/big.ts',
+        );
+      });
+
+      it('stops reading a body that grows past the limit', async () => {
+        vi.mocked(fetch).mockResolvedValue(
+          new Response(
+            streamOf([new Uint8Array(6), new Uint8Array(6), new Uint8Array(6)]),
+          ),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/big.ts', { maxBytes: 10 }),
+        ).rejects.toThrow('Remote file is larger than 10 bytes');
+      });
+
+      it('accepts a body exactly at the limit', async () => {
+        vi.mocked(fetch).mockResolvedValue(new Response('0123456789'));
+
+        await expect(
+          fetchRemoteContent('https://example.com/ok.ts', { maxBytes: 10 }),
+        ).resolves.toBe('0123456789');
+      });
+
+      it('decodes UTF-8 characters split across chunks', async () => {
+        const bytes = new TextEncoder().encode('café → 🚀');
+        vi.mocked(fetch).mockResolvedValue(
+          new Response(
+            streamOf([bytes.slice(0, 4), bytes.slice(4, 9), bytes.slice(9)]),
+          ),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/utf8.ts'),
+        ).resolves.toBe('café → 🚀');
+      });
+    });
+
     it('should allow HTTP when allowInsecureHttp is true', async () => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve('content'),
-      } as Response);
+      vi.mocked(fetch).mockResolvedValue(new Response('content'));
 
       await expect(
         fetchRemoteContent('http://example.com/file.ts', {
