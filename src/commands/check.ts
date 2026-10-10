@@ -7,6 +7,7 @@ import {
   getValidatedConfig,
   handleError,
   logWarningsAndErrors,
+  markFailed,
   type BaseArgs,
 } from './shared.js';
 
@@ -58,23 +59,26 @@ export const handler = async (argv: ArgumentsCamelCase<CheckArgs>) => {
       process.stdout.write('\x1b[2K\r');
     }
 
-    logWarningsAndErrors(result.warnings, result.errors);
+    const hasProcessingErrors = logWarningsAndErrors(
+      result.warnings,
+      result.errors,
+    );
 
     let hasDiscoveryIssues = false;
 
-    if (!hasIssues(result.fileIssues)) {
+    if (!hasProcessingErrors && !hasIssues(result.fileIssues)) {
       hasDiscoveryIssues = await handleDiscoveryMode(config, argv.config);
     }
 
     const output = format(result.fileIssues);
     if (output) {
       console.log(output);
-    } else if (!hasDiscoveryIssues) {
+    } else if (!hasDiscoveryIssues && !hasProcessingErrors) {
       console.log('All markdown files are in sync.');
     }
 
-    if (hasErrors(result.fileIssues)) {
-      process.exit(1);
+    if (hasProcessingErrors || hasErrors(result.fileIssues)) {
+      markFailed();
     }
   } catch (error: unknown) {
     handleError(error);

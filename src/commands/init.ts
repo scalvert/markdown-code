@@ -13,6 +13,7 @@ import {
   handleError,
   logExtractionResults,
   logWarningsAndErrors,
+  markFailed,
   type BaseArgs,
 } from './shared.js';
 
@@ -72,8 +73,15 @@ async function handleExtraction(argv: ArgumentsCamelCase<InitArgs>) {
   const config = await getValidatedConfig(argv);
   const result = await extractSnippets(config);
 
-  logWarningsAndErrors(result.warnings, result.errors);
-  logExtractionResults(result);
+  const hasProcessingErrors = logWarningsAndErrors(
+    result.warnings,
+    result.errors,
+  );
+  logExtractionResults(result, hasProcessingErrors);
+
+  if (hasProcessingErrors) {
+    markFailed();
+  }
 }
 
 export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {

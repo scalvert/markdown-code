@@ -15,6 +15,7 @@ import {
   getValidatedConfig,
   handleError,
   logWarningsAndErrors,
+  markFailed,
   type BaseArgs,
 } from './shared.js';
 
@@ -194,8 +195,10 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     console.log('Removing snippet directives from markdown files...');
     const directiveResult = await removeSnippetDirectives(config);
 
-    if (directiveResult.errors.length > 0) {
-      logWarningsAndErrors(directiveResult.warnings, directiveResult.errors);
+    if (
+      logWarningsAndErrors(directiveResult.warnings, directiveResult.errors)
+    ) {
+      markFailed();
       return;
     }
 
@@ -219,6 +222,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
         [...directiveResult.warnings, ...snippetResult.warnings],
         snippetResult.errors,
       );
+      markFailed();
       return;
     }
 
@@ -237,7 +241,10 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
       ...configResult.errors,
     ];
 
-    logWarningsAndErrors(allWarnings, allErrors);
+    if (logWarningsAndErrors(allWarnings, allErrors)) {
+      markFailed();
+      return;
+    }
 
     console.log('✅ Ejection completed successfully!');
   } catch (error) {

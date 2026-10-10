@@ -6,6 +6,7 @@ import {
   getValidatedConfig,
   handleError,
   logWarningsAndErrors,
+  markFailed,
   type BaseArgs,
 } from './shared.js';
 
@@ -21,15 +22,14 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
     console.log('Syncing markdown files...');
     const result = await syncMarkdownFiles(config);
 
-    logWarningsAndErrors(result.warnings, result.errors);
+    const hasProcessingErrors = logWarningsAndErrors(
+      result.warnings,
+      result.errors,
+    );
+    const failed = hasProcessingErrors || hasErrors(result.fileIssues);
 
     if (hasIssues(result.fileIssues)) {
-      const formattedOutput = format(result.fileIssues);
-      console.error(formattedOutput);
-
-      if (hasErrors(result.fileIssues)) {
-        process.exit(1);
-      }
+      console.error(format(result.fileIssues));
     }
 
     if (result.updated.length > 0) {
@@ -38,8 +38,12 @@ export const handler = async (argv: ArgumentsCamelCase<SyncArgs>) => {
         const relativePath = relative(config.workingDir, file);
         console.log(`  ${relativePath}`);
       });
-    } else {
+    } else if (!failed) {
       console.log('All files are already in sync.');
+    }
+
+    if (failed) {
+      markFailed();
     }
   } catch (error) {
     handleError(error);
