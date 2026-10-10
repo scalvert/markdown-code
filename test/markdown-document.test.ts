@@ -260,6 +260,116 @@ old
       expect(document.toString()).toBe('~~~~ts snippet=a.ts\nnew');
     });
 
+    describe('when the body contains a fence line', () => {
+      it('lengthens the fence so the body cannot close the block', () => {
+        const document = parse(
+          '# Doc\n\n```js snippet=a.js\nold\n```\n\nafter\n',
+        );
+        const body =
+          'const a = 1;\n```\n\n<img src=x onerror=alert(1)>\n\n```js';
+
+        document.setBody(document.codeBlocks[0]!, body);
+        const output = document.toString();
+
+        expect(output).toMatchInlineSnapshot(`
+          "# Doc
+
+          \`\`\`\`js snippet=a.js
+          const a = 1;
+          \`\`\`
+
+          <img src=x onerror=alert(1)>
+
+          \`\`\`js
+          \`\`\`\`
+
+          after
+          "
+        `);
+        expect(parse(output).codeBlocks.map((b) => b.content)).toEqual([body]);
+      });
+
+      it('goes one longer than the longest fence run in the body', () => {
+        const document = parse('````md snippet=a.md\nold\n````');
+
+        document.setBody(document.codeBlocks[0]!, '`````\n```\n  ``````  ');
+
+        expect(document.toString()).toBe(
+          '```````md snippet=a.md\n`````\n```\n  ``````  \n```````',
+        );
+      });
+
+      it('only counts runs of the fence character', () => {
+        const document = parse(
+          '~~~md snippet=a.md\nold\n~~~\n\n```md snippet=b.md\nold\n```',
+        );
+        const [tilde, backtick] = document.codeBlocks;
+
+        document.setBody(tilde!, '```\n~~~~');
+        document.setBody(backtick!, '~~~\n```');
+
+        expect(document.toString()).toBe(
+          '~~~~~md snippet=a.md\n```\n~~~~\n~~~~~\n\n````md snippet=b.md\n~~~\n```\n````',
+        );
+      });
+
+      it('ignores fence runs followed by an info string', () => {
+        const document = parse('```md snippet=a.md\nold\n```');
+
+        document.setBody(document.codeBlocks[0]!, '```js\ncode');
+
+        expect(document.toString()).toBe(
+          '```md snippet=a.md\n```js\ncode\n```',
+        );
+      });
+
+      it('keeps a closing fence that is already long enough', () => {
+        const document = parse('```md snippet=a.md\nold\n``````');
+
+        document.setBody(document.codeBlocks[0]!, '```');
+
+        expect(document.toString()).toBe('````md snippet=a.md\n```\n``````');
+      });
+
+      it('detects fence lines separated by a lone carriage return', () => {
+        const document = parse('```md snippet=a.md\nold\n```\nafter\n');
+
+        document.setBody(document.codeBlocks[0]!, 'a\r```\rb');
+        const output = document.toString();
+
+        expect(output).toBe('````md snippet=a.md\na\n```\nb\n````\nafter\n');
+        expect(parse(output).codeBlocks).toHaveLength(1);
+      });
+
+      it('keeps a longer existing fence and its closing length', () => {
+        const document = parse('`````md snippet=a.md\nold\n``````');
+
+        document.setBody(document.codeBlocks[0]!, '```');
+
+        expect(document.toString()).toBe('`````md snippet=a.md\n```\n``````');
+      });
+
+      it('lengthens a fence nested in a list', () => {
+        const document = parse(
+          '- item\n\n  ```md snippet=a.md\n  old\n  ```\n',
+        );
+
+        document.setBody(document.codeBlocks[0]!, '```');
+        const output = document.toString();
+
+        expect(output).toBe('- item\n\n  ````md snippet=a.md\n  ```\n  ````\n');
+        expect(parse(output).codeBlocks[0]!.content).toBe('```');
+      });
+
+      it('lengthens the opening fence of an unclosed block', () => {
+        const document = parse('```md snippet=a.md\nold');
+
+        document.setBody(document.codeBlocks[0]!, '```');
+
+        expect(document.toString()).toBe('````md snippet=a.md\n```');
+      });
+    });
+
     it('does not invent a closing fence for an unclosed block', () => {
       const document = parse('```ts snippet=a.ts\nold');
 
