@@ -53,10 +53,7 @@ export async function syncMarkdownFiles(
 
           if (snippet.status === 'failed') {
             fileIssues.push(snippet.issue);
-          } else if (
-            snippet.status === 'resolved' &&
-            snippet.content !== codeBlock.content
-          ) {
+          } else if (snippet.content !== codeBlock.content) {
             document.setBody(codeBlock, snippet.content);
           }
         }
@@ -116,10 +113,7 @@ export async function checkMarkdownFiles(
 
           if (snippet.status === 'failed') {
             fileIssues.push(snippet.issue);
-          } else if (
-            snippet.status === 'resolved' &&
-            snippet.content !== codeBlock.content
-          ) {
+          } else if (snippet.content !== codeBlock.content) {
             fileIssues.push(
               createIssue(
                 'content-mismatch',

@@ -19,6 +19,7 @@ describe('issue catalogue', () => {
     ['snippet-load-error', 'load-failed'],
     ['path-traversal', 'invalid-path'],
     ['remote-fetch-error', 'remote-error'],
+    ['empty-line-range', 'empty-range'],
   ])('creates %s as a %s error', (rule, type) => {
     expect(createIssue(rule, at, 'message')).toEqual({
       type,

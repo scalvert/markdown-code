@@ -125,14 +125,36 @@ describe('resolveSnippet', () => {
     });
   });
 
-  describe('no-lines', () => {
-    it('reports a range past the end of the file as no-lines', async () => {
-      expect(await resolveFor('snippet=app.js#L99-L100')).toEqual({
-        status: 'no-lines',
+  describe('empty line ranges', () => {
+    it('reports a range past the end of the file', async () => {
+      expect(await resolveFor('snippet=app.js#L99-L100'))
+        .toMatchInlineSnapshot(`
+        {
+          "issue": {
+            "column": 1,
+            "line": 1,
+            "message": "snippet=app.js#L99-L100 selects no lines (snippet has 5 lines)",
+            "ruleId": "empty-line-range",
+            "severity": "error",
+            "type": "empty-range",
+          },
+          "status": "failed",
+        }
+      `);
+    });
+
+    it('reports a range that selects only blank lines', async () => {
+      expect(await resolveFor('snippet=app.js#L5-L6')).toMatchObject({
+        status: 'failed',
+        issue: {
+          ruleId: 'empty-line-range',
+          message:
+            'snippet=app.js#L5-L6 selects no lines (snippet has 5 lines)',
+        },
       });
     });
 
-    it('reports a remote range past the end as no-lines', async () => {
+    it('reports a remote range past the end', async () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async () => new Response('one\n')),
@@ -140,7 +162,21 @@ describe('resolveSnippet', () => {
 
       expect(
         await resolveFor('snippet=https://example.com/app.js#L5-L6'),
-      ).toEqual({ status: 'no-lines' });
+      ).toMatchObject({
+        status: 'failed',
+        issue: {
+          ruleId: 'empty-line-range',
+          message:
+            'snippet=https://example.com/app.js#L5-L6 selects no lines (snippet has 1 line)',
+        },
+      });
+    });
+
+    it('still resolves an open-ended range that starts on the last line', async () => {
+      expect(await resolveFor('snippet=app.js#L4-')).toEqual({
+        status: 'resolved',
+        content: 'const c = 3;',
+      });
     });
   });
 

@@ -6,6 +6,7 @@ import { fileExists, isInWorkingDir } from './utils.js';
 import { isRemoteUrl, fetchRemoteContent } from './remote.js';
 import { getLineEnding, normalizeLineEndings } from './line-endings.js';
 import { createIssue } from './issues.js';
+import { formatSnippetDirective } from './snippet-directive.js';
 
 export type ManagedCodeBlock = DocumentCodeBlock & {
   readonly directive: SnippetDirective;
@@ -18,8 +19,7 @@ export interface SnippetContext {
 
 export type SnippetResolution =
   | { status: 'resolved'; content: string }
-  | { status: 'failed'; issue: Issue }
-  | { status: 'no-lines' };
+  | { status: 'failed'; issue: Issue };
 
 type LocalRead =
   | { ok: true; content: string }
@@ -38,6 +38,14 @@ function allowedSnippetRoots(config: RuntimeConfig): Array<string> {
   const workingDir = resolve(config.workingDir);
   const snippetRoot = resolve(workingDir, config.snippetRoot || '.');
   return snippetRoot !== workingDir ? [workingDir, snippetRoot] : [workingDir];
+}
+
+function countLines(content: string): number {
+  if (content === '') {
+    return 0;
+  }
+  const lines = content.split(/\r\n|\n|\r/);
+  return lines.at(-1) === '' ? lines.length - 1 : lines.length;
 }
 
 export function trimBlankLines(content: string): string {
@@ -260,10 +268,20 @@ export async function resolveSnippet(
     return { status: 'failed', issue: loaded.issue };
   }
 
-  const { startLine, endLine } = codeBlock.directive;
+  const { directive } = codeBlock;
+  const { startLine, endLine } = directive;
   const extracted = extractLines(loaded.content, startLine, endLine);
   if (extracted === '' && (startLine ?? endLine)) {
-    return { status: 'no-lines' };
+    const lineCount = countLines(loaded.content);
+    const snippetSize = `${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`;
+    return {
+      status: 'failed',
+      issue: createIssue(
+        'empty-line-range',
+        codeBlock,
+        `${formatSnippetDirective(directive)} selects no lines (snippet has ${snippetSize})`,
+      ),
+    };
   }
 
   return {

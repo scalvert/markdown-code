@@ -112,6 +112,8 @@ Use the `snippet=` directive in your fenced code blocks:
 ```
 ````
 
+A line range that selects no lines, for example one that starts past the end of the file, is reported as an `empty-range` error and the code block is left unchanged.
+
 ## Usage
 
 markdown-code provides two powerful workflows for keeping your documentation in sync with your code:

@@ -31,6 +31,11 @@ const ISSUE_KINDS: Record<IssueKind, IssueKindDefinition> = {
     plural: 'load-failed',
     allowsWarning: false,
   },
+  'empty-range': {
+    color: 'red',
+    plural: 'empty-ranges',
+    allowsWarning: false,
+  },
   'remote-error': {
     color: 'magenta',
     plural: 'remote-errors',
@@ -44,6 +49,7 @@ const ISSUE_RULES = {
   'path-validation': 'load-failed',
   'snippet-load-error': 'load-failed',
   'path-traversal': 'invalid-path',
+  'empty-line-range': 'empty-range',
   'remote-fetch-error': 'remote-error',
 } as const satisfies Record<string, IssueKind>;
 
