@@ -117,6 +117,63 @@ export function validateRemoteUrl(
 /**
  * Fetch content from a remote URL.
  */
+const MAX_REDIRECTS = 10;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+function redirectTarget(
+  url: string,
+  from: string,
+  location: string,
+  options: FetchOptions,
+): string {
+  const target = new URL(location, from);
+  target.hash = '';
+
+  if (target.protocol === 'http:' && !options.allowInsecureHttp) {
+    throw new Error(
+      `Remote file redirected to an insecure HTTP URL: ${url} -> ${target}. ` +
+        'Use HTTPS or set allowInsecureHttp: true in config.',
+    );
+  }
+  if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+    throw new Error(
+      `Remote file redirected to an unsupported URL: ${url} -> ${target}`,
+    );
+  }
+  return target.toString();
+}
+
+async function fetchFollowingRedirects(
+  url: string,
+  fetchUrl: string,
+  options: FetchOptions,
+  signal: AbortSignal,
+): Promise<Response> {
+  let current = fetchUrl;
+
+  for (let redirects = 0; ; redirects++) {
+    const response = await fetch(current, {
+      signal,
+      redirect: 'manual',
+      headers: {
+        'User-Agent': 'markdown-code',
+        Accept: 'text/plain, */*',
+      },
+    });
+
+    const location = response.headers.get('location');
+    if (!REDIRECT_STATUSES.has(response.status) || location === null) {
+      return response;
+    }
+
+    await response.body?.cancel();
+    if (redirects === MAX_REDIRECTS) {
+      throw new Error(`Too many redirects: ${url}`);
+    }
+    current = redirectTarget(url, current, location, options);
+  }
+}
+
 export async function fetchRemoteContent(
   url: string,
   options: FetchOptions = {},
@@ -134,25 +191,12 @@ export async function fetchRemoteContent(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(fetchUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'markdown-code',
-        Accept: 'text/plain, */*',
-      },
-    });
-
-    if (
-      response.redirected &&
-      new URL(response.url).protocol === 'http:' &&
-      !options.allowInsecureHttp
-    ) {
-      await response.body?.cancel();
-      throw new Error(
-        `Remote file redirected to an insecure HTTP URL: ${url} -> ${response.url}. ` +
-          'Use HTTPS or set allowInsecureHttp: true in config.',
-      );
-    }
+    const response = await fetchFollowingRedirects(
+      url,
+      fetchUrl,
+      options,
+      controller.signal,
+    );
 
     if (!response.ok) {
       if (response.status === 404) {

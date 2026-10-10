@@ -194,16 +194,17 @@ describe('remote', () => {
     });
 
     describe('redirects', () => {
-      function redirectedResponse(finalUrl: string, body = 'content') {
-        const response = new Response(body);
-        Object.defineProperty(response, 'redirected', { value: true });
-        Object.defineProperty(response, 'url', { value: finalUrl });
-        return response;
+      function redirect(location: string, status = 302) {
+        return new Response('moved', { status, headers: { location } });
       }
 
-      it('rejects an HTTPS URL that redirects to HTTP', async () => {
-        vi.mocked(fetch).mockResolvedValue(
-          redirectedResponse('http://example.com/file.ts'),
+      function requestedUrls() {
+        return vi.mocked(fetch).mock.calls.map(([input]) => String(input));
+      }
+
+      it('rejects a redirect to HTTP without requesting it', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce(
+          redirect('http://example.com/file.ts'),
         );
 
         await expect(
@@ -211,28 +212,84 @@ describe('remote', () => {
         ).rejects.toThrow(
           'Remote file redirected to an insecure HTTP URL: https://example.com/file.ts -> http://example.com/file.ts',
         );
+        expect(requestedUrls()).toEqual(['https://example.com/file.ts']);
       });
 
-      it('follows a redirect to HTTP when allowInsecureHttp is true', async () => {
-        vi.mocked(fetch).mockResolvedValue(
-          redirectedResponse('http://example.com/file.ts'),
-        );
+      it('rejects an HTTP hop in the middle of a redirect chain', async () => {
+        vi.mocked(fetch)
+          .mockResolvedValueOnce(redirect('https://a.example.com/one'))
+          .mockResolvedValueOnce(redirect('http://b.example.com/two'));
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts'),
+        ).rejects.toThrow('-> http://b.example.com/two');
+        expect(requestedUrls()).toEqual([
+          'https://example.com/file.ts',
+          'https://a.example.com/one',
+        ]);
+      });
+
+      it('follows HTTP hops when allowInsecureHttp is true', async () => {
+        vi.mocked(fetch)
+          .mockResolvedValueOnce(redirect('http://example.com/two', 301))
+          .mockResolvedValueOnce(redirect('https://example.com/three', 308))
+          .mockResolvedValueOnce(new Response('content'));
 
         await expect(
           fetchRemoteContent('https://example.com/file.ts', {
             allowInsecureHttp: true,
           }),
         ).resolves.toBe('content');
+        expect(requestedUrls()).toEqual([
+          'https://example.com/file.ts',
+          'http://example.com/two',
+          'https://example.com/three',
+        ]);
       });
 
-      it('follows a redirect that stays on HTTPS', async () => {
-        vi.mocked(fetch).mockResolvedValue(
-          redirectedResponse('https://cdn.example.com/file.ts'),
+      it('resolves a relative Location against the current URL', async () => {
+        vi.mocked(fetch)
+          .mockResolvedValueOnce(redirect('../raw/file.ts#L1-L2', 307))
+          .mockResolvedValueOnce(new Response('content'));
+
+        await expect(
+          fetchRemoteContent('https://example.com/blob/file.ts'),
+        ).resolves.toBe('content');
+        expect(requestedUrls()).toEqual([
+          'https://example.com/blob/file.ts',
+          'https://example.com/raw/file.ts',
+        ]);
+      });
+
+      it('rejects a redirect to a non-HTTP scheme', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce(redirect('file:///etc/passwd'));
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts'),
+        ).rejects.toThrow(
+          'Remote file redirected to an unsupported URL: https://example.com/file.ts -> file:///etc/passwd',
+        );
+      });
+
+      it('gives up after 10 redirects', async () => {
+        vi.mocked(fetch).mockImplementation(() =>
+          Promise.resolve(redirect('https://example.com/again')),
         );
 
         await expect(
           fetchRemoteContent('https://example.com/file.ts'),
-        ).resolves.toBe('content');
+        ).rejects.toThrow('Too many redirects: https://example.com/file.ts');
+        expect(requestedUrls()).toHaveLength(11);
+      });
+
+      it('treats a 3xx without a Location as the final response', async () => {
+        vi.mocked(fetch).mockResolvedValueOnce(
+          new Response(null, { status: 304 }),
+        );
+
+        await expect(
+          fetchRemoteContent('https://example.com/file.ts'),
+        ).rejects.toThrow('HTTP 304');
       });
     });
 
