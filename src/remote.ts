@@ -1,9 +1,49 @@
 export interface FetchOptions {
   timeout?: number | undefined;
   allowInsecureHttp?: boolean | undefined;
+  maxBytes?: number | undefined;
 }
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
+const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
+
+function tooLarge(url: string, maxBytes: number): Error {
+  return new Error(`Remote file is larger than ${maxBytes} bytes: ${url}`);
+}
+
+async function readBody(
+  response: Response,
+  url: string,
+  maxBytes: number,
+): Promise<string> {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (declaredLength > maxBytes) {
+    await response.body?.cancel();
+    throw tooLarge(url, maxBytes);
+  }
+
+  if (!response.body) {
+    return '';
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = '';
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      return text + decoder.decode();
+    }
+    received += value.byteLength;
+    if (received > maxBytes) {
+      await reader.cancel();
+      throw tooLarge(url, maxBytes);
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+}
 
 /**
  * Check if a path is a remote URL (HTTP or HTTPS)
@@ -77,6 +117,70 @@ export function validateRemoteUrl(
 /**
  * Fetch content from a remote URL.
  */
+const MAX_REDIRECTS = 10;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+function redirectTarget(
+  url: string,
+  from: string,
+  location: string,
+  options: FetchOptions,
+): string {
+  if (!URL.canParse(location, from)) {
+    throw new Error(`Remote file sent an invalid redirect: ${url}`);
+  }
+  const target = new URL(location, from);
+  target.hash = '';
+
+  if (target.username || target.password) {
+    throw new Error(`Remote file redirected to a URL with credentials: ${url}`);
+  }
+
+  if (target.protocol === 'http:' && !options.allowInsecureHttp) {
+    throw new Error(
+      `Remote file redirected to an insecure HTTP URL: ${url} -> ${target}. ` +
+        'Use HTTPS or set allowInsecureHttp: true in config.',
+    );
+  }
+  if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+    throw new Error(
+      `Remote file redirected to an unsupported URL: ${url} -> ${target}`,
+    );
+  }
+  return target.toString();
+}
+
+async function fetchFollowingRedirects(
+  url: string,
+  fetchUrl: string,
+  options: FetchOptions,
+  signal: AbortSignal,
+): Promise<Response> {
+  let current = fetchUrl;
+
+  for (let redirects = 0; ; redirects++) {
+    const response = await fetch(current, {
+      signal,
+      redirect: 'manual',
+      headers: {
+        'User-Agent': 'markdown-code',
+        Accept: 'text/plain, */*',
+      },
+    });
+
+    const location = response.headers.get('location');
+    if (!REDIRECT_STATUSES.has(response.status) || location === null) {
+      return response;
+    }
+
+    await response.body?.cancel();
+    if (redirects === MAX_REDIRECTS) {
+      throw new Error(`Too many redirects: ${url}`);
+    }
+    current = redirectTarget(url, current, location, options);
+  }
+}
+
 export async function fetchRemoteContent(
   url: string,
   options: FetchOptions = {},
@@ -94,15 +198,15 @@ export async function fetchRemoteContent(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(fetchUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'markdown-code',
-        Accept: 'text/plain, */*',
-      },
-    });
+    const response = await fetchFollowingRedirects(
+      url,
+      fetchUrl,
+      options,
+      controller.signal,
+    );
 
     if (!response.ok) {
+      await response.body?.cancel();
       if (response.status === 404) {
         throw new Error(`Remote file not found: ${url}`);
       }
@@ -111,7 +215,7 @@ export async function fetchRemoteContent(
       );
     }
 
-    return await response.text();
+    return await readBody(response, url, options.maxBytes ?? DEFAULT_MAX_BYTES);
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {

@@ -22,8 +22,7 @@
     "markdown-code": "dist/cli.js"
   },
   "files": [
-    "dist",
-    "markdown-code.png"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
@@ -40,10 +39,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@types/mdast": "^4.0.3",
     "fast-glob": "^3.3.2",
     "language-map": "^1.5.0",
-    "mdast": "^3.0.0",
     "picocolors": "^1.1.1",
     "remark": "^15.0.1",
     "remark-frontmatter": "^5.0.0",
@@ -56,6 +53,7 @@
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@release-it-plugins/lerna-changelog": "^9.0.0",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^25.6.0",
     "@types/yargs": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^8.58.1",

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./markdown-code.png" alt="markdown-code" width="600" />
+<img src="https://raw.githubusercontent.com/scalvert/markdown-code/main/markdown-code.png" alt="markdown-code" width="600" />
 
 [![CI Build](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml/badge.svg)](https://github.com/scalvert/markdown-code/actions/workflows/ci.yml)
 [![npm version](https://badge.fury.io/js/markdown-code.svg)](https://badge.fury.io/js/markdown-code)
@@ -200,7 +200,8 @@ syntax as a local path:
 ````
 
 HTTPS is allowed by default. Plain HTTP is rejected unless `allowInsecureHttp` is
-set to `true`. Remote requests time out after 30 seconds by default; configure
+set to `true`, including an HTTPS URL that redirects to HTTP. Remote files larger
+than 5 MB are rejected. Remote requests time out after 30 seconds by default; configure
 `remoteTimeout` in milliseconds when needed. Remote failures remain errors even
 when `missingSnippetSeverity` is set to `warning`, because the source was
 configured but could not be loaded.

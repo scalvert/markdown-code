@@ -24,5 +24,5 @@ export async function findMarkdownFiles({
     cwd: workingDir,
     absolute: true,
   });
-  return files.map((file) => resolve(file));
+  return files.map((file) => resolve(file)).sort();
 }
