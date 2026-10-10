@@ -47,11 +47,15 @@ export interface ConfigOverrides {
   allowInsecureHttp?: boolean;
 }
 
-export const CONFIG_FILENAME = '.markdown-coderc.json';
+const CONFIG_FILENAME = '.markdown-coderc.json';
+
+export function configPathOrDefault(configPath?: string): string {
+  const isExplicit = configPath !== undefined && configPath.length > 0;
+  return isExplicit ? configPath : CONFIG_FILENAME;
+}
 
 export function resolveConfigPath(configPath?: string): string {
-  const isExplicit = configPath !== undefined && configPath.length > 0;
-  return resolve(isExplicit ? configPath : CONFIG_FILENAME);
+  return resolve(configPathOrDefault(configPath));
 }
 
 export async function configExists(configPath?: string): Promise<boolean> {

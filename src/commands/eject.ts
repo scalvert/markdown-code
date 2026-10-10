@@ -3,7 +3,11 @@ import { parse as parsePath, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
 import fg from 'fast-glob';
-import { configExists, resolveConfigPath } from '../config.js';
+import {
+  configExists,
+  configPathOrDefault,
+  resolveConfigPath,
+} from '../config.js';
 import { readMarkdownDocument } from '../parser.js';
 import type { RuntimeConfig } from '../types.js';
 import { fileExists, isInWorkingDir } from '../utils.js';
@@ -174,8 +178,10 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
       return;
     }
 
-    const configPath = resolveConfigPath(argv.config);
-    const config = await getValidatedConfig({ ...argv, config: configPath });
+    const config = await getValidatedConfig({
+      ...argv,
+      config: configPathOrDefault(argv.config),
+    });
 
     const confirmed = await confirmEjection();
     if (!confirmed) {
@@ -217,7 +223,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     }
 
     console.log('Deleting configuration file...');
-    const configResult = await deleteConfigFile(configPath);
+    const configResult = await deleteConfigFile(resolveConfigPath(argv.config));
 
     const allWarnings = [
       ...directiveResult.warnings,

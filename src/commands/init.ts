@@ -1,7 +1,11 @@
 import { writeFile, mkdir } from 'node:fs/promises';
-import { relative, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
-import { DEFAULT_CONFIG, resolveConfigPath } from '../config.js';
+import {
+  DEFAULT_CONFIG,
+  configPathOrDefault,
+  resolveConfigPath,
+} from '../config.js';
 import { extractSnippets } from '../sync.js';
 import { fileExists } from '../utils.js';
 import {
@@ -30,7 +34,7 @@ export const builder = (yargs: Argv) => {
 
 async function createDefaultConfig(requestedPath?: string): Promise<void> {
   const configPath = resolveConfigPath(requestedPath);
-  const displayPath = relative(process.cwd(), configPath);
+  const displayPath = configPathOrDefault(requestedPath);
   const snippetsDir = resolve('snippets');
 
   if (await fileExists(configPath)) {
@@ -41,6 +45,7 @@ async function createDefaultConfig(requestedPath?: string): Promise<void> {
   const defaultConfig = { ...DEFAULT_CONFIG, snippetRoot: './snippets' };
 
   try {
+    await mkdir(dirname(configPath), { recursive: true });
     await writeFile(configPath, JSON.stringify(defaultConfig, null, 2));
     console.log(`Created ${displayPath} with default configuration`);
 
