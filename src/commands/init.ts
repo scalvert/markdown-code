@@ -1,7 +1,11 @@
 import { writeFile, mkdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
-import { DEFAULT_CONFIG } from '../config.js';
+import {
+  DEFAULT_CONFIG,
+  configPathOrDefault,
+  resolveConfigPath,
+} from '../config.js';
 import { extractSnippets } from '../sync.js';
 import { fileExists } from '../utils.js';
 import {
@@ -28,20 +32,22 @@ export const builder = (yargs: Argv) => {
   });
 };
 
-async function createDefaultConfig(): Promise<void> {
-  const configPath = resolve('.markdown-coderc.json');
+async function createDefaultConfig(requestedPath?: string): Promise<void> {
+  const configPath = resolveConfigPath(requestedPath);
+  const displayPath = configPathOrDefault(requestedPath);
   const snippetsDir = resolve('snippets');
 
   if (await fileExists(configPath)) {
-    console.log('Configuration file already exists at .markdown-coderc.json');
+    console.log(`Configuration file already exists at ${displayPath}`);
     return;
   }
 
   const defaultConfig = { ...DEFAULT_CONFIG, snippetRoot: './snippets' };
 
   try {
+    await mkdir(dirname(configPath), { recursive: true });
     await writeFile(configPath, JSON.stringify(defaultConfig, null, 2));
-    console.log('Created .markdown-coderc.json with default configuration');
+    console.log(`Created ${displayPath} with default configuration`);
 
     if (!(await fileExists(snippetsDir))) {
       await mkdir(snippetsDir, { recursive: true });
@@ -72,7 +78,7 @@ async function handleExtraction(argv: ArgumentsCamelCase<InitArgs>) {
 
 export const handler = async (argv: ArgumentsCamelCase<InitArgs>) => {
   try {
-    await createDefaultConfig();
+    await createDefaultConfig(argv.config);
 
     if (argv.extract) {
       await handleExtraction(argv);

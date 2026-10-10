@@ -47,9 +47,19 @@ export interface ConfigOverrides {
   allowInsecureHttp?: boolean;
 }
 
+const CONFIG_FILENAME = '.markdown-coderc.json';
+
+export function configPathOrDefault(configPath?: string): string {
+  const isExplicit = configPath !== undefined && configPath.length > 0;
+  return isExplicit ? configPath : CONFIG_FILENAME;
+}
+
+export function resolveConfigPath(configPath?: string): string {
+  return resolve(configPathOrDefault(configPath));
+}
+
 export async function configExists(configPath?: string): Promise<boolean> {
-  const defaultPath = resolve('.markdown-coderc.json');
-  const pathToCheck = configPath ? resolve(configPath) : defaultPath;
+  const pathToCheck = resolveConfigPath(configPath);
 
   if (!(await fileExists(pathToCheck))) {
     return false;
@@ -71,23 +81,21 @@ export async function loadConfig(
   let config = { ...DEFAULT_CONFIG };
 
   if (!configPath) {
-    const defaultPath = resolve('.markdown-coderc.json');
-
     try {
-      const content = await readFile(defaultPath, 'utf-8');
+      const content = await readFile(resolveConfigPath(), 'utf-8');
       config = { ...config, ...JSON.parse(content) };
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
       if (err.code !== 'ENOENT') {
         console.warn(
-          `Warning: Could not parse .markdown-coderc.json: ${err.message}. ` +
+          `Warning: Could not parse ${CONFIG_FILENAME}: ${err.message}. ` +
             'Using default configuration.',
         );
       }
     }
   } else {
     try {
-      const content = await readFile(resolve(configPath), 'utf-8');
+      const content = await readFile(resolveConfigPath(configPath), 'utf-8');
       config = { ...config, ...JSON.parse(content) };
     } catch (error) {
       const errorMessage =
@@ -137,7 +145,6 @@ export async function loadConfig(
     config.allowInsecureHttp = overrides.allowInsecureHttp;
   }
 
-  // Create RuntimeConfig with workingDir
   return {
     ...config,
     workingDir: workingDir ?? process.cwd(),

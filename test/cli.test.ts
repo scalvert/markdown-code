@@ -47,6 +47,59 @@ describe('CLI', () => {
   });
 
   describe('init mode', () => {
+    it('writes the config to --config and extracts with it', async () => {
+      await project.write({
+        'README.md': '```ts\nconst a = 1;\n```\n',
+      });
+
+      const result = await runBin(
+        'init',
+        '--config',
+        'custom.json',
+        '--extract',
+      );
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain(
+        'Created custom.json with default configuration',
+      );
+      expect(result.stdout).toContain('Extracted 1 snippets from:');
+      expect(existsSync(path.join(project.baseDir, 'custom.json'))).toBe(true);
+      expect(
+        existsSync(path.join(project.baseDir, '.markdown-coderc.json')),
+      ).toBe(false);
+    });
+
+    it('creates parent directories for a nested --config', async () => {
+      const result = await runBin('init', '--config', 'conf/md-code.json');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stdout).toContain(
+        'Created conf/md-code.json with default configuration',
+      );
+      expect(
+        existsSync(path.join(project.baseDir, 'conf', 'md-code.json')),
+      ).toBe(true);
+    });
+
+    it('leaves an existing --config file alone', async () => {
+      await project.write({ 'custom.json': '{"snippetRoot":"./mine"}' });
+
+      const result = await runBin('init', '--config', 'custom.json');
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stdout).toMatchInlineSnapshot(
+        `"Configuration file already exists at custom.json"`,
+      );
+      expect(
+        readFileSync(path.join(project.baseDir, 'custom.json'), 'utf-8'),
+      ).toBe('{"snippetRoot":"./mine"}');
+      expect(
+        existsSync(path.join(project.baseDir, '.markdown-coderc.json')),
+      ).toBe(false);
+    });
+
     it('creates default configuration and snippets directory', async () => {
       const result = await runBin('init');
 
@@ -1152,6 +1205,47 @@ old content
   });
 
   describe('eject command', () => {
+    it('refuses to eject with a malformed config, before changing any files', async () => {
+      const readme = '```ts snippet=a.ts\nconst a = 1;\n```\n';
+      await project.write({
+        '.markdown-coderc.json': '{ not json',
+        'README.md': readme,
+        'a.ts': 'const a = 1;\n',
+      });
+
+      const result = await runBin('eject', { input: 'y\n' });
+
+      expect(result.exitCode).toEqual(1);
+      expect(result.stderr).toMatch(
+        /^Failed to load config from \.markdown-coderc\.json: /,
+      );
+      expect(result.stdout).toBe('');
+      expect(
+        readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8'),
+      ).toBe(readme);
+      expect(
+        existsSync(path.join(project.baseDir, '.markdown-coderc.json')),
+      ).toBe(true);
+    });
+
+    it('refuses to eject with an invalid config without prompting', async () => {
+      await project.write({
+        'custom.json': JSON.stringify({ snippetRoot: '' }),
+        'README.md': '```ts snippet=a.ts\nconst a = 1;\n```\n',
+      });
+
+      const result = await runBin('eject', '--config', 'custom.json', {
+        input: 'n\n',
+      });
+
+      expect(result.exitCode).toEqual(1);
+      expect(result.stderr).toMatchInlineSnapshot(
+        `"Config: snippetRoot must be a non-empty string"`,
+      );
+      expect(result.stdout).toBe('');
+      expect(existsSync(path.join(project.baseDir, 'custom.json'))).toBe(true);
+    });
+
     it('handles no config file gracefully', async () => {
       const result = await runBin('eject');
 

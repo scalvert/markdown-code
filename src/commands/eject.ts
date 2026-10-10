@@ -3,7 +3,11 @@ import { parse as parsePath, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import type { ArgumentsCamelCase, Argv } from 'yargs';
 import fg from 'fast-glob';
-import { configExists } from '../config.js';
+import {
+  configExists,
+  configPathOrDefault,
+  resolveConfigPath,
+} from '../config.js';
 import { readMarkdownDocument } from '../parser.js';
 import type { RuntimeConfig } from '../types.js';
 import { fileExists, isInWorkingDir } from '../utils.js';
@@ -145,7 +149,7 @@ export async function deleteSnippetDirectory(
   return result;
 }
 
-async function deleteConfigFile(configPath?: string) {
+async function deleteConfigFile(configPath: string) {
   const result = {
     deleted: false,
     warnings: [] as string[],
@@ -153,15 +157,12 @@ async function deleteConfigFile(configPath?: string) {
   };
 
   try {
-    const defaultPath = resolve('.markdown-coderc.json');
-    const pathToDelete = configPath ? resolve(configPath) : defaultPath;
-
-    if (await fileExists(pathToDelete)) {
-      await unlink(pathToDelete);
+    if (await fileExists(configPath)) {
+      await unlink(configPath);
       result.deleted = true;
-      console.log(`Deleted configuration file: ${pathToDelete}`);
+      console.log(`Deleted configuration file: ${configPath}`);
     } else {
-      result.warnings.push(`Configuration file not found: ${pathToDelete}`);
+      result.warnings.push(`Configuration file not found: ${configPath}`);
     }
   } catch (error) {
     result.errors.push(`Error deleting configuration file: ${error}`);
@@ -177,6 +178,11 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
       return;
     }
 
+    const config = await getValidatedConfig({
+      ...argv,
+      config: configPathOrDefault(argv.config),
+    });
+
     const confirmed = await confirmEjection();
     if (!confirmed) {
       console.log('Ejection cancelled.');
@@ -184,8 +190,6 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     }
 
     console.log('Starting ejection process...');
-
-    const config = await getValidatedConfig(argv);
 
     console.log('Removing snippet directives from markdown files...');
     const directiveResult = await removeSnippetDirectives(config);
@@ -219,7 +223,7 @@ export const handler = async (argv: ArgumentsCamelCase<EjectArgs>) => {
     }
 
     console.log('Deleting configuration file...');
-    const configResult = await deleteConfigFile(argv.config);
+    const configResult = await deleteConfigFile(resolveConfigPath(argv.config));
 
     const allWarnings = [
       ...directiveResult.warnings,
