@@ -96,6 +96,20 @@ describe('config', () => {
     );
   });
 
+  it('resolveConfigPath defaults to .markdown-coderc.json in the cwd', async () => {
+    const { resolveConfigPath } = await import('../src/config.js');
+
+    expect(resolveConfigPath()).toBe(
+      join(process.cwd(), '.markdown-coderc.json'),
+    );
+    expect(resolveConfigPath('')).toBe(
+      join(process.cwd(), '.markdown-coderc.json'),
+    );
+    expect(resolveConfigPath('conf/custom.json')).toBe(
+      join(process.cwd(), 'conf', 'custom.json'),
+    );
+  });
+
   it('configExists returns false when file is missing', async () => {
     const { configExists } = await import('../src/config.js');
     const exists = await configExists(join(tempDir, 'missing.json'));

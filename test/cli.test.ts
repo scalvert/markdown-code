@@ -47,6 +47,30 @@ describe('CLI', () => {
   });
 
   describe('init mode', () => {
+    it('writes the config to --config and extracts with it', async () => {
+      await project.write({
+        'README.md': '```ts\nconst a = 1;\n```\n',
+      });
+
+      const result = await runBin(
+        'init',
+        '--config',
+        'custom.json',
+        '--extract',
+      );
+
+      expect(result.exitCode).toEqual(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain(
+        'Created custom.json with default configuration',
+      );
+      expect(result.stdout).toContain('Extracted 1 snippets from:');
+      expect(existsSync(path.join(project.baseDir, 'custom.json'))).toBe(true);
+      expect(
+        existsSync(path.join(project.baseDir, '.markdown-coderc.json')),
+      ).toBe(false);
+    });
+
     it('creates default configuration and snippets directory', async () => {
       const result = await runBin('init');
 
@@ -1152,6 +1176,34 @@ old content
   });
 
   describe('eject command', () => {
+    it('refuses to eject with a malformed config, before changing any files', async () => {
+      const readme = '```ts snippet=a.ts\nconst a = 1;\n```\n';
+      await project.write({
+        '.markdown-coderc.json': '{ not json',
+        'README.md': readme,
+        'a.ts': 'const a = 1;\n',
+      });
+
+      const result = await runBin('eject', { input: 'y\n' });
+
+      expect(result.exitCode).toEqual(1);
+      expect(
+        normalizeOutput(result.stderr, project.baseDir).replace(
+          /\/private<TMP_DIR>/g,
+          '<TMP_DIR>',
+        ),
+      ).toMatch(
+        /^Failed to load config from <TMP_DIR>\/\.markdown-coderc\.json: /,
+      );
+      expect(result.stdout).toBe('');
+      expect(
+        readFileSync(path.join(project.baseDir, 'README.md'), 'utf-8'),
+      ).toBe(readme);
+      expect(
+        existsSync(path.join(project.baseDir, '.markdown-coderc.json')),
+      ).toBe(true);
+    });
+
     it('handles no config file gracefully', async () => {
       const result = await runBin('eject');
 
