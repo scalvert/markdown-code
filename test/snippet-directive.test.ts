@@ -123,6 +123,18 @@ describe('snippet directive parsing', () => {
     });
   });
 
+  it('ends a quoted value at the next matching quote, even after a backslash', () => {
+    expect(parseSnippetDirective('snippet="C:\\my docs\\" x=1')).toEqual({
+      filePath: 'C:\\my docs\\',
+      isRemote: false,
+    });
+  });
+
+  it('rejects a quoted value that does not end its token', () => {
+    expect(parseSnippetDirective('snippet="a"b')).toBeUndefined();
+    expect(parseSnippetDirective('snippet="a b')).toBeUndefined();
+  });
+
   it('should return undefined for missing snippet directive', () => {
     const result = parseSnippetDirective('language=typescript');
     expect(result).toBeUndefined();
