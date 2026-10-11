@@ -120,13 +120,20 @@ describe('renderFencedBlock', () => {
     );
   });
 
-  it('ends an unterminated block at a line break when the body ends in a blank line', () => {
-    const block = blockIn('```js\nold');
+  it('drops trailing blank lines from the body of an unclosed block', () => {
+    expect(
+      renderFencedBlock(blockIn('```js\nold'), { content: 'new\n\n' }),
+    ).toBe('```js\nnew');
+    expect(
+      renderFencedBlock(blockIn('```js\nold\n'), { content: 'new\n' }),
+    ).toBe('```js\nnew\n');
+    expect(
+      renderFencedBlock(blockIn('```js\nold\n```'), { content: 'new\n' }),
+    ).toBe('```js\nnew\n\n```');
+  });
 
-    expect(renderFencedBlock(block, { content: 'new\n' })).toBe(
-      '```js\nnew\n\n',
-    );
-    expect(renderFencedBlock(block, { content: 'new' })).toBe('```js\nnew');
+  it('reads the line prefix after a lone carriage return', () => {
+    expect(blockIn('p\r\r- ```js\r  a\r  ```\r').bodyPrefix).toBe('  ');
   });
 
   it('writes a body into a block that only has an opening line', () => {

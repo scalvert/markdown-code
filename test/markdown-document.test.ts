@@ -282,17 +282,19 @@ old
           'a blockquote inside a list',
           '- Nested\n  > ```js snippet=a.js\n  > old\n  > ```\n',
         ],
+      ];
+      const unclosedContainers = [
+        ['the end of a blockquote', '> ```js snippet=a.js\n> old\n>'],
+        ['the end of a file in a blockquote', '> ```js snippet=a.js\n> old\n'],
         [
-          'an unclosed block at the end of a blockquote',
-          '> ```js snippet=a.js\n> old\n>',
+          'a blockquote followed by text',
+          '> ```js snippet=a.js\n> old\n\nafter\n',
         ],
+        ['a list inside a blockquote', '> - ```js snippet=a.js\n>   old\n'],
+        ['the end of a list item', '- ```js snippet=a.js\n  old\n\nout\n'],
+        ['the end of the file', '```js snippet=a.js\nold\n'],
         [
-          'an unclosed block at the end of a list item',
-          '- ```js snippet=a.js\n  old\n\nout\n',
-        ],
-        ['an unclosed top-level block', '```js snippet=a.js\nold\n'],
-        [
-          'an unclosed block at the end of the file',
+          'the end of a file without a line break',
           '```js snippet=a.js\nold\n\nold2',
         ],
       ];
@@ -305,6 +307,20 @@ old
         ['only a blank line', '\n'],
       ];
 
+      function expectRoundTrip(source: string, body: string, content: string) {
+        const document = parse(source);
+        document.setBody(document.codeBlocks[0]!, body);
+        const output = document.toString();
+
+        const reparsed = parse(output);
+        expect(reparsed.codeBlocks.map((block) => block.content)).toEqual([
+          content,
+        ]);
+        expect(structure(output)).toEqual(structure(source));
+        reparsed.setBody(reparsed.codeBlocks[0]!, body);
+        expect(reparsed.toString()).toBe(output);
+      }
+
       it.each(
         containers.flatMap(([container, source]) =>
           bodies.map(([description, body]) => [
@@ -315,18 +331,24 @@ old
           ]),
         ),
       )('keeps the body inside %s when it has %s', (_, __, source, body) => {
-        const document = parse(source!);
-        document.setBody(document.codeBlocks[0]!, body!);
-        const output = document.toString();
-
-        const reparsed = parse(output);
-        expect(reparsed.codeBlocks.map((block) => block.content)).toEqual([
-          body,
-        ]);
-        expect(structure(output)).toEqual(structure(source!));
-        reparsed.setBody(reparsed.codeBlocks[0]!, body!);
-        expect(reparsed.toString()).toBe(output);
+        expectRoundTrip(source!, body!, body!);
       });
+
+      it.each(
+        unclosedContainers.flatMap(([container, source]) =>
+          bodies.map(([description, body]) => [
+            container,
+            description,
+            source,
+            body,
+          ]),
+        ),
+      )(
+        'keeps an unclosed block at %s stable when the body has %s',
+        (_, __, source, body) => {
+          expectRoundTrip(source!, body!, body!.replace(/\n+$/, ''));
+        },
+      );
 
       it('repeats the blockquote marker on every body line', () => {
         const document = parse(

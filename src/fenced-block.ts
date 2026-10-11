@@ -27,7 +27,7 @@ const OPENING_LINE = /^(`{3,}|~{3,})(.*)$/;
 const BODY_FENCE_LINE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
 const FENCE_RUN = /`{3,}|~{3,}/;
 const STARTS_WITH_WHITESPACE = /^[ \t]/;
-const ENDS_WITH_LINE_BREAK = /(?:\r\n|\r|\n)$/;
+const TRAILING_LINE_BREAKS = /(?:\r\n|\r|\n)+$/;
 
 function columnAfter(text: string, startColumn: number): number {
   return [...text].reduce(
@@ -79,7 +79,12 @@ function endText(end: BlockEnd): string {
 }
 
 function linePrefixAt(source: string, offset: number): string {
-  return source.slice(source.lastIndexOf('\n', offset - 1) + 1, offset);
+  const lineStart =
+    Math.max(
+      source.lastIndexOf('\n', offset - 1),
+      source.lastIndexOf('\r', offset - 1),
+    ) + 1;
+  return source.slice(lineStart, offset);
 }
 
 export function parseFencedBlockAt(
@@ -144,10 +149,10 @@ function bodyLines(content: string, prefix: string): Array<string> {
   );
 }
 
-function endFor(end: BlockEnd, content: string): BlockEnd {
-  return end.kind === 'unterminated' && ENDS_WITH_LINE_BREAK.test(content)
-    ? { kind: 'line-break' }
-    : end;
+function bodyFor(content: string, end: BlockEnd): string {
+  return end.kind === 'closing-fence'
+    ? content
+    : content.replace(TRAILING_LINE_BREAKS, '');
 }
 
 function endLines(end: BlockEnd, fence: string): Array<string> {
@@ -167,11 +172,12 @@ export function renderFencedBlock(block: FencedBlock, edit: BlockEdit): string {
     return block.fence + info + block.rawBody + endText(block.end);
   }
 
-  const fence = fenceFor(edit.content, block.fence);
+  const content = bodyFor(edit.content, block.end);
+  const fence = fenceFor(content, block.fence);
 
   return [
     fence + info,
-    ...bodyLines(edit.content, block.bodyPrefix),
-    ...endLines(endFor(block.end, edit.content), fence),
+    ...bodyLines(content, block.bodyPrefix),
+    ...endLines(block.end, fence),
   ].join(block.lineEnding);
 }
