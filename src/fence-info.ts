@@ -5,6 +5,7 @@ import {
 } from './snippet-directive.js';
 
 const LANGUAGE = /^[ \t]*\S*/;
+const WHITESPACE = /[ \t]/;
 
 function splitLanguage(info: string): [language: string, meta: string] {
   const language = LANGUAGE.exec(info)?.[0] ?? '';
@@ -29,7 +30,7 @@ function withMetaDirective(
     );
   }
 
-  const separated = /[ \t]/.test(meta[token.start - 1] ?? '');
+  const separated = WHITESPACE.test(meta.charAt(token.start - 1));
   return (
     meta.slice(0, token.start - (separated ? 1 : 0)) + meta.slice(token.end)
   );

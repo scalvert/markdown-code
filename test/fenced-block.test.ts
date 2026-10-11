@@ -1,69 +1,72 @@
 import { describe, it, expect } from 'vitest';
-import {
-  linePrefixAt,
-  parseFencedBlock,
-  renderFencedBlock,
-} from '../src/fenced-block.js';
+import { parseFencedBlockAt, renderFencedBlock } from '../src/fenced-block.js';
 
-describe('linePrefixAt', () => {
-  it.each([
-    ['```js', 0, ''],
-    ['intro\n> - ```js', 10, '> - '],
-    ['a\r\n\t```js', 4, '\t'],
-  ])('returns the text before offset %#', (source, offset, expected) => {
-    expect(linePrefixAt(source, offset)).toBe(expected);
-  });
-});
+function blockIn(source: string) {
+  return parseFencedBlockAt(source, source.search(/`{3}|~{3}/), source.length);
+}
 
-describe('parseFencedBlock', () => {
-  it('splits the opening fence, info string and closing fence', () => {
-    const block = parseFencedBlock(
-      '````ts snippet=a.ts\r\n> x\r\n>   ````',
-      '> - ',
+describe('parseFencedBlockAt', () => {
+  it('splits the opening fence, info string, body and closing fence', () => {
+    const block = blockIn(
+      'intro\n> - ````ts snippet=a.ts\r\n>   x\r\n>   ````',
     );
 
     expect(block.lineEnding).toBe('\r\n');
-    expect(block.afterOpening).toBe('\r\n> x\r\n>   ````');
     expect(block).toMatchInlineSnapshot(`
       {
-        "afterOpening": "
-      > x
-      >   \`\`\`\`",
         "bodyPrefix": ">   ",
         "closing": ">   \`\`\`\`",
         "fence": "\`\`\`\`",
         "info": "ts snippet=a.ts",
         "lineEnding": "
       ",
+        "rawBody": "
+      >   x
+      ",
       }
     `);
   });
 
   it.each([
+    ['', ''],
+    ['  ', '  '],
+    ['\t', '    '],
+    ['- ', '  '],
+    ['-\t', '    '],
+    ['10) ', '    '],
     ['> ', '> '],
     ['>', '> '],
     ['>>', '> > '],
-    ['>\t', '>\t'],
-    ['  ', '  '],
-    ['\t', '\t'],
-    ['- ', '  '],
-    ['-\t', ' \t'],
-    ['10) ', '    '],
+    ['>\t', '>   '],
+    ['>>\t', '> >  '],
+    ['>- ', '>   '],
     ['> 1. ', '>    '],
     ['  > ', '  > '],
   ])('continues the line prefix %j as %j', (linePrefix, bodyPrefix) => {
-    expect(parseFencedBlock('```js\n```', linePrefix).bodyPrefix).toBe(
+    expect(blockIn(`${linePrefix}\`\`\`js\n\`\`\``).bodyPrefix).toBe(
       bodyPrefix,
     );
   });
 
-  it('has no closing fence when the last line does not close it', () => {
-    expect(parseFencedBlock('~~~~ts\nold\n~~~', '').closing).toBeUndefined();
-    expect(parseFencedBlock('```ts', '').closing).toBeUndefined();
+  it.each([
+    ['a matching fence', '```ts\nx\n```', '```'],
+    ['a longer fence', '```ts\nx\n`````', '`````'],
+    [
+      'a fence behind its blockquote marker',
+      '> ```ts\n> x\n>   ```',
+      '>   ```',
+    ],
+    ['a trailing line break', '```ts\nx\n', ''],
+    ['a shorter fence', '~~~~ts\nx\n~~~', undefined],
+    ['a fence of the other character', '```ts\nx\n~~~', undefined],
+    ['a fence behind an extra blockquote marker', '```ts\n> ```', undefined],
+    ['only an opening line', '```ts', undefined],
+  ])('ends a block at %s', (_, source, closing) => {
+    expect(blockIn(source).closing).toBe(closing);
   });
 
   it('rejects text that does not start with a fence', () => {
-    expect(() => parseFencedBlock('    code', '')).toThrow(
+    expect(() => parseFencedBlockAt('    code', 0, 8)).toThrow(
       'Not the start of a fenced code block',
     );
   });
@@ -71,25 +74,36 @@ describe('parseFencedBlock', () => {
 
 describe('renderFencedBlock', () => {
   it('prefixes every body line and gives blank lines the trimmed prefix', () => {
-    const block = parseFencedBlock('```js\n> old\n> ```', '> ');
+    const block = blockIn('> ```js\n> old\n> ```');
 
     expect(renderFencedBlock(block, { content: 'a\n\n  b' })).toBe(
       '```js\n> a\n>\n>   b\n> ```',
     );
   });
 
+  it('writes an empty body as no lines', () => {
+    expect(renderFencedBlock(blockIn('```js\nold\n```'), { content: '' })).toBe(
+      '```js\n```',
+    );
+  });
+
   it('keeps everything after the opening line when only the info changes', () => {
-    const text = '```js snippet=a.js\r\n>   odd  \n>  ```';
-    const block = parseFencedBlock(text, '> ');
+    const block = blockIn('> ```js snippet=a.js\r\n>   odd  \n>  ```');
 
     expect(renderFencedBlock(block, { directive: null })).toBe(
       '```js\r\n>   odd  \n>  ```',
     );
   });
 
-  it('writes a body into a block that only has an opening line', () => {
-    const block = parseFencedBlock('```js', '');
+  it('keeps the line break that ends an unclosed block', () => {
+    expect(renderFencedBlock(blockIn('```js\nold\n'), { content: 'new' })).toBe(
+      '```js\nnew\n',
+    );
+  });
 
-    expect(renderFencedBlock(block, { content: 'x' })).toBe('```js\nx');
+  it('writes a body into a block that only has an opening line', () => {
+    expect(renderFencedBlock(blockIn('```js'), { content: 'x' })).toBe(
+      '```js\nx',
+    );
   });
 });

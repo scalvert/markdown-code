@@ -5,11 +5,7 @@ import {
   isMdxPath,
   toLegacyCodeBlocks,
 } from './markdown-document.js';
-import {
-  linePrefixAt,
-  parseFencedBlock,
-  renderFencedBlock,
-} from './fenced-block.js';
+import { parseFencedBlockAt, renderFencedBlock } from './fenced-block.js';
 
 export { parseSnippetDirective } from './snippet-directive.js';
 export {
@@ -87,11 +83,10 @@ export function replaceCodeBlock(
   newContent: string,
 ): string {
   const { start, end } = codeBlock.position;
-  const block = parseFencedBlock(
-    markdownContent.slice(start, end),
-    linePrefixAt(markdownContent, start),
+  const rendered = renderFencedBlock(
+    parseFencedBlockAt(markdownContent, start, end),
+    { content: newContent },
   );
-  const rendered = renderFencedBlock(block, { content: newContent });
   return (
     markdownContent.slice(0, start) + rendered + markdownContent.slice(end)
   );

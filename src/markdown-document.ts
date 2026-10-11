@@ -10,8 +10,7 @@ import {
   parseSnippetDirective,
 } from './snippet-directive.js';
 import {
-  linePrefixAt,
-  parseFencedBlock,
+  parseFencedBlockAt,
   renderFencedBlock,
   type BlockEdit,
   type FencedBlock,
@@ -37,6 +36,8 @@ interface BlockRecord {
   readonly end: number;
   readonly source: FencedBlock;
 }
+
+type LanguageCode = Code & { lang: string };
 
 interface Replacement {
   readonly start: number;
@@ -73,16 +74,17 @@ function replaceRanges(
     );
 }
 
-function toRecord(content: string, node: Code): BlockRecord {
+function hasLanguage(node: Code): node is LanguageCode {
+  return Boolean(node.lang);
+}
+
+function toRecord(content: string, node: LanguageCode): BlockRecord {
   const start = node.position?.start.offset ?? 0;
   const end = node.position?.end.offset ?? 0;
-  const source = parseFencedBlock(
-    content.slice(start, end),
-    linePrefixAt(content, start),
-  );
+  const source = parseFencedBlockAt(content, start, end);
   const directive = node.meta ? parseSnippetDirective(node.meta) : undefined;
   const block: DocumentCodeBlock = {
-    language: node.lang!,
+    language: node.lang,
     content: node.value,
     ...(directive ? { directive } : {}),
     line: node.position?.start.line ?? 1,
@@ -111,7 +113,7 @@ export class MarkdownDocument {
     const records: Array<BlockRecord> = [];
 
     visit(tree, 'code', (node: Code) => {
-      if (node.lang) {
+      if (hasLanguage(node)) {
         records.push(toRecord(content, node));
       }
     });
