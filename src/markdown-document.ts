@@ -5,10 +5,8 @@ import remarkMdx from 'remark-mdx';
 import { visit } from 'unist-util-visit';
 import type { Code } from 'mdast';
 import type { CodeBlock, SnippetDirective } from './types.js';
-import {
-  formatSnippetDirective,
-  parseSnippetDirective,
-} from './snippet-directive.js';
+import { formatSnippetDirective } from './snippet-directive.js';
+import { readDirective } from './fence-info.js';
 import {
   parseFencedBlockAt,
   renderFencedBlock,
@@ -82,7 +80,7 @@ function toRecord(content: string, node: LanguageCode): BlockRecord {
   const start = node.position?.start.offset ?? 0;
   const end = node.position?.end.offset ?? 0;
   const source = parseFencedBlockAt(content, start, end);
-  const directive = node.meta ? parseSnippetDirective(node.meta) : undefined;
+  const directive = readDirective(source.info);
   const block: DocumentCodeBlock = {
     language: node.lang,
     content: node.value,

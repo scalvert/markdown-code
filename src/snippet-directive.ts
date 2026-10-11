@@ -8,104 +8,45 @@ export interface SnippetDirectiveToken {
 }
 
 const DIRECTIVE_PREFIX = 'snippet=';
+const META_TOKEN = /(?:"[^"]*"?|'[^']*'?|[^\s"'])+/g;
+const QUOTED_VALUE = /^(?:"([^"]*)"|'([^']*)')(?=\s|$)/;
+const UNQUOTED_VALUE = /^[^\s"']\S*/;
 
-function isWhitespace(character: string | undefined): boolean {
-  return character !== undefined && /\s/.test(character);
+interface DirectiveValue {
+  readonly length: number;
+  readonly value: string;
 }
 
-function findQuotedValueEnd(
-  info: string,
-  valueStart: number,
-): number | undefined {
-  const quote = info[valueStart];
-  let valueEnd = valueStart + 1;
-
-  while (valueEnd < info.length) {
-    if (info[valueEnd] === quote && info[valueEnd - 1] !== '\\') {
-      break;
-    }
-    valueEnd++;
+function directiveValue(text: string): DirectiveValue | undefined {
+  const quoted = QUOTED_VALUE.exec(text);
+  if (quoted) {
+    return { length: quoted[0].length, value: quoted[1] ?? quoted[2] ?? '' };
   }
-
-  if (
-    valueEnd >= info.length ||
-    (valueEnd + 1 < info.length && !isWhitespace(info[valueEnd + 1]))
-  ) {
-    return undefined;
-  }
-
-  return valueEnd;
-}
-
-function skipToken(info: string, index: number): number {
-  let quote: string | undefined;
-
-  while (index < info.length) {
-    const character = info[index]!;
-    if (quote) {
-      if (character === quote && info[index - 1] !== '\\') {
-        quote = undefined;
-      }
-    } else if (character === '"' || character === "'") {
-      quote = character;
-    } else if (isWhitespace(character)) {
-      break;
-    }
-    index++;
-  }
-
-  return index;
+  const unquoted = UNQUOTED_VALUE.exec(text)?.[0];
+  return unquoted === undefined
+    ? undefined
+    : { length: unquoted.length, value: unquoted };
 }
 
 export function findSnippetDirectiveToken(
   info: string,
 ): SnippetDirectiveToken | undefined {
-  let index = 0;
-
-  while (index < info.length) {
-    while (index < info.length && isWhitespace(info[index])) {
-      index++;
-    }
-
-    if (index >= info.length) {
-      return undefined;
-    }
-
-    if (!info.startsWith(DIRECTIVE_PREFIX, index)) {
-      index = skipToken(info, index);
-      continue;
-    }
-
-    const valueStart = index + DIRECTIVE_PREFIX.length;
-    if (valueStart >= info.length || isWhitespace(info[valueStart])) {
-      return undefined;
-    }
-
-    const quote = info[valueStart];
-    if (quote === '"' || quote === "'") {
-      const valueEnd = findQuotedValueEnd(info, valueStart);
-      if (valueEnd === undefined) {
-        return undefined;
-      }
-      return {
-        start: index,
-        end: valueEnd + 1,
-        value: info.substring(valueStart + 1, valueEnd),
-      };
-    }
-
-    let valueEnd = valueStart;
-    while (valueEnd < info.length && !isWhitespace(info[valueEnd])) {
-      valueEnd++;
-    }
-    return {
-      start: index,
-      end: valueEnd,
-      value: info.substring(valueStart, valueEnd),
-    };
+  const token = [...info.matchAll(META_TOKEN)].find((match) =>
+    match[0].startsWith(DIRECTIVE_PREFIX),
+  );
+  if (!token) {
+    return undefined;
   }
 
-  return undefined;
+  const valueStart = token.index + DIRECTIVE_PREFIX.length;
+  const found = directiveValue(info.slice(valueStart));
+  return (
+    found && {
+      start: token.index,
+      end: valueStart + found.length,
+      value: found.value,
+    }
+  );
 }
 
 function parsePositiveLineNumber(value: string): number | undefined {

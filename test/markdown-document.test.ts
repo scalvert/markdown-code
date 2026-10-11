@@ -646,6 +646,74 @@ const b = 2;
       );
     });
 
+    describe('when the info string uses escapes or character references', () => {
+      it('reads the directive as Markdown decodes it', () => {
+        const document = parse(
+          '```ts snippet=a\\_b&amp;c.ts\ncode\n```\n\n```ts snippet=&quot;my docs/a.ts&quot;\ncode\n```',
+        );
+
+        expect(
+          document.codeBlocks.map((block) => block.directive?.filePath),
+        ).toEqual(['a_b&c.ts', 'my docs/a.ts']);
+      });
+
+      it('replaces only the source text of the directive', () => {
+        const document = parse(
+          '```ts snippet=a.ts&#32;title=x\ncode\n```\n\n```ts snippet=&quot;my docs/a.ts&quot; title=y\ncode\n```',
+        );
+
+        for (const block of document.codeBlocks) {
+          document.setDirective(block, { filePath: 'new.ts' });
+        }
+
+        expect(document.toString()).toBe(
+          '```ts snippet=new.ts&#32;title=x\ncode\n```\n\n```ts snippet=new.ts title=y\ncode\n```',
+        );
+      });
+
+      it('reads escapes the same way in MDX', () => {
+        const source =
+          '<Tabs>\n\n  ```ts snippet=a\\_b&amp;c.ts\n  code\n  ```\n\n</Tabs>\n';
+
+        expect(parse(source, true).codeBlocks[0]!.directive?.filePath).toBe(
+          'a_b&c.ts',
+        );
+      });
+
+      it('removes a directive whose quotes are character references', () => {
+        const document = parse(
+          '```ts title=x snippet=&quot;my docs/a.ts&quot;\ncode\n```',
+        );
+
+        document.setDirective(document.codeBlocks[0]!, undefined);
+
+        expect(document.toString()).toBe('```ts title=x\ncode\n```');
+      });
+
+      it.each([
+        'a_b.ts',
+        'docs\\_draft.ts',
+        'a&amp;b.ts',
+        'a&b.ts',
+        'a`b.ts',
+        'C:\\docs\\a.ts',
+        'C:\\my docs\\',
+        'my docs/a.ts',
+        "it's here.ts",
+        '\\&#96;.ts',
+      ])('writes %j so it reads back unchanged', (filePath) => {
+        const source = '```ts title=x\ncode\n```\n';
+        const document = parse(source);
+
+        document.setDirective(document.codeBlocks[0]!, { filePath });
+        const annotated = parse(document.toString());
+
+        expect(annotated.codeBlocks[0]!.directive?.filePath).toBe(filePath);
+        annotated.setDirective(annotated.codeBlocks[0]!, undefined);
+        expect(annotated.toString()).toBe(source);
+      });
+    });
+
     it('round-trips: removing an added directive restores the source', () => {
       const source =
         '```ts title="x"\ncode\n```\n\n    ```py\n    x\n    ```\n';

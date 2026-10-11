@@ -114,6 +114,12 @@ Use the `snippet=` directive in your fenced code blocks:
 
 A line range that selects no lines, for example one that starts past the end of the file, is reported as an `empty-range` error and the code block is left unchanged.
 
+Quote a path that contains spaces: `snippet="my docs/file.ts"`. The directive is
+read the way Markdown reads the rest of the fence line, so backslash escapes and
+character references apply: `snippet=a\_b.ts` refers to `a_b.ts`, and
+`snippet=a&amp;b.ts` to `a&b.ts`. When `extract` writes a directive, it escapes
+the path so it reads back unchanged.
+
 ## Usage
 
 markdown-code provides two powerful workflows for keeping your documentation in sync with your code:

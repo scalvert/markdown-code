@@ -23,7 +23,7 @@ export interface FencedBlock {
 
 const TAB_SIZE = 4;
 const BLOCKQUOTE_MARKER = '>';
-const OPENING_LINE = /^(`{3,}|~{3,})(.*)$/;
+const OPENING_LINE = /^(`{3,}|~{3,})(.*)$/s;
 const BODY_FENCE_LINE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
 const FENCE_RUN = /`{3,}|~{3,}/;
 const STARTS_WITH_WHITESPACE = /^[ \t]/;
