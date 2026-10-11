@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import type { Node, Parent } from 'unist';
 import { MarkdownDocument, isMdxPath } from '../src/markdown-document.js';
+
+interface Structure {
+  type: string;
+  children?: Array<Structure>;
+}
+
+function structure(markdown: string): Structure {
+  const outline = (node: Node): Structure =>
+    'children' in node
+      ? { type: node.type, children: (node as Parent).children.map(outline) }
+      : { type: node.type };
+  return outline(unified().use(remarkParse).parse(markdown));
+}
 
 function parse(content: string, mdx = false): MarkdownDocument {
   return MarkdownDocument.parse(content, { mdx });
@@ -215,6 +231,136 @@ old
           \`\`\`
         "
       `);
+    });
+
+    describe('when the fence is inside a container', () => {
+      const containers = [
+        ['a blockquote', '> ```js snippet=a.js\n> old\n> ```\n> after\n'],
+        [
+          'a blockquote without a space',
+          '>```js snippet=a.js\n>old\n>```\n>after\n',
+        ],
+        [
+          'a blockquote followed by a tab',
+          '>\t```js snippet=a.js\n>\told\n>\t```\n',
+        ],
+        [
+          'a nested blockquote',
+          '> > ```js snippet=a.js\n> > old\n> > ```\n> > after\n',
+        ],
+        ['a compact nested blockquote', '>>```js snippet=a.js\n>>old\n>>```\n'],
+        [
+          'a compact nested blockquote followed by a tab',
+          '>>\t```js snippet=a.js\n>>\told\n>>\t```\n',
+        ],
+        [
+          'a tab-indented list item',
+          '1. Item\n\n\t```js snippet=a.js\n\told\n\t```\n\n\tafter\n',
+        ],
+        [
+          'a list item it opens',
+          '- ```js snippet=a.js\n  old\n  ```\n  after\n',
+        ],
+        [
+          'a list item whose marker is followed by a tab',
+          '-\t```js snippet=a.js\n \told\n \t```\n',
+        ],
+        ['an ordered list item', '10) ```js snippet=a.js\n    old\n    ```\n'],
+        [
+          'a list inside a blockquote',
+          '> - ```js snippet=a.js\n>   old\n>   ```\n>   after\n',
+        ],
+        [
+          'a list right after a bare blockquote marker',
+          '>- ```js snippet=a.js\n>   old\n>   ```\n>   after\n',
+        ],
+        [
+          'an ordered list right after a bare blockquote marker',
+          '>1. ```js snippet=a.js\n>    old\n>    ```\n',
+        ],
+        [
+          'a blockquote inside a list',
+          '- Nested\n  > ```js snippet=a.js\n  > old\n  > ```\n',
+        ],
+      ];
+      const unclosedContainers = [
+        ['the end of a blockquote', '> ```js snippet=a.js\n> old\n>'],
+        ['the end of a file in a blockquote', '> ```js snippet=a.js\n> old\n'],
+        [
+          'a blockquote followed by text',
+          '> ```js snippet=a.js\n> old\n\nafter\n',
+        ],
+        ['a list inside a blockquote', '> - ```js snippet=a.js\n>   old\n'],
+        ['the end of a list item', '- ```js snippet=a.js\n  old\n\nout\n'],
+        ['the end of the file', '```js snippet=a.js\nold\n'],
+        [
+          'the end of a file without a line break',
+          '```js snippet=a.js\nold\n\nold2',
+        ],
+      ];
+      const bodies = [
+        ['indentation, a blank line and a fence', 'one\n\n  two\n```'],
+        ['a leading tab', '\tone'],
+        ['container markers', '> quoted\n- item\n> ```'],
+        ['nothing', ''],
+        ['trailing blank lines', 'one\n\n'],
+        ['only a blank line', '\n'],
+      ];
+
+      function expectRoundTrip(source: string, body: string, content: string) {
+        const document = parse(source);
+        document.setBody(document.codeBlocks[0]!, body);
+        const output = document.toString();
+
+        const reparsed = parse(output);
+        expect(reparsed.codeBlocks.map((block) => block.content)).toEqual([
+          content,
+        ]);
+        expect(structure(output)).toEqual(structure(source));
+        reparsed.setBody(reparsed.codeBlocks[0]!, body);
+        expect(reparsed.toString()).toBe(output);
+      }
+
+      it.each(
+        containers.flatMap(([container, source]) =>
+          bodies.map(([description, body]) => [
+            container,
+            description,
+            source,
+            body,
+          ]),
+        ),
+      )('keeps the body inside %s when it has %s', (_, __, source, body) => {
+        expectRoundTrip(source!, body!, body!);
+      });
+
+      it.each(
+        unclosedContainers.flatMap(([container, source]) =>
+          bodies.map(([description, body]) => [
+            container,
+            description,
+            source,
+            body,
+          ]),
+        ),
+      )(
+        'keeps an unclosed block at %s stable when the body has %s',
+        (_, __, source, body) => {
+          expectRoundTrip(source!, body!, body!.replace(/\n+$/, ''));
+        },
+      );
+
+      it('repeats the blockquote marker on every body line', () => {
+        const document = parse(
+          '> Intro\n>\n> ```js snippet=a.js\n> old\n> ```\n> after\n',
+        );
+
+        document.setBody(document.codeBlocks[0]!, 'one\n\ntwo');
+
+        expect(document.toString()).toBe(
+          '> Intro\n>\n> ```js snippet=a.js\n> one\n>\n> two\n> ```\n> after\n',
+        );
+      });
     });
 
     it('fills an empty block', () => {
