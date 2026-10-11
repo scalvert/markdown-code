@@ -84,6 +84,12 @@ describe('parseFencedBlockAt', () => {
     expect(blockIn(source).end).toEqual(end);
   });
 
+  it('keeps line and paragraph separators in the info string', () => {
+    expect(blockIn('```ts a\u2028b\u2029c\n```').info).toBe(
+      'ts a\u2028b\u2029c',
+    );
+  });
+
   it('rejects text that does not start with a fence', () => {
     expect(() => parseFencedBlockAt('    code', 0, 8)).toThrow(
       'Not the start of a fenced code block',

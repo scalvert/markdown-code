@@ -3,10 +3,15 @@ import {
   findSnippetDirectiveToken,
   formatSnippetDirective,
   parseSnippetDirective,
+  type SnippetDirectiveToken,
 } from './snippet-directive.js';
-import { decodeInfoString, encodeInfoString } from './info-string.js';
+import {
+  decodeInfoString,
+  encodeInfoString,
+  type DecodedInfoString,
+} from './info-string.js';
 
-const LANGUAGE = /^[ \t]*\S*/;
+const LANGUAGE = /^[ \t]*[^ \t]*/;
 const WHITESPACE = /\s/;
 
 function splitLanguage(info: string): [language: string, meta: string] {
@@ -19,27 +24,47 @@ export function readDirective(info: string): SnippetDirective | undefined {
   return parseSnippetDirective(decodeInfoString(meta).value);
 }
 
-function withMetaDirective(
+function spliceDecoded(
   meta: string,
-  directive: SnippetDirective | null,
+  decoded: DecodedInfoString,
+  start: number,
+  end: number,
+  replacement: string,
 ): string {
-  const decoded = decodeInfoString(meta);
-  const token = findSnippetDirectiveToken(decoded.value);
-  const replacement = directive
-    ? encodeInfoString(formatSnippetDirective(directive))
-    : '';
+  return (
+    meta.slice(0, decoded.sourceOffset(start)) +
+    replacement +
+    meta.slice(decoded.sourceOffset(end))
+  );
+}
 
-  if (!token) {
-    return replacement ? `${meta} ${replacement}` : meta;
+function removeDirective(
+  meta: string,
+  decoded: DecodedInfoString,
+  token: SnippetDirectiveToken,
+): string {
+  const separatorAfter = WHITESPACE.test(decoded.value.charAt(token.end));
+  const separatorBefore = WHITESPACE.test(
+    decoded.value.charAt(token.start - 1),
+  );
+
+  if (separatorAfter) {
+    return spliceDecoded(meta, decoded, token.start, token.end + 1, '');
   }
+  const start = separatorBefore ? token.start - 1 : token.start;
+  return spliceDecoded(meta, decoded, start, token.end, '');
+}
 
-  const separated =
-    !directive && WHITESPACE.test(decoded.value.charAt(token.start - 1));
-  const { start, end } = decoded.sourceRange({
-    start: separated ? token.start - 1 : token.start,
-    end: token.end,
-  });
-  return meta.slice(0, start) + replacement + meta.slice(end);
+function replaceDirective(
+  meta: string,
+  decoded: DecodedInfoString,
+  token: SnippetDirectiveToken | undefined,
+  directive: SnippetDirective,
+): string {
+  const encoded = encodeInfoString(formatSnippetDirective(directive));
+  return token
+    ? spliceDecoded(meta, decoded, token.start, token.end, encoded)
+    : `${meta} ${encoded}`;
 }
 
 export function withDirective(
@@ -47,5 +72,11 @@ export function withDirective(
   directive: SnippetDirective | null,
 ): string {
   const [language, meta] = splitLanguage(info);
-  return language + withMetaDirective(meta, directive);
+  const decoded = decodeInfoString(meta);
+  const token = findSnippetDirectiveToken(decoded.value);
+
+  if (directive) {
+    return language + replaceDirective(meta, decoded, token, directive);
+  }
+  return token ? language + removeDirective(meta, decoded, token) : info;
 }

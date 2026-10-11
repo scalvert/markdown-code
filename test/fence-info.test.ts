@@ -16,6 +16,14 @@ describe('readDirective', () => {
   it('does not read a directive in the language position', () => {
     expect(readDirective('snippet=a.ts')).toBeUndefined();
   });
+
+  it.each(['js\u00a0snippet=a.ts', 'js\u3000snippet=a.ts'])(
+    'only splits the language at a space or tab, not in %j',
+    (info) => {
+      expect(readDirective(info)).toBeUndefined();
+      expect(withDirective(info, null)).toBe(info);
+    },
+  );
 });
 
 describe('withDirective', () => {
@@ -53,6 +61,25 @@ describe('withDirective', () => {
     expect(withDirective('ts title=x&#32;snippet=a.ts', null)).toBe(
       'ts title=x',
     );
+  });
+
+  it.each([
+    ['ts snippet=a.ts&#32;title=x', 'ts title=x'],
+    ['ts x\\ snippet=c.ts&#32;y', 'ts x\\ y'],
+  ])(
+    'keeps the words around a removed directive apart in %j',
+    (info, expected) => {
+      expect(withDirective(info, null)).toBe(expected);
+    },
+  );
+
+  it('escapes a trailing backslash so it cannot escape what follows', () => {
+    const info = withDirective('ts snippet=a.ts&nbsp;title=x', {
+      filePath: 'c:\\dir\\',
+    });
+
+    expect(info).toBe('ts snippet=c:\\dir\\\\&nbsp;title=x');
+    expect(readDirective(info)?.filePath).toBe('c:\\dir\\');
   });
 
   it('encodes what would otherwise decode or end the fence', () => {
