@@ -15,7 +15,10 @@ describe('parseFencedBlockAt', () => {
     expect(block).toMatchInlineSnapshot(`
       {
         "bodyPrefix": ">   ",
-        "closing": ">   \`\`\`\`",
+        "end": {
+          "kind": "closing-fence",
+          "line": ">   \`\`\`\`",
+        },
         "fence": "\`\`\`\`",
         "info": "ts snippet=a.ts",
         "lineEnding": "
@@ -49,20 +52,36 @@ describe('parseFencedBlockAt', () => {
   });
 
   it.each([
-    ['a matching fence', '```ts\nx\n```', '```'],
-    ['a longer fence', '```ts\nx\n`````', '`````'],
+    [
+      'a matching fence',
+      '```ts\nx\n```',
+      { kind: 'closing-fence', line: '```' },
+    ],
+    [
+      'a longer fence',
+      '```ts\nx\n`````',
+      { kind: 'closing-fence', line: '`````' },
+    ],
     [
       'a fence behind its blockquote marker',
       '> ```ts\n> x\n>   ```',
-      '>   ```',
+      { kind: 'closing-fence', line: '>   ```' },
     ],
-    ['a trailing line break', '```ts\nx\n', ''],
-    ['a shorter fence', '~~~~ts\nx\n~~~', undefined],
-    ['a fence of the other character', '```ts\nx\n~~~', undefined],
-    ['a fence behind an extra blockquote marker', '```ts\n> ```', undefined],
-    ['only an opening line', '```ts', undefined],
-  ])('ends a block at %s', (_, source, closing) => {
-    expect(blockIn(source).closing).toBe(closing);
+    ['a trailing line break', '```ts\nx\n', { kind: 'line-break' }],
+    ['a shorter fence', '~~~~ts\nx\n~~~', { kind: 'unterminated' }],
+    [
+      'a fence of the other character',
+      '```ts\nx\n~~~',
+      { kind: 'unterminated' },
+    ],
+    [
+      'a fence behind an extra blockquote marker',
+      '```ts\n> ```',
+      { kind: 'unterminated' },
+    ],
+    ['only an opening line', '```ts', { kind: 'unterminated' }],
+  ])('ends a block at %s', (_, source, end) => {
+    expect(blockIn(source).end).toEqual(end);
   });
 
   it('rejects text that does not start with a fence', () => {
@@ -99,6 +118,15 @@ describe('renderFencedBlock', () => {
     expect(renderFencedBlock(blockIn('```js\nold\n'), { content: 'new' })).toBe(
       '```js\nnew\n',
     );
+  });
+
+  it('ends an unterminated block at a line break when the body ends in a blank line', () => {
+    const block = blockIn('```js\nold');
+
+    expect(renderFencedBlock(block, { content: 'new\n' })).toBe(
+      '```js\nnew\n\n',
+    );
+    expect(renderFencedBlock(block, { content: 'new' })).toBe('```js\nnew');
   });
 
   it('writes a body into a block that only has an opening line', () => {

@@ -272,11 +272,11 @@ old
         ],
         [
           'a list right after a bare blockquote marker',
-          '>- ```js snippet=a.js\n>  old\n>  ```\n',
+          '>- ```js snippet=a.js\n>   old\n>   ```\n>   after\n',
         ],
         [
           'an ordered list right after a bare blockquote marker',
-          '>1. ```js snippet=a.js\n>   old\n>   ```\n',
+          '>1. ```js snippet=a.js\n>    old\n>    ```\n',
         ],
         [
           'a blockquote inside a list',
@@ -291,12 +291,18 @@ old
           '- ```js snippet=a.js\n  old\n\nout\n',
         ],
         ['an unclosed top-level block', '```js snippet=a.js\nold\n'],
+        [
+          'an unclosed block at the end of the file',
+          '```js snippet=a.js\nold\n\nold2',
+        ],
       ];
       const bodies = [
         ['indentation, a blank line and a fence', 'one\n\n  two\n```'],
         ['a leading tab', '\tone'],
         ['container markers', '> quoted\n- item\n> ```'],
         ['nothing', ''],
+        ['trailing blank lines', 'one\n\n'],
+        ['only a blank line', '\n'],
       ];
 
       it.each(

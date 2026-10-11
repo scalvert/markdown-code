@@ -7,11 +7,16 @@ export interface BlockEdit {
   directive?: SnippetDirective | null | undefined;
 }
 
+export type BlockEnd =
+  | { readonly kind: 'closing-fence'; readonly line: string }
+  | { readonly kind: 'line-break' }
+  | { readonly kind: 'unterminated' };
+
 export interface FencedBlock {
   readonly fence: string;
   readonly info: string;
   readonly rawBody: string;
-  readonly closing: string | undefined;
+  readonly end: BlockEnd;
   readonly bodyPrefix: string;
   readonly lineEnding: LineEnding;
 }
@@ -22,6 +27,7 @@ const OPENING_LINE = /^(`{3,}|~{3,})(.*)$/;
 const BODY_FENCE_LINE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
 const FENCE_RUN = /`{3,}|~{3,}/;
 const STARTS_WITH_WHITESPACE = /^[ \t]/;
+const ENDS_WITH_LINE_BREAK = /(?:\r\n|\r|\n)$/;
 
 function columnAfter(text: string, startColumn: number): number {
   return [...text].reduce(
@@ -53,17 +59,23 @@ function closingFencePattern(fence: string, quoteDepth: number): RegExp {
   return new RegExp(`^${blockquoteMarkers}[ \\t]*${fenceRun}[ \\t]*$`);
 }
 
-function closingLine(
+function blockEnd(
   lines: ReadonlyArray<string>,
   fence: string,
   quoteDepth: number,
-): string | undefined {
-  const last = lines.at(-1);
-  const closes =
-    lines.length > 1 &&
-    last !== undefined &&
-    (last === '' || closingFencePattern(fence, quoteDepth).test(last));
-  return closes ? last : undefined;
+): BlockEnd {
+  const last = lines.length > 1 ? lines.at(-1) : undefined;
+  if (last === '') {
+    return { kind: 'line-break' };
+  }
+  if (last !== undefined && closingFencePattern(fence, quoteDepth).test(last)) {
+    return { kind: 'closing-fence', line: last };
+  }
+  return { kind: 'unterminated' };
+}
+
+function endText(end: BlockEnd): string {
+  return end.kind === 'closing-fence' ? end.line : '';
 }
 
 function linePrefixAt(source: string, offset: number): string {
@@ -86,13 +98,16 @@ export function parseFencedBlockAt(
   const [, fence = '', info = ''] = match;
   const linePrefix = linePrefixAt(source, start);
   const quoteDepth = linePrefix.split(BLOCKQUOTE_MARKER).length - 1;
-  const closing = closingLine(lines, fence, quoteDepth);
+  const blockEnding = blockEnd(lines, fence, quoteDepth);
 
   return {
     fence,
     info,
-    rawBody: text.slice(opening.length, text.length - (closing?.length ?? 0)),
-    closing,
+    rawBody: text.slice(
+      opening.length,
+      text.length - endText(blockEnding).length,
+    ),
+    end: blockEnding,
     bodyPrefix: bodyPrefixFor(linePrefix),
     lineEnding: getLineEnding(text),
   };
@@ -129,6 +144,19 @@ function bodyLines(content: string, prefix: string): Array<string> {
   );
 }
 
+function endFor(end: BlockEnd, content: string): BlockEnd {
+  return end.kind === 'unterminated' && ENDS_WITH_LINE_BREAK.test(content)
+    ? { kind: 'line-break' }
+    : end;
+}
+
+function endLines(end: BlockEnd, fence: string): Array<string> {
+  if (end.kind === 'closing-fence') {
+    return [lengthenFence(end.line, fence)];
+  }
+  return end.kind === 'line-break' ? [''] : [];
+}
+
 export function renderFencedBlock(block: FencedBlock, edit: BlockEdit): string {
   const info =
     edit.directive === undefined
@@ -136,16 +164,14 @@ export function renderFencedBlock(block: FencedBlock, edit: BlockEdit): string {
       : withDirective(block.info, edit.directive);
 
   if (edit.content === undefined) {
-    return block.fence + info + block.rawBody + (block.closing ?? '');
+    return block.fence + info + block.rawBody + endText(block.end);
   }
 
   const fence = fenceFor(edit.content, block.fence);
-  const closing =
-    block.closing === undefined ? [] : [lengthenFence(block.closing, fence)];
 
   return [
     fence + info,
     ...bodyLines(edit.content, block.bodyPrefix),
-    ...closing,
+    ...endLines(endFor(block.end, edit.content), fence),
   ].join(block.lineEnding);
 }
