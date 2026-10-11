@@ -6,15 +6,17 @@ import { visit } from 'unist-util-visit';
 import type { Code } from 'mdast';
 import type { CodeBlock, SnippetDirective } from './types.js';
 import {
-  findSnippetDirectiveToken,
   formatSnippetDirective,
   parseSnippetDirective,
 } from './snippet-directive.js';
 import {
-  getLineEnding,
-  normalizeLineEndings,
-  type LineEnding,
-} from './line-endings.js';
+  linePrefixAt,
+  parseFencedBlock,
+  renderFencedBlock,
+  type BlockEdit,
+  type FencedBlock,
+} from './fenced-block.js';
+import type { LineEnding } from './line-endings.js';
 
 export interface ParseOptions {
   mdx?: boolean;
@@ -29,57 +31,17 @@ export interface DocumentCodeBlock {
   readonly lineEnding: LineEnding;
 }
 
-export interface BlockEdit {
-  content?: string | undefined;
-  directive?: SnippetDirective | null | undefined;
-}
-
 interface BlockRecord {
-  block: DocumentCodeBlock;
-  start: number;
-  end: number;
+  readonly block: DocumentCodeBlock;
+  readonly start: number;
+  readonly end: number;
+  readonly source: FencedBlock;
 }
 
-const OPENING_FENCE_PREFIX = /^[ \t]*(?:`{3,}|~{3,})[ \t]*\S*/;
-const FENCE_MARKER = /^[ \t]*(`{3,}|~{3,})/;
-const CLOSING_FENCE = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
-const CLOSING_FENCE_IN_BODY = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
-const FENCE_RUN = /`{3,}|~{3,}/;
-
-function fenceLengthFor(
-  content: string,
-  fenceChar: string,
-  currentLength: number,
-): number {
-  let longest = 0;
-  for (const line of content.split(/\r\n|\r|\n/)) {
-    const run = line.match(CLOSING_FENCE_IN_BODY)?.[1];
-    if (run?.[0] === fenceChar) {
-      longest = Math.max(longest, run.length);
-    }
-  }
-  return longest >= currentLength ? longest + 1 : currentLength;
-}
-
-function lengthenFence(
-  line: string,
-  fenceChar: string,
-  length: number,
-): string {
-  return line.replace(FENCE_RUN, (run) =>
-    fenceChar.repeat(Math.max(run.length, length)),
-  );
-}
-
-function closesFence(openingLine: string, candidate: string): boolean {
-  const opening = openingLine.match(FENCE_MARKER)?.[1];
-  const closing = candidate.match(CLOSING_FENCE)?.[1];
-  return (
-    opening !== undefined &&
-    closing !== undefined &&
-    closing[0] === opening[0] &&
-    closing.length >= opening.length
-  );
+interface Replacement {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
 }
 
 const legacyOffsets = new WeakMap<
@@ -98,98 +60,38 @@ function createProcessor(options: ParseOptions) {
   return unified().use(remarkParse);
 }
 
-function splitLineEnding(line: string): [string, string] {
-  return line.endsWith('\r') ? [line.slice(0, -1), '\r'] : [line, ''];
+function replaceRanges(
+  source: string,
+  replacements: ReadonlyArray<Replacement>,
+): string {
+  return [...replacements]
+    .sort((a, b) => b.start - a.start)
+    .reduce(
+      (output, { start, end, text }) =>
+        output.slice(0, start) + text + output.slice(end),
+      source,
+    );
 }
 
-function rewriteOpeningFence(
-  line: string,
-  directive: SnippetDirective | null,
-): string {
-  const [text, lineEnding] = splitLineEnding(line);
-  const metaStart = text.match(OPENING_FENCE_PREFIX)?.[0].length ?? text.length;
-  const head = text.slice(0, metaStart);
-  const meta = text.slice(metaStart);
-  const existing = findSnippetDirectiveToken(meta);
+function toRecord(content: string, node: Code): BlockRecord {
+  const start = node.position?.start.offset ?? 0;
+  const end = node.position?.end.offset ?? 0;
+  const source = parseFencedBlock(
+    content.slice(start, end),
+    linePrefixAt(content, start),
+  );
+  const directive = node.meta ? parseSnippetDirective(node.meta) : undefined;
+  const block: DocumentCodeBlock = {
+    language: node.lang!,
+    content: node.value,
+    ...(directive ? { directive } : {}),
+    line: node.position?.start.line ?? 1,
+    column: node.position?.start.column ?? 1,
+    lineEnding: source.lineEnding,
+  };
 
-  if (existing) {
-    const after = meta.slice(existing.end);
-
-    if (directive) {
-      const before = meta.slice(0, existing.start);
-      return (
-        head + before + formatSnippetDirective(directive) + after + lineEnding
-      );
-    }
-
-    const separatorStart =
-      existing.start > 0 && /[ \t]/.test(meta[existing.start - 1]!)
-        ? existing.start - 1
-        : existing.start;
-    return head + meta.slice(0, separatorStart) + after + lineEnding;
-  }
-
-  if (!directive) {
-    return line;
-  }
-
-  return `${text} ${formatSnippetDirective(directive)}${lineEnding}`;
-}
-
-function indentBody(
-  content: string,
-  column: number,
-  lineEnding: LineEnding,
-): string {
-  const normalized = normalizeLineEndings(content, lineEnding);
-  const indent = ' '.repeat(Math.max(0, column - 1));
-  if (indent === '') {
-    return normalized;
-  }
-  return normalized
-    .split(lineEnding)
-    .map((line) => (line === '' ? line : indent + line))
-    .join(lineEnding);
-}
-
-export function renderBlock(
-  blockText: string,
-  column: number,
-  edit: BlockEdit,
-): string {
-  const firstNewlineIndex = blockText.indexOf('\n');
-  const openingLine =
-    firstNewlineIndex === -1
-      ? blockText
-      : blockText.slice(0, firstNewlineIndex);
-  const rest =
-    firstNewlineIndex === -1 ? '' : blockText.slice(firstNewlineIndex);
-
-  const opening =
-    edit.directive === undefined
-      ? openingLine
-      : rewriteOpeningFence(openingLine, edit.directive);
-
-  if (edit.content === undefined || firstNewlineIndex === -1) {
-    return opening + rest;
-  }
-
-  const lineEnding = getLineEnding(blockText);
-  const lastLine = blockText.slice(blockText.lastIndexOf('\n') + 1);
-  const hasClosingFence = closesFence(openingLine, lastLine);
-  const body = indentBody(edit.content, column, lineEnding);
-
-  const fence = openingLine.match(FENCE_MARKER)?.[1] ?? '```';
-  const fenceChar = fence[0]!;
-  const fenceLength = fenceLengthFor(edit.content, fenceChar, fence.length);
-
-  const lengthen = (line: string) =>
-    fenceLength > fence.length
-      ? lengthenFence(line, fenceChar, fenceLength)
-      : line;
-
-  const closing = hasClosingFence ? `${lineEnding}${lengthen(lastLine)}` : '';
-  return `${lengthen(opening)}\n${body}${closing}`;
+  legacyOffsets.set(block, { start, end });
+  return { block, start, end, source };
 }
 
 export class MarkdownDocument {
@@ -209,26 +111,9 @@ export class MarkdownDocument {
     const records: Array<BlockRecord> = [];
 
     visit(tree, 'code', (node: Code) => {
-      if (!node.lang) {
-        return;
+      if (node.lang) {
+        records.push(toRecord(content, node));
       }
-
-      const start = node.position?.start.offset ?? 0;
-      const end = node.position?.end.offset ?? 0;
-      const directive = node.meta
-        ? parseSnippetDirective(node.meta)
-        : undefined;
-      const block: DocumentCodeBlock = {
-        language: node.lang,
-        content: node.value,
-        ...(directive ? { directive } : {}),
-        line: node.position?.start.line ?? 1,
-        column: node.position?.start.column ?? 1,
-        lineEnding: getLineEnding(content.slice(start, end)),
-      };
-
-      legacyOffsets.set(block, { start, end });
-      records.push({ block, start, end });
     });
 
     return new MarkdownDocument(content, records);
@@ -250,20 +135,15 @@ export class MarkdownDocument {
   }
 
   toString(): string {
-    const edited = this.#records
-      .filter((record) => this.#edits.has(record.block))
-      .sort((a, b) => b.start - a.start);
-
-    let output = this.#source;
-    for (const { block, start, end } of edited) {
-      const rendered = renderBlock(
-        this.#source.slice(start, end),
-        block.column,
-        this.#edits.get(block)!,
-      );
-      output = output.slice(0, start) + rendered + output.slice(end);
-    }
-    return output;
+    return replaceRanges(
+      this.#source,
+      this.#records.flatMap(({ block, start, end, source }) => {
+        const edit = this.#edits.get(block);
+        return edit
+          ? [{ start, end, text: renderFencedBlock(source, edit) }]
+          : [];
+      }),
+    );
   }
 
   #edit(block: DocumentCodeBlock, edit: BlockEdit): void {

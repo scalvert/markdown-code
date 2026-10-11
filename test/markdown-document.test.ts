@@ -217,6 +217,62 @@ old
       `);
     });
 
+    describe('when the fence is inside a container', () => {
+      const body = 'one\n\n  two\n```';
+
+      it.each([
+        ['a blockquote', '> ```js snippet=a.js\n> old\n> ```\n'],
+        ['a blockquote without a space', '>```js snippet=a.js\n>old\n>```\n'],
+        ['a nested blockquote', '> > ```js snippet=a.js\n> > old\n> > ```\n'],
+        [
+          'a blockquote followed by a tab',
+          '>\t```js snippet=a.js\n>\told\n>\t```\n',
+        ],
+        ['a compact nested blockquote', '>>```js snippet=a.js\n>>old\n>>```\n'],
+        [
+          'a tab-indented list item',
+          '1. Item\n\n\t```js snippet=a.js\n\told\n\t```\n',
+        ],
+        ['a list item it opens', '- ```js snippet=a.js\n  old\n  ```\n'],
+        [
+          'a list item whose marker is followed by a tab',
+          '-\t```js snippet=a.js\n \told\n \t```\n',
+        ],
+        ['an ordered list item', '10) ```js snippet=a.js\n    old\n    ```\n'],
+        [
+          'a list inside a blockquote',
+          '> - ```js snippet=a.js\n>   old\n>   ```\n',
+        ],
+        [
+          'a blockquote inside a list',
+          '- Nested\n  > ```js snippet=a.js\n  > old\n  > ```\n',
+        ],
+      ])('keeps the body inside %s', (_, source) => {
+        const document = parse(source);
+        document.setBody(document.codeBlocks[0]!, body);
+        const output = document.toString();
+
+        const reparsed = parse(output);
+        expect(reparsed.codeBlocks.map((block) => block.content)).toEqual([
+          body,
+        ]);
+        reparsed.setBody(reparsed.codeBlocks[0]!, body);
+        expect(reparsed.toString()).toBe(output);
+      });
+
+      it('repeats the blockquote marker on every body line', () => {
+        const document = parse(
+          '> Intro\n>\n> ```js snippet=a.js\n> old\n> ```\n> after\n',
+        );
+
+        document.setBody(document.codeBlocks[0]!, 'one\n\ntwo');
+
+        expect(document.toString()).toBe(
+          '> Intro\n>\n> ```js snippet=a.js\n> one\n>\n> two\n> ```\n> after\n',
+        );
+      });
+    });
+
     it('fills an empty block', () => {
       const document = parse('```ts snippet=a.ts\n```\n');
 

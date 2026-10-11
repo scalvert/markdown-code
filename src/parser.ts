@@ -3,9 +3,13 @@ import type { MarkdownFile, CodeBlock } from './types.js';
 import {
   MarkdownDocument,
   isMdxPath,
-  renderBlock,
   toLegacyCodeBlocks,
 } from './markdown-document.js';
+import {
+  linePrefixAt,
+  parseFencedBlock,
+  renderFencedBlock,
+} from './fenced-block.js';
 
 export { parseSnippetDirective } from './snippet-directive.js';
 export {
@@ -83,11 +87,11 @@ export function replaceCodeBlock(
   newContent: string,
 ): string {
   const { start, end } = codeBlock.position;
-  const rendered = renderBlock(
+  const block = parseFencedBlock(
     markdownContent.slice(start, end),
-    codeBlock.columnNumber ?? 1,
-    { content: newContent },
+    linePrefixAt(markdownContent, start),
   );
+  const rendered = renderFencedBlock(block, { content: newContent });
   return (
     markdownContent.slice(0, start) + rendered + markdownContent.slice(end)
   );
